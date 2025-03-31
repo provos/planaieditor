@@ -2,9 +2,16 @@
 	import { createEventDispatcher } from 'svelte';
 	import { isValidPythonIdentifier } from '$lib/utils/validation';
 
-	export let existingFieldNames: string[] = [];
-
 	type FieldType = 'string' | 'integer' | 'float' | 'list_string' | 'list_integer' | 'list_float';
+
+	interface Field {
+		name: string;
+		type: FieldType;
+		required: boolean;
+		default?: any;
+	}
+
+	let { existingFieldNames = [] } = $props<{ existingFieldNames?: string[] }>();
 
 	const FIELD_TYPE_LABELS = {
 		string: 'String',
@@ -15,14 +22,17 @@
 		list_float: 'List of floats'
 	};
 
-	const dispatch = createEventDispatcher();
+	const dispatch = createEventDispatcher<{
+		save: Field;
+		cancel: void;
+	}>();
 
-	$state: fieldName = '';
-	$state: fieldType = 'string' as FieldType;
-	$state: required = true;
-	$state: defaultValue = '';
-	$state: fieldNameError = '';
-	$state: defaultValueError = '';
+	let fieldName = $state('');
+	let fieldType = $state<FieldType>('string');
+	let required = $state(true);
+	let defaultValue = $state('');
+	let fieldNameError = $state('');
+	let defaultValueError = $state('');
 
 	function validateFieldName() {
 		if (!fieldName) {
@@ -89,7 +99,7 @@
 		}
 
 		// Process the default value based on type
-		let processedDefault = defaultValue;
+		let processedDefault: any = defaultValue;
 		if (defaultValue) {
 			switch (fieldType) {
 				case 'integer':

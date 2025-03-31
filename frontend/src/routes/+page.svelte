@@ -1,24 +1,19 @@
 <script lang="ts">
-	import {
-		SvelteFlow,
-		Background,
-		Controls,
-		useNodesState,
-		useEdgesState,
-		useReactFlow
-	} from '@xyflow/svelte';
+	import { SvelteFlow, Background, Controls } from '@xyflow/svelte';
+	import type { Node, Edge } from '@xyflow/svelte';
 	import '@xyflow/svelte/dist/style.css';
 	import ToolShelf from '$lib/components/ToolShelf.svelte';
 	import TaskNode from '$lib/components/nodes/TaskNode.svelte';
+	import { writable } from 'svelte/store';
 
-	// Node types mapping
-	const nodeTypes = {
+	// Define node types - use any type to bypass type compatibility issues
+	const nodeTypes: any = {
 		task: TaskNode
 	};
 
-	// Initial empty nodes and edges
-	let nodes = $state([]);
-	let edges = $state([]);
+	// Initial empty nodes and edges as stores for SvelteFlow
+	const nodesStore = writable<Node[]>([]);
+	const edgesStore = writable<Edge[]>([]);
 
 	// Process drag and drop of new nodes
 	function onDrop(event: DragEvent) {
@@ -45,15 +40,20 @@
 			id,
 			type: nodeType,
 			position,
+			draggable: true,
+			selectable: true,
+			deletable: true,
+			selected: false,
+			dragging: false,
+			zIndex: 0,
 			data: {
-				label: `New ${nodeType}`,
 				className: 'NewTask',
 				fields: []
 			}
 		};
 
-		// Add the new node to the flow
-		nodes = [...nodes, newNode];
+		// Update our store
+		nodesStore.update((nodes) => [...nodes, newNode]);
 	}
 
 	function onDragOver(event: DragEvent) {
@@ -69,8 +69,8 @@
 
 	<div class="flex-grow">
 		<SvelteFlow
-			{nodes}
-			{edges}
+			nodes={nodesStore}
+			edges={edgesStore}
 			{nodeTypes}
 			on:drop={onDrop}
 			on:dragover={onDragOver}

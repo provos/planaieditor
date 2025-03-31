@@ -13,8 +13,6 @@
 
 	<div
 		class="cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-md transition-shadow hover:shadow-lg"
-		role="button"
-		tabindex="0"
 		draggable="true"
 		on:dragstart={(e) => onDragStart(e, 'task')}
 	>

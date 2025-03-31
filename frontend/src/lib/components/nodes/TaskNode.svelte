@@ -12,14 +12,15 @@
 		default?: any;
 	}
 
-	export let id: string;
-	export let data: {
+	interface NodeData {
 		className: string;
 		fields: Field[];
-	};
+	}
 
-	$state: classNameError = '';
-	$state: showFieldEditor = false;
+	let { id, data } = $props<{ id: string; data: NodeData }>();
+
+	let classNameError = $state('');
+	let showFieldEditor = $state(false);
 
 	function updateClassName(e: Event) {
 		const target = e.target as HTMLInputElement;
@@ -39,7 +40,7 @@
 	}
 
 	function deleteField(index: number) {
-		data.fields = data.fields.filter((_, i) => i !== index);
+		data.fields = data.fields.filter((_: Field, i: number) => i !== index);
 	}
 </script>
 
@@ -112,7 +113,7 @@
 				<FieldEditor
 					on:save={(e) => addNewField(e.detail)}
 					on:cancel={() => (showFieldEditor = false)}
-					existingFieldNames={data.fields.map((f) => f.name)}
+					existingFieldNames={data.fields.map((f: Field) => f.name)}
 				/>
 			</div>
 		</div>
