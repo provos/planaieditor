@@ -57,7 +57,7 @@
 			<input
 				type="text"
 				value={data.className}
-				on:input={updateClassName}
+				oninput={updateClassName}
 				class="rounded border border-gray-300 px-2 py-1 text-sm {classNameError
 					? 'border-red-500'
 					: ''}"
@@ -74,7 +74,7 @@
 			<div class="text-sm font-semibold">Fields</div>
 			<button
 				class="rounded bg-blue-500 px-2 py-1 text-xs text-white transition-colors hover:bg-blue-600"
-				on:click={() => (showFieldEditor = true)}
+				onclick={() => (showFieldEditor = true)}
 			>
 				Add Field
 			</button>
@@ -96,7 +96,7 @@
 						</div>
 						<button
 							class="text-xs text-red-500 hover:text-red-700"
-							on:click={() => deleteField(index)}
+							onclick={() => deleteField(index)}
 						>
 							✕
 						</button>
@@ -111,8 +111,8 @@
 		<div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
 			<div class="w-full max-w-md rounded-lg bg-white p-4">
 				<FieldEditor
-					on:save={(e) => addNewField(e.detail)}
-					on:cancel={() => (showFieldEditor = false)}
+					onsave={(e) => addNewField(e.detail)}
+					oncancel={() => (showFieldEditor = false)}
 					existingFieldNames={data.fields.map((f: Field) => f.name)}
 				/>
 			</div>

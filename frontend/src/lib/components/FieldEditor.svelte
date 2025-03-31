@@ -138,7 +138,7 @@
 		<input
 			type="text"
 			bind:value={fieldName}
-			on:blur={validateFieldName}
+			onblur={validateFieldName}
 			class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm {fieldNameError
 				? 'border-red-500'
 				: ''}"
@@ -181,7 +181,7 @@
 		<input
 			type="text"
 			bind:value={defaultValue}
-			on:blur={validateDefaultValue}
+			onblur={validateDefaultValue}
 			class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm {defaultValueError
 				? 'border-red-500'
 				: ''}"
@@ -207,13 +207,13 @@
 	<div class="flex justify-end space-x-2">
 		<button
 			class="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-			on:click={cancel}
+			onclick={cancel}
 		>
 			Cancel
 		</button>
 		<button
 			class="rounded-md border border-transparent bg-blue-500 px-3 py-2 text-sm text-white hover:bg-blue-600"
-			on:click={saveField}
+			onclick={saveField}
 		>
 			Add Field
 		</button>

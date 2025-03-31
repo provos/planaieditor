@@ -6,14 +6,14 @@
 	import TaskNode from '$lib/components/nodes/TaskNode.svelte';
 	import { writable } from 'svelte/store';
 
-	// Define node types - use any type to bypass type compatibility issues
+	// Define node types
 	const nodeTypes: any = {
 		task: TaskNode
 	};
 
-	// Initial empty nodes and edges as stores for SvelteFlow
-	const nodesStore = writable<Node[]>([]);
-	const edgesStore = writable<Edge[]>([]);
+	// Use Svelte stores for nodes and edges as required by @xyflow/svelte
+	const nodes = writable<Node[]>([]);
+	const edges = writable<Edge[]>([]);
 
 	// Process drag and drop of new nodes
 	function onDrop(event: DragEvent) {
@@ -21,15 +21,23 @@
 
 		const nodeType = event.dataTransfer?.getData('application/reactflow');
 
-		if (!nodeType) return;
+		if (!nodeType) {
+			console.log('No node type found in drag data');
+			return;
+		}
 
 		// Get the position where the node is dropped
-		const flowBounds = document.querySelector('.react-flow')?.getBoundingClientRect();
-		if (!flowBounds) return;
+		const wrapper = document.querySelector('.svelte-flow__pane');
+		const wrapperBounds = wrapper?.getBoundingClientRect();
+
+		if (!wrapperBounds) {
+			console.log('Could not find flow wrapper element');
+			return;
+		}
 
 		const position = {
-			x: event.clientX - flowBounds.left,
-			y: event.clientY - flowBounds.top
+			x: event.clientX - wrapperBounds.left,
+			y: event.clientY - wrapperBounds.top
 		};
 
 		// Create a unique ID for the new node
@@ -52,8 +60,9 @@
 			}
 		};
 
-		// Update our store
-		nodesStore.update((nodes) => [...nodes, newNode]);
+		// Update our nodes store
+		nodes.update((currentNodes) => [...currentNodes, newNode]);
+		console.log('Added new node:', newNode);
 	}
 
 	function onDragOver(event: DragEvent) {
@@ -69,11 +78,11 @@
 
 	<div class="flex-grow">
 		<SvelteFlow
-			nodes={nodesStore}
-			edges={edgesStore}
+			{nodes}
+			{edges}
 			{nodeTypes}
-			on:drop={onDrop}
-			on:dragover={onDragOver}
+			ondrop={onDrop}
+			ondragover={onDragOver}
 			class="flex-grow"
 			fitView
 		>
