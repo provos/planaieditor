@@ -3,7 +3,8 @@
 	import { isValidPythonClassName, isValidPythonIdentifier } from '$lib/utils/validation';
 	import { allClassNames } from '$lib/stores/classNameStore';
 
-	type FieldType = 'string' | 'integer' | 'float' | 'list_string' | 'list_integer' | 'list_float';
+	type BaseFieldType = 'string' | 'integer' | 'float';
+	type FieldType = BaseFieldType | `list_${BaseFieldType}`;
 
 	interface Field {
 		name: string;
@@ -33,7 +34,8 @@
 	let classNameError = $state('');
 	let editingNewField = $state(false);
 	let newFieldName = $state('');
-	let newFieldType = $state<FieldType>('string');
+	let newFieldType = $state<BaseFieldType>('string');
+	let newFieldIsList = $state(false);
 	let newFieldRequired = $state(true);
 	let newFieldNameError = $state('');
 	let tempClassName = $state(data.className);
@@ -42,13 +44,10 @@
 	let currentFields = $state<Field[]>([...data.fields]);
 
 	// Field type options
-	const FIELD_TYPE_OPTIONS: Record<FieldType, string> = {
-		string: 'String',
-		integer: 'Integer',
-		float: 'Float',
-		list_string: 'List[str]',
-		list_integer: 'List[int]',
-		list_float: 'List[float]'
+	const BASE_TYPE_LABELS = {
+		string: 'str',
+		integer: 'int',
+		float: 'float'
 	};
 
 	function startEditingClassName() {
@@ -119,12 +118,16 @@
 		return true;
 	}
 
+	function getFullFieldType(): FieldType {
+		return newFieldIsList ? (`list_${newFieldType}` as FieldType) : newFieldType;
+	}
+
 	function addField() {
 		if (!validateNewFieldName()) return;
 
 		const newField = {
 			name: newFieldName,
-			type: newFieldType,
+			type: getFullFieldType(),
 			required: newFieldRequired
 		};
 
@@ -137,6 +140,7 @@
 		// Reset form
 		newFieldName = '';
 		newFieldType = 'string';
+		newFieldIsList = false;
 		newFieldRequired = true;
 		editingNewField = false;
 	}
@@ -161,19 +165,28 @@
 		}
 	}
 
+	// Format field type for display
+	function formatFieldType(type: FieldType): string {
+		if (type.startsWith('list_')) {
+			const baseType = type.substring(5) as BaseFieldType;
+			return `List[${BASE_TYPE_LABELS[baseType]}]`;
+		}
+		return BASE_TYPE_LABELS[type as BaseFieldType];
+	}
+
 	// Update local fields when data.fields changes
 	$effect(() => {
 		currentFields = [...data.fields];
 	});
 </script>
 
-<div class="task-node w-56 rounded-md border border-gray-300 bg-white shadow-md">
+<div class="task-node w-52 rounded-md border border-gray-300 bg-white shadow-md">
 	<!-- Node handles -->
 	<Handle type="source" position={Position.Bottom} id="output" />
 	<Handle type="target" position={Position.Top} id="input" />
 
 	<!-- Header with editable class name -->
-	<div class="border-b border-gray-200 bg-gray-50 p-2">
+	<div class="border-b border-gray-200 bg-gray-50 p-1">
 		{#if editingClassName}
 			<div class="flex flex-col">
 				<input
@@ -181,7 +194,7 @@
 					bind:value={tempClassName}
 					onblur={updateClassName}
 					onkeydown={handleClassNameKeydown}
-					class="w-full rounded border border-gray-200 bg-white px-2 py-1 text-sm font-medium {classNameError
+					class="w-full rounded border border-gray-200 bg-white px-1.5 py-0.5 text-xs font-medium {classNameError
 						? 'border-red-500'
 						: ''}"
 					autofocus
@@ -192,7 +205,7 @@
 			</div>
 		{:else}
 			<div
-				class="w-full cursor-pointer rounded px-1 py-0.5 text-sm font-medium hover:bg-gray-100"
+				class="w-full cursor-pointer rounded px-1 py-0.5 text-center text-xs font-medium hover:bg-gray-100"
 				onclick={startEditingClassName}
 				role="button"
 				tabindex="0"
@@ -202,100 +215,124 @@
 		{/if}
 	</div>
 
-	<!-- Fields list - using currentFields for rendering -->
-	<div class="max-h-48 overflow-y-auto p-2">
-		<div class="mb-1 flex items-center justify-between">
-			<div class="text-xs font-semibold text-gray-500">Fields</div>
+	<!-- Fields list with compact styling -->
+	<div class="relative max-h-48 overflow-y-auto">
+		<!-- Plus button overlay -->
+		<div class="absolute right-2 top-0 z-10 flex translate-y-[-50%] items-center bg-white px-1">
 			{#if !editingNewField}
 				<button
-					class="rounded px-1.5 py-0.5 text-xs text-blue-500 hover:bg-blue-50"
+					class="flex h-4 w-4 items-center justify-center rounded-full bg-blue-100 text-xs text-blue-500 hover:bg-blue-200"
 					onclick={() => (editingNewField = true)}
+					title="Add field"
 				>
-					+ Add
+					<span class="font-bold leading-none">+</span>
 				</button>
 			{/if}
 		</div>
 
-		{#if !currentFields.length && !editingNewField}
-			<div class="py-1 text-xs italic text-gray-400">No fields defined</div>
-		{/if}
+		<div class="p-1.5">
+			{#if !currentFields.length && !editingNewField}
+				<div class="text-2xs py-1 italic text-gray-400">No fields</div>
+			{/if}
 
-		<!-- Existing fields -->
-		{#if currentFields.length > 0}
-			<div class="space-y-1.5">
-				{#each currentFields as field, index}
-					<div class="flex items-center justify-between rounded bg-gray-50 px-1.5 py-1">
-						<div class="flex flex-col">
-							<div class="text-xs font-medium">{field.name}</div>
-							<div class="text-xs text-gray-500">
-								{FIELD_TYPE_OPTIONS[field.type as FieldType]}{field.required ? '' : ' (optional)'}
+			<!-- Existing fields -->
+			{#if currentFields.length > 0}
+				<div class="space-y-1">
+					{#each currentFields as field, index}
+						<div class="text-2xs flex items-center justify-between rounded bg-gray-50 px-1 py-0.5">
+							<div class="flex items-center gap-1">
+								<span class="font-medium">{field.name}</span>
+								<span class="text-gray-500">:</span>
+								<span class="text-gray-600">{formatFieldType(field.type)}</span>
+								{#if !field.required}
+									<span class="text-gray-400">?</span>
+								{/if}
 							</div>
+							<button
+								class="ml-1 flex h-3 w-3 items-center justify-center rounded-full text-red-400 hover:bg-red-50 hover:text-red-500"
+								onclick={() => deleteField(index)}
+								title="Remove field"
+							>
+								<span class="leading-none">×</span>
+							</button>
 						</div>
-						<button
-							class="h-5 w-5 rounded-full text-xs text-red-400 hover:bg-red-50 hover:text-red-500"
-							onclick={() => deleteField(index)}
+					{/each}
+				</div>
+			{/if}
+
+			<!-- New field form -->
+			{#if editingNewField}
+				<div class="mt-1 rounded border border-gray-200 bg-gray-50 p-1">
+					<div class="mb-1 flex items-center gap-1">
+						<input
+							type="text"
+							bind:value={newFieldName}
+							onblur={validateNewFieldName}
+							placeholder="name"
+							class="text-2xs w-full flex-grow rounded border border-gray-200 px-1 py-0.5 {newFieldNameError
+								? 'border-red-500'
+								: ''}"
+						/>
+
+						<select
+							bind:value={newFieldType}
+							class="text-2xs w-16 rounded border border-gray-200 px-1 py-0.5"
 						>
-							✕
-						</button>
+							{#each Object.entries(BASE_TYPE_LABELS) as [value, label]}
+								<option {value}>{label}</option>
+							{/each}
+						</select>
+
+						<div class="flex items-center">
+							<label class="text-2xs ml-1">List</label>
+							<input
+								type="checkbox"
+								bind:checked={newFieldIsList}
+								class="ml-0.5 h-2.5 w-2.5 rounded"
+							/>
+						</div>
 					</div>
-				{/each}
-			</div>
-		{/if}
 
-		<!-- New field form -->
-		{#if editingNewField}
-			<div class="mt-2 rounded border border-gray-200 bg-gray-50 p-1.5">
-				<div class="mb-1.5">
-					<input
-						type="text"
-						bind:value={newFieldName}
-						onblur={validateNewFieldName}
-						placeholder="Field name"
-						class="w-full rounded border border-gray-200 px-1.5 py-0.5 text-xs {newFieldNameError
-							? 'border-red-500'
-							: ''}"
-					/>
 					{#if newFieldNameError}
-						<div class="mt-0.5 text-xs text-red-500">{newFieldNameError}</div>
+						<div class="text-2xs mb-1 text-red-500">{newFieldNameError}</div>
 					{/if}
-				</div>
 
-				<div class="mb-1.5 flex items-center">
-					<select
-						bind:value={newFieldType}
-						class="w-full rounded border border-gray-200 px-1 py-0.5 text-xs"
-					>
-						{#each Object.entries(FIELD_TYPE_OPTIONS) as [value, label]}
-							<option {value}>{label}</option>
-						{/each}
-					</select>
-				</div>
+					<div class="flex items-center justify-between">
+						<div class="text-2xs flex items-center">
+							<input
+								type="checkbox"
+								id="newFieldRequired{id}"
+								bind:checked={newFieldRequired}
+								class="h-2.5 w-2.5 rounded"
+							/>
+							<label for="newFieldRequired{id}" class="text-2xs ml-1">Required</label>
+						</div>
 
-				<div class="mb-1.5 flex items-center text-xs">
-					<input
-						type="checkbox"
-						id="newFieldRequired{id}"
-						bind:checked={newFieldRequired}
-						class="h-3 w-3 rounded"
-					/>
-					<label for="newFieldRequired{id}" class="ml-1 text-xs">Required</label>
+						<div class="flex justify-end space-x-1">
+							<button
+								class="text-2xs rounded bg-gray-200 px-1 py-0.5 hover:bg-gray-300"
+								onclick={cancelNewField}
+							>
+								Cancel
+							</button>
+							<button
+								class="text-2xs rounded bg-blue-500 px-1 py-0.5 text-white hover:bg-blue-600"
+								onclick={addField}
+							>
+								Add
+							</button>
+						</div>
+					</div>
 				</div>
-
-				<div class="flex justify-end space-x-1">
-					<button
-						class="rounded bg-gray-200 px-1.5 py-0.5 text-xs hover:bg-gray-300"
-						onclick={cancelNewField}
-					>
-						Cancel
-					</button>
-					<button
-						class="rounded bg-blue-500 px-1.5 py-0.5 text-xs text-white hover:bg-blue-600"
-						onclick={addField}
-					>
-						Add
-					</button>
-				</div>
-			</div>
-		{/if}
+			{/if}
+		</div>
 	</div>
 </div>
+
+<style>
+	/* Additional utility class for extra small text */
+	.text-2xs {
+		font-size: 0.65rem;
+		line-height: 1rem;
+	}
+</style>
