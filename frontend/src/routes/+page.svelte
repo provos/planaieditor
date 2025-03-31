@@ -61,14 +61,25 @@
 		};
 
 		// Update our nodes store
-		nodes.update((currentNodes) => [...currentNodes, newNode]);
-		console.log('Added new node:', newNode);
+		nodes.update((currentNodes) => {
+			console.log('Adding node to store:', newNode);
+			return [...currentNodes, newNode];
+		});
 	}
 
 	function onDragOver(event: DragEvent) {
 		event.preventDefault();
 		event.dataTransfer!.dropEffect = 'move';
 	}
+
+	// For debugging
+	$effect(() => {
+		const unsubscribe = nodes.subscribe((currentNodes) => {
+			console.log('Current nodes:', currentNodes);
+		});
+
+		return unsubscribe;
+	});
 </script>
 
 <div class="flex h-screen w-screen flex-col">

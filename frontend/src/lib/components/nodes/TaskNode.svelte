@@ -19,12 +19,14 @@
 	let { id, data } = $props<{ id: string; data: NodeData }>();
 
 	// State variables
+	let editingClassName = $state(false);
 	let classNameError = $state('');
 	let editingNewField = $state(false);
 	let newFieldName = $state('');
 	let newFieldType = $state<FieldType>('string');
 	let newFieldRequired = $state(true);
 	let newFieldNameError = $state('');
+	let tempClassName = $state(data.className);
 
 	// Field type options
 	const FIELD_TYPE_OPTIONS: Record<FieldType, string> = {
@@ -36,16 +38,26 @@
 		list_float: 'List[float]'
 	};
 
-	function updateClassName(e: Event) {
-		const target = e.target as HTMLInputElement;
-		const newClassName = target.value;
+	function startEditingClassName() {
+		tempClassName = data.className;
+		editingClassName = true;
+	}
 
-		if (!isValidPythonClassName(newClassName)) {
+	function updateClassName() {
+		if (!isValidPythonClassName(tempClassName)) {
 			classNameError = 'Invalid Python class name';
-		} else {
-			classNameError = '';
-			data.className = newClassName;
+			return;
 		}
+
+		classNameError = '';
+		data.className = tempClassName;
+		editingClassName = false;
+	}
+
+	function cancelEditingClassName() {
+		tempClassName = data.className;
+		classNameError = '';
+		editingClassName = false;
 	}
 
 	function validateNewFieldName() {
@@ -71,14 +83,16 @@
 	function addField() {
 		if (!validateNewFieldName()) return;
 
-		data.fields = [
-			...data.fields,
-			{
-				name: newFieldName,
-				type: newFieldType,
-				required: newFieldRequired
-			}
-		];
+		const newField = {
+			name: newFieldName,
+			type: newFieldType,
+			required: newFieldRequired
+		};
+
+		// Add the field to data
+		data.fields = [...data.fields, newField];
+		console.log('Added field:', newField);
+		console.log('Current fields:', data.fields);
 
 		// Reset form
 		newFieldName = '';
@@ -96,6 +110,15 @@
 		newFieldNameError = '';
 		editingNewField = false;
 	}
+
+	// Handle keydown for class name editing
+	function handleClassNameKeydown(event: KeyboardEvent) {
+		if (event.key === 'Enter') {
+			updateClassName();
+		} else if (event.key === 'Escape') {
+			cancelEditingClassName();
+		}
+	}
 </script>
 
 <div class="task-node w-56 rounded-md border border-gray-300 bg-white shadow-md">
@@ -103,19 +126,31 @@
 	<Handle type="source" position={Position.Bottom} id="output" />
 	<Handle type="target" position={Position.Top} id="input" />
 
-	<!-- Header with class name -->
+	<!-- Header with editable class name -->
 	<div class="border-b border-gray-200 bg-gray-50 p-2">
-		<label class="block text-xs font-medium text-gray-500">Class Name:</label>
-		<input
-			type="text"
-			value={data.className}
-			onblur={updateClassName}
-			class="w-full border border-gray-200 bg-white px-1 py-0.5 text-sm {classNameError
-				? 'border-red-500'
-				: ''}"
-		/>
-		{#if classNameError}
-			<div class="mt-0.5 text-xs text-red-500">{classNameError}</div>
+		{#if editingClassName}
+			<div class="flex flex-col">
+				<input
+					type="text"
+					bind:value={tempClassName}
+					onblur={updateClassName}
+					onkeydown={handleClassNameKeydown}
+					class="w-full rounded border border-gray-200 bg-white px-2 py-1 text-sm font-medium {classNameError
+						? 'border-red-500'
+						: ''}"
+					autofocus
+				/>
+				{#if classNameError}
+					<div class="mt-0.5 text-xs text-red-500">{classNameError}</div>
+				{/if}
+			</div>
+		{:else}
+			<div
+				class="w-full cursor-pointer rounded px-1 py-0.5 text-sm font-medium hover:bg-gray-100"
+				onclick={startEditingClassName}
+			>
+				{data.className || 'Unnamed Task'}
+			</div>
 		{/if}
 	</div>
 
@@ -133,12 +168,12 @@
 			{/if}
 		</div>
 
-		{#if data.fields.length === 0 && !editingNewField}
+		{#if !data.fields || (data.fields.length === 0 && !editingNewField)}
 			<div class="py-1 text-xs italic text-gray-400">No fields defined</div>
 		{/if}
 
 		<!-- Existing fields -->
-		{#if data.fields.length > 0}
+		{#if data.fields && data.fields.length > 0}
 			<div class="space-y-1.5">
 				{#each data.fields as field, index}
 					<div class="flex items-center justify-between rounded bg-gray-50 px-1.5 py-1">
