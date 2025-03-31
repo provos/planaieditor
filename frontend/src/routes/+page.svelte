@@ -4,13 +4,19 @@
 	import '@xyflow/svelte/dist/style.css';
 	import ToolShelf from '$lib/components/ToolShelf.svelte';
 	import TaskNode from '$lib/components/nodes/TaskNode.svelte';
+	import TaskWorkerNode from '$lib/components/nodes/TaskWorkerNode.svelte';
+	import LLMTaskWorkerNode from '$lib/components/nodes/LLMTaskWorkerNode.svelte';
+	import JoinedTaskWorkerNode from '$lib/components/nodes/JoinedTaskWorkerNode.svelte';
 	import { writable } from 'svelte/store';
 	import { allClassNames } from '$lib/stores/classNameStore';
 	import ContextMenu from '$lib/components/ContextMenu.svelte';
 
-	// Define node types with props for each node type
+	// Define node types
 	const nodeTypes: any = {
-		task: TaskNode
+		task: TaskNode,
+		taskworker: TaskWorkerNode,
+		llmtaskworker: LLMTaskWorkerNode,
+		joinedtaskworker: JoinedTaskWorkerNode
 	};
 
 	// Use Svelte stores for nodes and edges as required by @xyflow/svelte
@@ -74,27 +80,83 @@
 		// Create a unique ID for the new node
 		const id = `${nodeType}-${Date.now()}`;
 
-		// Generate a unique class name
-		let uniqueClassName = 'Task';
-		let counter = 1;
-		let classNameMap = new Map<string, string>();
+		// Configure node data based on node type
+		let nodeData: any = {};
 
-		// Get current class names
-		const unsubscribe = allClassNames.subscribe((map) => {
-			classNameMap = map;
-		});
-		unsubscribe();
+		switch (nodeType) {
+			case 'task':
+				// Generate a unique class name
+				let uniqueClassName = 'Task';
+				let counter = 1;
+				let classNameMap = new Map<string, string>();
 
-		// Get all existing class names
-		const existingNames = new Set(classNameMap.values());
+				// Get current class names
+				const unsubscribe = allClassNames.subscribe((map) => {
+					classNameMap = map;
+				});
+				unsubscribe();
 
-		// Make sure the class name is unique
-		while (existingNames.has(uniqueClassName)) {
-			uniqueClassName = `Task${counter}`;
-			counter++;
+				// Get all existing class names
+				const existingNames = new Set(classNameMap.values());
+
+				// Make sure the class name is unique
+				while (existingNames.has(uniqueClassName)) {
+					uniqueClassName = `Task${counter}`;
+					counter++;
+				}
+
+				nodeData = {
+					className: uniqueClassName,
+					fields: [],
+					nodeId: id
+				};
+				break;
+
+			case 'taskworker':
+				nodeData = {
+					workerName: 'BasicTaskWorker',
+					inputTypes: [],
+					outputTypes: [],
+					consumeWork: `def consume_work(self, task):
+    # Process the input task and produce output
+    # self.publish_work(output_task, input_task=task)
+    pass`,
+					nodeId: id
+				};
+				break;
+
+			case 'llmtaskworker':
+				nodeData = {
+					workerName: 'LLMTaskWorker',
+					inputTypes: [],
+					outputTypes: [],
+					prompt: `# Process the task using an LLM
+Analyze the following information and provide a response.`,
+					systemPrompt: `You are a helpful task processing assistant.`,
+					nodeId: id
+				};
+				break;
+
+			case 'joinedtaskworker':
+				nodeData = {
+					workerName: 'JoinedTaskWorker',
+					inputTypes: [],
+					outputTypes: [],
+					consumeWork: `def consume_work(self, task):
+    # Process the input task and produce output
+    # self.publish_work(output_task, input_task=task)
+    pass`,
+					joinMethod: 'merge',
+					nodeId: id
+				};
+				break;
+
+			default:
+				console.log(`Unknown node type: ${nodeType}`);
+				return;
 		}
 
-		// Create a new node object with explicit fields array
+		// Create a new node object
 		const newNode = {
 			id,
 			type: nodeType,
@@ -105,11 +167,7 @@
 			selected: false,
 			dragging: false,
 			zIndex: 0,
-			data: {
-				className: uniqueClassName,
-				fields: [], // Explicitly initialized empty array
-				nodeId: id // Pass the node ID for validation
-			}
+			data: nodeData
 		};
 
 		// Update our nodes store
