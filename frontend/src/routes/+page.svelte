@@ -43,7 +43,7 @@
 		// Create a unique ID for the new node
 		const id = `${nodeType}-${Date.now()}`;
 
-		// Create a new node object
+		// Create a new node object with explicit fields array
 		const newNode = {
 			id,
 			type: nodeType,
@@ -56,13 +56,13 @@
 			zIndex: 0,
 			data: {
 				className: 'NewTask',
-				fields: []
+				fields: [] // Explicitly initialized empty array
 			}
 		};
 
 		// Update our nodes store
 		nodes.update((currentNodes) => {
-			console.log('Adding node to store:', newNode);
+			console.log('Adding node to store:', JSON.stringify(newNode));
 			return [...currentNodes, newNode];
 		});
 	}
@@ -75,7 +75,8 @@
 	// For debugging
 	$effect(() => {
 		const unsubscribe = nodes.subscribe((currentNodes) => {
-			console.log('Current nodes:', currentNodes);
+			// Use JSON.stringify to see the full structure
+			console.log('Current nodes:', JSON.stringify(currentNodes));
 		});
 
 		return unsubscribe;

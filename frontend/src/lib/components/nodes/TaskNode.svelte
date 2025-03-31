@@ -18,6 +18,11 @@
 
 	let { id, data } = $props<{ id: string; data: NodeData }>();
 
+	// Ensure data.fields is initialized
+	if (!data.fields) {
+		data.fields = [];
+	}
+
 	// State variables
 	let editingClassName = $state(false);
 	let classNameError = $state('');
@@ -27,6 +32,9 @@
 	let newFieldRequired = $state(true);
 	let newFieldNameError = $state('');
 	let tempClassName = $state(data.className);
+
+	// Track current fields for debugging
+	let currentFields = $state<Field[]>([...data.fields]);
 
 	// Field type options
 	const FIELD_TYPE_OPTIONS: Record<FieldType, string> = {
@@ -91,8 +99,13 @@
 
 		// Add the field to data
 		data.fields = [...data.fields, newField];
+
+		// Update our local tracking state
+		currentFields = [...data.fields];
+
 		console.log('Added field:', newField);
-		console.log('Current fields:', data.fields);
+		console.log('Current fields from data:', data.fields);
+		console.log('Current fields from state:', currentFields);
 
 		// Reset form
 		newFieldName = '';
@@ -103,6 +116,7 @@
 
 	function deleteField(index: number) {
 		data.fields = data.fields.filter((_: Field, i: number) => i !== index);
+		currentFields = [...data.fields];
 	}
 
 	function cancelNewField() {
@@ -119,6 +133,11 @@
 			cancelEditingClassName();
 		}
 	}
+
+	// Debug effect to monitor fields
+	$effect(() => {
+		console.log('Current fields from $effect:', data.fields);
+	});
 </script>
 
 <div class="task-node w-56 rounded-md border border-gray-300 bg-white shadow-md">
@@ -154,7 +173,7 @@
 		{/if}
 	</div>
 
-	<!-- Fields list -->
+	<!-- Fields list - using currentFields for rendering -->
 	<div class="max-h-48 overflow-y-auto p-2">
 		<div class="mb-1 flex items-center justify-between">
 			<div class="text-xs font-semibold text-gray-500">Fields</div>
@@ -168,14 +187,14 @@
 			{/if}
 		</div>
 
-		{#if !data.fields || (data.fields.length === 0 && !editingNewField)}
+		{#if !currentFields.length && !editingNewField}
 			<div class="py-1 text-xs italic text-gray-400">No fields defined</div>
 		{/if}
 
 		<!-- Existing fields -->
-		{#if data.fields && data.fields.length > 0}
+		{#if currentFields.length > 0}
 			<div class="space-y-1.5">
-				{#each data.fields as field, index}
+				{#each currentFields as field, index}
 					<div class="flex items-center justify-between rounded bg-gray-50 px-1.5 py-1">
 						<div class="flex flex-col">
 							<div class="text-xs font-medium">{field.name}</div>
