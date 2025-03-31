@@ -5,6 +5,7 @@
 	import ToolShelf from '$lib/components/ToolShelf.svelte';
 	import TaskNode from '$lib/components/nodes/TaskNode.svelte';
 	import { writable } from 'svelte/store';
+	import { allClassNames } from '$lib/stores/classNameStore';
 
 	// Define node types
 	const nodeTypes: any = {
@@ -14,6 +15,29 @@
 	// Use Svelte stores for nodes and edges as required by @xyflow/svelte
 	const nodes = writable<Node[]>([]);
 	const edges = writable<Edge[]>([]);
+
+	// When nodes change, update the class name map
+	$effect(() => {
+		let classNameMap = new Map<string, string>();
+
+		// Subscribe to get current nodes
+		const unsubNodes = nodes.subscribe((currentNodes) => {
+			// Reset the map
+			classNameMap = new Map();
+
+			// Add each node's class name with its ID
+			currentNodes.forEach((node) => {
+				if (node.data?.className && typeof node.data.className === 'string') {
+					classNameMap.set(node.id, node.data.className);
+				}
+			});
+
+			// Update the store
+			allClassNames.set(classNameMap);
+		});
+
+		return unsubNodes;
+	});
 
 	// Process drag and drop of new nodes
 	function onDrop(event: DragEvent) {
@@ -43,6 +67,26 @@
 		// Create a unique ID for the new node
 		const id = `${nodeType}-${Date.now()}`;
 
+		// Generate a unique class name
+		let uniqueClassName = 'Task';
+		let counter = 1;
+		let classNameMap = new Map<string, string>();
+
+		// Get current class names
+		const unsubscribe = allClassNames.subscribe((map) => {
+			classNameMap = map;
+		});
+		unsubscribe();
+
+		// Get all existing class names
+		const existingNames = new Set(classNameMap.values());
+
+		// Make sure the class name is unique
+		while (existingNames.has(uniqueClassName)) {
+			uniqueClassName = `Task${counter}`;
+			counter++;
+		}
+
 		// Create a new node object with explicit fields array
 		const newNode = {
 			id,
@@ -55,14 +99,14 @@
 			dragging: false,
 			zIndex: 0,
 			data: {
-				className: 'NewTask',
-				fields: [] // Explicitly initialized empty array
+				className: uniqueClassName,
+				fields: [], // Explicitly initialized empty array
+				nodeId: id // Pass the node ID for validation
 			}
 		};
 
 		// Update our nodes store
 		nodes.update((currentNodes) => {
-			console.log('Adding node to store:', JSON.stringify(newNode));
 			return [...currentNodes, newNode];
 		});
 	}
@@ -71,16 +115,6 @@
 		event.preventDefault();
 		event.dataTransfer!.dropEffect = 'move';
 	}
-
-	// For debugging
-	$effect(() => {
-		const unsubscribe = nodes.subscribe((currentNodes) => {
-			// Use JSON.stringify to see the full structure
-			console.log('Current nodes:', JSON.stringify(currentNodes));
-		});
-
-		return unsubscribe;
-	});
 </script>
 
 <div class="flex h-screen w-screen flex-col">

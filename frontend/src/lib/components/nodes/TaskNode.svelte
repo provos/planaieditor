@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Handle, Position } from '@xyflow/svelte';
 	import { isValidPythonClassName, isValidPythonIdentifier } from '$lib/utils/validation';
+	import { allClassNames } from '$lib/stores/classNameStore';
 
 	type FieldType = 'string' | 'integer' | 'float' | 'list_string' | 'list_integer' | 'list_float';
 
@@ -14,6 +15,7 @@
 	interface NodeData {
 		className: string;
 		fields: Field[];
+		nodeId: string; // The node's ID for validation
 	}
 
 	let { id, data } = $props<{ id: string; data: NodeData }>();
@@ -33,7 +35,7 @@
 	let newFieldNameError = $state('');
 	let tempClassName = $state(data.className);
 
-	// Track current fields for debugging
+	// Track current fields for rendering
 	let currentFields = $state<Field[]>([...data.fields]);
 
 	// Field type options
@@ -51,13 +53,39 @@
 		editingClassName = true;
 	}
 
-	function updateClassName() {
-		if (!isValidPythonClassName(tempClassName)) {
+	function validateClassName(name: string): boolean {
+		// First check if it's a valid Python class name
+		if (!isValidPythonClassName(name)) {
 			classNameError = 'Invalid Python class name';
-			return;
+			return false;
+		}
+
+		// Then check if it's unique among all nodes
+		let isDuplicate = false;
+		const unsubscribe = allClassNames.subscribe((classMap: Map<string, string>) => {
+			// Check all class names except this node's own
+			classMap.forEach((className: string, nodeId: string) => {
+				if (nodeId !== data.nodeId && className === name) {
+					isDuplicate = true;
+				}
+			});
+		});
+		unsubscribe();
+
+		if (isDuplicate) {
+			classNameError = 'Class name already exists';
+			return false;
 		}
 
 		classNameError = '';
+		return true;
+	}
+
+	function updateClassName() {
+		if (!validateClassName(tempClassName)) {
+			return;
+		}
+
 		data.className = tempClassName;
 		editingClassName = false;
 	}
@@ -80,7 +108,7 @@
 		}
 
 		if (data.fields.some((f: Field) => f.name === newFieldName)) {
-			newFieldNameError = 'Name exists';
+			newFieldNameError = 'Field name exists';
 			return false;
 		}
 
@@ -102,10 +130,6 @@
 
 		// Update our local tracking state
 		currentFields = [...data.fields];
-
-		console.log('Added field:', newField);
-		console.log('Current fields from data:', data.fields);
-		console.log('Current fields from state:', currentFields);
 
 		// Reset form
 		newFieldName = '';
@@ -134,9 +158,9 @@
 		}
 	}
 
-	// Debug effect to monitor fields
+	// Update local fields when data.fields changes
 	$effect(() => {
-		console.log('Current fields from $effect:', data.fields);
+		currentFields = [...data.fields];
 	});
 </script>
 
@@ -167,6 +191,8 @@
 			<div
 				class="w-full cursor-pointer rounded px-1 py-0.5 text-sm font-medium hover:bg-gray-100"
 				onclick={startEditingClassName}
+				role="button"
+				tabindex="0"
 			>
 				{data.className || 'Unnamed Task'}
 			</div>
@@ -245,11 +271,11 @@
 				<div class="mb-1.5 flex items-center text-xs">
 					<input
 						type="checkbox"
-						id="newFieldRequired"
+						id="newFieldRequired{id}"
 						bind:checked={newFieldRequired}
 						class="h-3 w-3 rounded"
 					/>
-					<label for="newFieldRequired" class="ml-1 text-xs">Required</label>
+					<label for="newFieldRequired{id}" class="ml-1 text-xs">Required</label>
 				</div>
 
 				<div class="flex justify-end space-x-1">
