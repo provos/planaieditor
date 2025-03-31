@@ -6,6 +6,7 @@
 	import TaskNode from '$lib/components/nodes/TaskNode.svelte';
 	import { writable } from 'svelte/store';
 	import { allClassNames } from '$lib/stores/classNameStore';
+	import ContextMenu from '$lib/components/ContextMenu.svelte';
 
 	// Define node types
 	const nodeTypes: any = {
@@ -15,6 +16,12 @@
 	// Use Svelte stores for nodes and edges as required by @xyflow/svelte
 	const nodes = writable<Node[]>([]);
 	const edges = writable<Edge[]>([]);
+
+	// Context menu state
+	let showContextMenu = $state(false);
+	let contextMenuX = $state(0);
+	let contextMenuY = $state(0);
+	let contextMenuNode = $state<Node | null>(null);
 
 	// When nodes change, update the class name map
 	$effect(() => {
@@ -115,6 +122,57 @@
 		event.preventDefault();
 		event.dataTransfer!.dropEffect = 'move';
 	}
+
+	// Handle node context menu event from TaskNode
+	function handleNodeContextMenu(event: CustomEvent) {
+		const { event: originalEvent, node } = event.detail;
+
+		// Set the context menu position and node
+		contextMenuX = originalEvent.clientX;
+		contextMenuY = originalEvent.clientY;
+		contextMenuNode = node;
+		showContextMenu = true;
+	}
+
+	// Close the context menu
+	function closeContextMenu() {
+		showContextMenu = false;
+		contextMenuNode = null;
+	}
+
+	// Delete the selected node
+	function deleteNode() {
+		if (!contextMenuNode) return;
+
+		nodes.update((currentNodes) => currentNodes.filter((node) => node.id !== contextMenuNode!.id));
+
+		// Remove any connected edges
+		edges.update((currentEdges) =>
+			currentEdges.filter(
+				(edge) => edge.source !== contextMenuNode!.id && edge.target !== contextMenuNode!.id
+			)
+		);
+
+		// Close the context menu
+		closeContextMenu();
+	}
+
+	// Context menu items
+	const getContextMenuItems = () => [
+		{
+			label: 'Delete Node',
+			icon: '🗑️',
+			action: deleteNode,
+			danger: true
+		}
+	];
+
+	// Handle pane click to close context menu
+	function onPaneClick() {
+		if (showContextMenu) {
+			closeContextMenu();
+		}
+	}
 </script>
 
 <div class="flex h-screen w-screen flex-col">
@@ -131,9 +189,20 @@
 			ondragover={onDragOver}
 			class="flex-grow"
 			fitView
+			onpaneclick={onPaneClick}
+			on:nodecontextmenu={handleNodeContextMenu}
 		>
 			<Background />
 			<Controls />
 		</SvelteFlow>
+
+		{#if showContextMenu}
+			<ContextMenu
+				items={getContextMenuItems()}
+				x={contextMenuX}
+				y={contextMenuY}
+				onClose={closeContextMenu}
+			/>
+		{/if}
 	</div>
 </div>

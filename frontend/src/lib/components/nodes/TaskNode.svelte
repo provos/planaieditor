@@ -2,6 +2,7 @@
 	import { Handle, Position } from '@xyflow/svelte';
 	import { isValidPythonClassName, isValidPythonIdentifier } from '$lib/utils/validation';
 	import { allClassNames } from '$lib/stores/classNameStore';
+	import { createEventDispatcher } from 'svelte';
 
 	type FieldType = 'string' | 'integer' | 'float' | 'list_string' | 'list_integer' | 'list_float';
 
@@ -19,6 +20,9 @@
 	}
 
 	let { id, data } = $props<{ id: string; data: NodeData }>();
+
+	// Event dispatcher for node events
+	const dispatch = createEventDispatcher();
 
 	// Ensure data.fields is initialized
 	if (!data.fields) {
@@ -158,13 +162,40 @@
 		}
 	}
 
+	// Handle right-click for context menu
+	function handleContextMenu(event: MouseEvent) {
+		// Create a custom event with node data
+		const customEvent = new CustomEvent('nodecontextmenu', {
+			detail: {
+				event,
+				node: {
+					id,
+					data,
+					// Include other necessary node data
+					type: 'task',
+					position: { x: 0, y: 0 } // This will be updated by SvelteFlow
+				}
+			},
+			bubbles: true
+		});
+
+		// Dispatch the event
+		event.target?.dispatchEvent(customEvent);
+
+		// Prevent default browser context menu
+		event.preventDefault();
+	}
+
 	// Update local fields when data.fields changes
 	$effect(() => {
 		currentFields = [...data.fields];
 	});
 </script>
 
-<div class="task-node w-56 rounded-md border border-gray-300 bg-white shadow-md">
+<div
+	class="task-node w-56 rounded-md border border-gray-300 bg-white shadow-md"
+	oncontextmenu={handleContextMenu}
+>
 	<!-- Node handles -->
 	<Handle type="source" position={Position.Bottom} id="output" />
 	<Handle type="target" position={Position.Top} id="input" />
