@@ -1,0 +1,12 @@
+---
+description: 
+globs: *.ts,*.svelte
+alwaysApply: false
+---
+
+# We are writing Svelte 5 code
+
+- We make use of Svelte 5 runes: $state, $derived, and $effect
+- We employ universal reactivity with .svelte.js files rather than using stores
+- We use typescript instead of javascript
+- We use Svelte 5 snippets instead of Svelte 5 slots
