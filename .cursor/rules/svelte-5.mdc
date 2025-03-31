@@ -10,3 +10,4 @@ alwaysApply: false
 - We employ universal reactivity with .svelte.js files rather than using stores
 - We use typescript instead of javascript
 - We use Svelte 5 snippets instead of Svelte 5 slots
+- createEventDispatcher() is obsolete; use $props() instead
