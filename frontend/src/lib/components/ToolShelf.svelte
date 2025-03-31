@@ -10,8 +10,6 @@
 </script>
 
 <div class="flex gap-4">
-	<div class="text-lg font-bold">Tools:</div>
-
 	<div
 		class="cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-md transition-shadow hover:shadow-lg"
 		role="button"
