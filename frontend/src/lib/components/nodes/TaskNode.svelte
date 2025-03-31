@@ -2,6 +2,9 @@
 	import { Handle, Position } from '@xyflow/svelte';
 	import { isValidPythonClassName, isValidPythonIdentifier } from '$lib/utils/validation';
 	import { allClassNames } from '$lib/stores/classNameStore';
+	import Plus from 'phosphor-svelte/lib/Plus';
+	import Trash from 'phosphor-svelte/lib/Trash';
+	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
 
 	type BaseFieldType = 'string' | 'integer' | 'float';
 	type FieldType = BaseFieldType | `list_${BaseFieldType}`;
@@ -32,12 +35,12 @@
 	// State variables
 	let editingClassName = $state(false);
 	let classNameError = $state('');
-	let editingNewField = $state(false);
-	let newFieldName = $state('');
-	let newFieldType = $state<BaseFieldType>('string');
-	let newFieldIsList = $state(false);
-	let newFieldRequired = $state(true);
-	let newFieldNameError = $state('');
+	let editingFieldIndex = $state<number | null>(null);
+	let editingFieldName = $state('');
+	let editingFieldType = $state<BaseFieldType>('string');
+	let editingFieldIsList = $state(false);
+	let editingFieldRequired = $state(true);
+	let fieldNameError = $state('');
 	let tempClassName = $state(data.className);
 
 	// Track current fields for rendering
@@ -98,62 +101,92 @@
 		editingClassName = false;
 	}
 
-	function validateNewFieldName() {
-		if (!newFieldName) {
-			newFieldNameError = 'Required';
+	function startEditingField(index: number) {
+		const field = data.fields[index];
+		editingFieldIndex = index;
+		editingFieldName = field.name;
+
+		if (field.type.startsWith('list_')) {
+			editingFieldIsList = true;
+			editingFieldType = field.type.substring(5) as BaseFieldType;
+		} else {
+			editingFieldIsList = false;
+			editingFieldType = field.type as BaseFieldType;
+		}
+
+		editingFieldRequired = field.required;
+		fieldNameError = '';
+	}
+
+	function startAddingField() {
+		editingFieldIndex = -1;
+		editingFieldName = '';
+		editingFieldType = 'string';
+		editingFieldIsList = false;
+		editingFieldRequired = true;
+		fieldNameError = '';
+	}
+
+	function validateFieldName(name: string, currentIndex: number): boolean {
+		if (!name) {
+			fieldNameError = 'Required';
 			return false;
 		}
 
-		if (!isValidPythonIdentifier(newFieldName)) {
-			newFieldNameError = 'Invalid Python identifier';
+		if (!isValidPythonIdentifier(name)) {
+			fieldNameError = 'Invalid Python identifier';
 			return false;
 		}
 
-		if (data.fields.some((f: Field) => f.name === newFieldName)) {
-			newFieldNameError = 'Field name exists';
+		// Check if the name exists in other fields (ignore current field being edited)
+		if (data.fields.some((f: Field, i: number) => f.name === name && i !== currentIndex)) {
+			fieldNameError = 'Field name exists';
 			return false;
 		}
 
-		newFieldNameError = '';
+		fieldNameError = '';
 		return true;
 	}
 
 	function getFullFieldType(): FieldType {
-		return newFieldIsList ? (`list_${newFieldType}` as FieldType) : newFieldType;
+		return editingFieldIsList ? (`list_${editingFieldType}` as FieldType) : editingFieldType;
 	}
 
-	function addField() {
-		if (!validateNewFieldName()) return;
+	function saveField() {
+		if (!validateFieldName(editingFieldName, editingFieldIndex!)) return;
 
 		const newField = {
-			name: newFieldName,
+			name: editingFieldName,
 			type: getFullFieldType(),
-			required: newFieldRequired
+			required: editingFieldRequired
 		};
 
-		// Add the field to data
-		data.fields = [...data.fields, newField];
+		if (editingFieldIndex === -1) {
+			// Add new field
+			data.fields = [...data.fields, newField];
+		} else {
+			// Update existing field
+			data.fields = data.fields.map((field: Field, i: number) =>
+				i === editingFieldIndex ? newField : field
+			);
+		}
 
 		// Update our local tracking state
 		currentFields = [...data.fields];
 
 		// Reset form
-		newFieldName = '';
-		newFieldType = 'string';
-		newFieldIsList = false;
-		newFieldRequired = true;
-		editingNewField = false;
+		cancelFieldEditing();
+	}
+
+	function cancelFieldEditing() {
+		editingFieldIndex = null;
+		editingFieldName = '';
+		fieldNameError = '';
 	}
 
 	function deleteField(index: number) {
 		data.fields = data.fields.filter((_: Field, i: number) => i !== index);
 		currentFields = [...data.fields];
-	}
-
-	function cancelNewField() {
-		newFieldName = '';
-		newFieldNameError = '';
-		editingNewField = false;
 	}
 
 	// Handle keydown for class name editing
@@ -162,6 +195,15 @@
 			updateClassName();
 		} else if (event.key === 'Escape') {
 			cancelEditingClassName();
+		}
+	}
+
+	// Handle keydown for field editing
+	function handleFieldKeydown(event: KeyboardEvent) {
+		if (event.key === 'Enter') {
+			saveField();
+		} else if (event.key === 'Escape') {
+			cancelFieldEditing();
 		}
 	}
 
@@ -216,67 +258,134 @@
 	</div>
 
 	<!-- Fields list with compact styling -->
-	<div class="relative max-h-48 overflow-y-auto">
-		<!-- Plus button overlay -->
-		<div class="absolute right-2 top-0 z-10 flex translate-y-[-50%] items-center bg-white px-1">
-			{#if !editingNewField}
-				<button
-					class="flex h-4 w-4 items-center justify-center rounded-full bg-blue-100 text-xs text-blue-500 hover:bg-blue-200"
-					onclick={() => (editingNewField = true)}
-					title="Add field"
-				>
-					<span class="font-bold leading-none">+</span>
-				</button>
-			{/if}
-		</div>
+	<div class="relative h-full max-h-48 overflow-y-auto p-1.5">
+		{#if !currentFields.length && editingFieldIndex !== -1}
+			<div class="text-2xs py-0.5 italic text-gray-400">No fields</div>
+		{/if}
 
-		<div class="p-1.5">
-			{#if !currentFields.length && !editingNewField}
-				<div class="text-2xs py-1 italic text-gray-400">No fields</div>
-			{/if}
+		<!-- Existing fields -->
+		<div class="space-y-1">
+			{#each currentFields as field, index}
+				{#if editingFieldIndex === index}
+					<div class="rounded border border-blue-200 bg-blue-50 p-1">
+						<div class="mb-1 flex items-center gap-1">
+							<input
+								type="text"
+								bind:value={editingFieldName}
+								onkeydown={handleFieldKeydown}
+								class="text-2xs w-full flex-grow rounded border border-gray-200 px-1 py-0.5 {fieldNameError
+									? 'border-red-500'
+									: ''}"
+								autofocus
+							/>
 
-			<!-- Existing fields -->
-			{#if currentFields.length > 0}
-				<div class="space-y-1">
-					{#each currentFields as field, index}
-						<div class="text-2xs flex items-center justify-between rounded bg-gray-50 px-1 py-0.5">
-							<div class="flex items-center gap-1">
-								<span class="font-medium">{field.name}</span>
-								<span class="text-gray-500">:</span>
-								<span class="text-gray-600">{formatFieldType(field.type)}</span>
-								{#if !field.required}
-									<span class="text-gray-400">?</span>
-								{/if}
+							<select
+								bind:value={editingFieldType}
+								class="text-2xs w-14 rounded border border-gray-200 px-1 py-0.5"
+							>
+								{#each Object.entries(BASE_TYPE_LABELS) as [value, label]}
+									<option {value}>{label}</option>
+								{/each}
+							</select>
+
+							<div class="flex items-center">
+								<label class="text-2xs ml-0.5">List</label>
+								<input
+									type="checkbox"
+									bind:checked={editingFieldIsList}
+									class="ml-0.5 h-2.5 w-2.5 rounded"
+								/>
 							</div>
+						</div>
+
+						{#if fieldNameError}
+							<div class="text-2xs mb-1 text-red-500">{fieldNameError}</div>
+						{/if}
+
+						<div class="flex items-center justify-between">
+							<div class="text-2xs flex items-center">
+								<input
+									type="checkbox"
+									id="fieldRequired{id}{index}"
+									bind:checked={editingFieldRequired}
+									class="h-2.5 w-2.5 rounded"
+								/>
+								<label for="fieldRequired{id}{index}" class="text-2xs ml-0.5">Required</label>
+							</div>
+
+							<div class="flex justify-end space-x-1">
+								<button
+									class="text-2xs rounded bg-gray-200 px-1 py-0.5 hover:bg-gray-300"
+									onclick={cancelFieldEditing}
+								>
+									Cancel
+								</button>
+								<button
+									class="text-2xs rounded bg-blue-500 px-1 py-0.5 text-white hover:bg-blue-600"
+									onclick={saveField}
+								>
+									Save
+								</button>
+							</div>
+						</div>
+					</div>
+				{:else}
+					<div
+						class="text-2xs group flex cursor-pointer items-center justify-between rounded bg-gray-50 px-1 py-0.5 hover:bg-gray-100"
+						onclick={() => startEditingField(index)}
+					>
+						<div class="flex items-center gap-1">
+							<span class="font-medium">{field.name}</span>
+							<span class="text-gray-500">:</span>
+							<span class="text-gray-600">{formatFieldType(field.type)}</span>
+							{#if !field.required}
+								<span class="text-gray-400">?</span>
+							{/if}
+						</div>
+						<div class="flex items-center">
 							<button
-								class="ml-1 flex h-3 w-3 items-center justify-center rounded-full text-red-400 hover:bg-red-50 hover:text-red-500"
-								onclick={() => deleteField(index)}
+								class="ml-1 flex h-3.5 w-3.5 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-gray-200 hover:text-blue-500 group-hover:opacity-100"
+								onclick={(e) => {
+									e.stopPropagation();
+									startEditingField(index);
+								}}
+								title="Edit field"
+							>
+								<PencilSimple size={8} weight="bold" />
+							</button>
+							<button
+								class="ml-1 flex h-3.5 w-3.5 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
+								onclick={(e) => {
+									e.stopPropagation();
+									deleteField(index);
+								}}
 								title="Remove field"
 							>
-								<span class="leading-none">×</span>
+								<Trash size={8} weight="bold" />
 							</button>
 						</div>
-					{/each}
-				</div>
-			{/if}
+					</div>
+				{/if}
+			{/each}
 
 			<!-- New field form -->
-			{#if editingNewField}
-				<div class="mt-1 rounded border border-gray-200 bg-gray-50 p-1">
+			{#if editingFieldIndex === -1}
+				<div class="rounded border border-blue-200 bg-blue-50 p-1">
 					<div class="mb-1 flex items-center gap-1">
 						<input
 							type="text"
-							bind:value={newFieldName}
-							onblur={validateNewFieldName}
-							placeholder="name"
-							class="text-2xs w-full flex-grow rounded border border-gray-200 px-1 py-0.5 {newFieldNameError
+							bind:value={editingFieldName}
+							onkeydown={handleFieldKeydown}
+							placeholder="field_name"
+							class="text-2xs w-full flex-grow rounded border border-gray-200 px-1 py-0.5 {fieldNameError
 								? 'border-red-500'
 								: ''}"
+							autofocus
 						/>
 
 						<select
-							bind:value={newFieldType}
-							class="text-2xs w-16 rounded border border-gray-200 px-1 py-0.5"
+							bind:value={editingFieldType}
+							class="text-2xs w-14 rounded border border-gray-200 px-1 py-0.5"
 						>
 							{#each Object.entries(BASE_TYPE_LABELS) as [value, label]}
 								<option {value}>{label}</option>
@@ -284,17 +393,17 @@
 						</select>
 
 						<div class="flex items-center">
-							<label class="text-2xs ml-1">List</label>
+							<label class="text-2xs ml-0.5">List</label>
 							<input
 								type="checkbox"
-								bind:checked={newFieldIsList}
+								bind:checked={editingFieldIsList}
 								class="ml-0.5 h-2.5 w-2.5 rounded"
 							/>
 						</div>
 					</div>
 
-					{#if newFieldNameError}
-						<div class="text-2xs mb-1 text-red-500">{newFieldNameError}</div>
+					{#if fieldNameError}
+						<div class="text-2xs mb-1 text-red-500">{fieldNameError}</div>
 					{/if}
 
 					<div class="flex items-center justify-between">
@@ -302,22 +411,22 @@
 							<input
 								type="checkbox"
 								id="newFieldRequired{id}"
-								bind:checked={newFieldRequired}
+								bind:checked={editingFieldRequired}
 								class="h-2.5 w-2.5 rounded"
 							/>
-							<label for="newFieldRequired{id}" class="text-2xs ml-1">Required</label>
+							<label for="newFieldRequired{id}" class="text-2xs ml-0.5">Required</label>
 						</div>
 
 						<div class="flex justify-end space-x-1">
 							<button
 								class="text-2xs rounded bg-gray-200 px-1 py-0.5 hover:bg-gray-300"
-								onclick={cancelNewField}
+								onclick={cancelFieldEditing}
 							>
 								Cancel
 							</button>
 							<button
 								class="text-2xs rounded bg-blue-500 px-1 py-0.5 text-white hover:bg-blue-600"
-								onclick={addField}
+								onclick={saveField}
 							>
 								Add
 							</button>
@@ -326,6 +435,19 @@
 				</div>
 			{/if}
 		</div>
+
+		<!-- Plus button at the bottom center -->
+		{#if editingFieldIndex === null}
+			<div class="mt-2 flex justify-center">
+				<button
+					class="z-10 flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 text-blue-500 shadow-sm hover:bg-blue-200"
+					onclick={startAddingField}
+					title="Add field"
+				>
+					<Plus size={12} weight="bold" />
+				</button>
+			</div>
+		{/if}
 	</div>
 </div>
 
