@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
-
 	export interface ContextMenuItem {
 		label: string;
 		icon?: string;
@@ -15,9 +13,6 @@
 		y: number;
 		onClose: () => void;
 	}>();
-
-	// Event dispatcher
-	const dispatch = createEventDispatcher();
 
 	// Handle item click
 	function handleItemClick(item: ContextMenuItem) {

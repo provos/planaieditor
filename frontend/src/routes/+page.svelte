@@ -8,7 +8,7 @@
 	import { allClassNames } from '$lib/stores/classNameStore';
 	import ContextMenu from '$lib/components/ContextMenu.svelte';
 
-	// Define node types
+	// Define node types with props for each node type
 	const nodeTypes: any = {
 		task: TaskNode
 	};
@@ -123,13 +123,14 @@
 		event.dataTransfer!.dropEffect = 'move';
 	}
 
-	// Handle node context menu event from TaskNode
-	function handleNodeContextMenu(event: CustomEvent) {
-		const { event: originalEvent, node } = event.detail;
+	// Handle node context menu
+	function handleNodeContextMenu(event: MouseEvent, node: any) {
+		// Prevent the default context menu
+		event.preventDefault();
 
 		// Set the context menu position and node
-		contextMenuX = originalEvent.clientX;
-		contextMenuY = originalEvent.clientY;
+		contextMenuX = event.clientX;
+		contextMenuY = event.clientY;
 		contextMenuNode = node;
 		showContextMenu = true;
 	}
@@ -187,10 +188,17 @@
 			{nodeTypes}
 			ondrop={onDrop}
 			ondragover={onDragOver}
+			onclick={onPaneClick}
 			class="flex-grow"
 			fitView
-			onpaneclick={onPaneClick}
-			on:nodecontextmenu={handleNodeContextMenu}
+			nodesDraggable
+			proOptions={{ hideAttribution: true }}
+			on:nodecontextmenu={({ detail: { event, node } }) => {
+				if ('clientX' in event) {
+					// Check if it's a MouseEvent
+					handleNodeContextMenu(event, node);
+				}
+			}}
 		>
 			<Background />
 			<Controls />
