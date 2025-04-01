@@ -194,7 +194,9 @@
 	});
 </script>
 
-<div class="taskworker-node flex flex-col rounded-md border border-gray-300 bg-white shadow-md">
+<div
+	class="taskworker-node flex h-full flex-col rounded-md border border-gray-300 bg-white shadow-md"
+>
 	<!-- Node Resizer -->
 	<NodeResizer minWidth={250} minHeight={200} />
 
@@ -203,7 +205,7 @@
 	<Handle type="source" position={Position.Bottom} id="output" />
 
 	<!-- Header with editable worker name -->
-	<div class="border-b border-gray-200 bg-gray-50 p-1">
+	<div class="flex-none border-b border-gray-200 bg-gray-50 p-1">
 		{#if editingWorkerName}
 			<div class="flex flex-col">
 				<input
@@ -233,7 +235,7 @@
 		{/if}
 	</div>
 
-	<div class="flex h-full flex-col overflow-hidden p-1.5">
+	<div class="flex h-full min-h-0 flex-col overflow-hidden p-1.5">
 		<!-- Input Types Section - Now inferred from connections -->
 		<div class="mb-2 flex-none">
 			<div class="flex items-center justify-between">
@@ -344,7 +346,7 @@
 		</div>
 
 		<!-- Code Section -->
-		<div class="mt-3 flex min-h-0 flex-grow flex-col overflow-hidden">
+		<div class="flex min-h-0 flex-grow flex-col overflow-hidden">
 			<div class="mb-1 flex flex-none items-center">
 				<h3 class="text-2xs font-semibold text-gray-600">consume_work()</h3>
 			</div>

@@ -222,7 +222,7 @@
 	});
 </script>
 
-<div class="task-node flex flex-col rounded-md border border-gray-300 bg-white shadow-md">
+<div class="task-node flex h-full flex-col rounded-md border border-gray-300 bg-white shadow-md">
 	<!-- Node Resizer -->
 	<NodeResizer minWidth={200} minHeight={150} />
 
@@ -261,7 +261,7 @@
 	</div>
 
 	<!-- Fields list with compact styling -->
-	<div class="relative h-full flex-grow overflow-y-auto p-1.5">
+	<div class="relative h-full min-h-0 flex-grow overflow-y-auto p-1.5">
 		{#if !currentFields.length && editingFieldIndex !== -1}
 			<div class="text-2xs py-0.5 italic text-gray-400">No fields</div>
 		{/if}

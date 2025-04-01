@@ -193,7 +193,9 @@
 	});
 </script>
 
-<div class="llmtaskworker-node flex flex-col rounded-md border border-gray-300 bg-white shadow-md">
+<div
+	class="llmtaskworker-node flex h-full flex-col rounded-md border border-gray-300 bg-white shadow-md"
+>
 	<!-- Node Resizer -->
 	<NodeResizer minWidth={250} minHeight={250} />
 
@@ -231,7 +233,7 @@
 		{/if}
 	</div>
 
-	<div class="flex h-full flex-col overflow-hidden p-1.5">
+	<div class="flex h-full min-h-0 flex-col overflow-hidden p-1.5">
 		<!-- Input Types Section - Now inferred from connections -->
 		<div class="mb-2 flex-none">
 			<div class="flex items-center justify-between">
@@ -341,14 +343,14 @@
 			</div>
 		</div>
 
-		<!-- Prompt and System Prompt Sections - Each takes half of remaining space -->
+		<!-- Prompt and System Prompt Sections -->
 		<div class="flex min-h-0 flex-grow flex-col overflow-hidden">
 			<!-- Prompt Section -->
-			<div class="mb-2 min-h-0 flex-1">
+			<div class="mb-2 flex min-h-0 flex-1 flex-col">
 				<div class="mb-1 flex flex-none items-center">
 					<h3 class="text-2xs font-semibold text-gray-600">Prompt</h3>
 				</div>
-				<div class="h-full">
+				<div class="min-h-0 flex-grow">
 					<CodeMirror
 						value={data.prompt}
 						lang={markdown()}
@@ -380,11 +382,11 @@
 			</div>
 
 			<!-- System Prompt Section -->
-			<div class="min-h-0 flex-1">
+			<div class="flex min-h-0 flex-1 flex-col">
 				<div class="mb-1 flex flex-none items-center">
 					<h3 class="text-2xs font-semibold text-gray-600">System Prompt</h3>
 				</div>
-				<div class="h-full">
+				<div class="min-h-0 flex-grow">
 					<CodeMirror
 						value={data.systemPrompt}
 						lang={markdown()}

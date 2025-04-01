@@ -231,7 +231,7 @@
 </script>
 
 <div
-	class="joinedtaskworker-node flex flex-col rounded-md border border-gray-300 bg-white shadow-md"
+	class="joinedtaskworker-node flex h-full flex-col rounded-md border border-gray-300 bg-white shadow-md"
 >
 	<!-- Node Resizer -->
 	<NodeResizer minWidth={250} minHeight={200} />
@@ -270,7 +270,7 @@
 		{/if}
 	</div>
 
-	<div class="flex h-full flex-col overflow-hidden p-1.5">
+	<div class="flex h-full min-h-0 flex-col overflow-hidden p-1.5">
 		<!-- Input Types Section -->
 		<div class="mb-2 flex-none">
 			<div class="flex items-center justify-between">
