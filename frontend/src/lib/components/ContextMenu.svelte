@@ -1,9 +1,9 @@
 <script lang="ts">
-	import type { ComponentType, SvelteComponent } from 'svelte';
+	import type { Component } from 'svelte';
 
 	export interface ContextMenuItem {
 		label: string;
-		iconComponent?: ComponentType<SvelteComponent>;
+		iconComponent?: Component;
 		action: () => void;
 		danger?: boolean;
 	}
