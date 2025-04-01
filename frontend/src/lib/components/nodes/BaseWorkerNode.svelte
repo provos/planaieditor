@@ -180,8 +180,8 @@
 	class="base-worker-node flex h-full flex-col rounded-md border border-gray-300 bg-white shadow-md"
 >
 	<NodeResizer {minWidth} {minHeight} />
-	<Handle type="target" position={Position.Top} id="input" />
-	<Handle type="source" position={Position.Bottom} id="output" />
+	<Handle type="target" position={Position.Left} id="input" />
+	<Handle type="source" position={Position.Right} id="output" />
 
 	<!-- Header -->
 	<div class="flex-none border-b border-gray-200 bg-gray-50 p-1">

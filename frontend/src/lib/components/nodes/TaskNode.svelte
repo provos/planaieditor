@@ -227,9 +227,8 @@
 	<NodeResizer minWidth={200} minHeight={150} />
 
 	<!-- Node handles -->
-	<Handle type="source" position={Position.Bottom} id="output" />
-	<Handle type="target" position={Position.Top} id="input" />
-
+	<Handle type="source" position={Position.Right} id="output" />
+	
 	<!-- Header with editable class name -->
 	<div class="flex-none border-b border-gray-200 bg-gray-50 p-1">
 		{#if editingClassName}
@@ -249,6 +248,7 @@
 				{/if}
 			</div>
 		{:else}
+			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<div
 				class="w-full cursor-pointer rounded px-1 py-0.5 text-center text-xs font-medium hover:bg-gray-100"
 				onclick={startEditingClassName}
@@ -333,9 +333,12 @@
 						</div>
 					</div>
 				{:else}
+					<!-- svelte-ignore a11y_click_events_have_key_events -->
 					<div
 						class="text-2xs group flex cursor-pointer items-center justify-between rounded bg-gray-50 px-1 py-0.5 hover:bg-gray-100"
 						onclick={() => startEditingField(index)}
+						role="button"
+						tabindex="0"
 					>
 						<div class="flex items-center gap-1">
 							<span class="font-medium">{field.name}</span>
