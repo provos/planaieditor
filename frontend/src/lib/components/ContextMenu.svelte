@@ -1,7 +1,9 @@
 <script lang="ts">
+	import type { ComponentType, SvelteComponent } from 'svelte';
+
 	export interface ContextMenuItem {
 		label: string;
-		icon?: string;
+		iconComponent?: ComponentType<SvelteComponent>;
 		action: () => void;
 		danger?: boolean;
 	}
@@ -52,8 +54,8 @@
 					: 'text-gray-700'}"
 				onclick={() => handleItemClick(item)}
 			>
-				{#if item.icon}
-					<span class="mr-2">{item.icon}</span>
+				{#if item.iconComponent}
+					<svelte:component this={item.iconComponent} class="mr-2 h-4 w-4" />
 				{/if}
 				{item.label}
 			</button>

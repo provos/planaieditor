@@ -11,6 +11,8 @@
 	import { allClassNames } from '$lib/stores/classNameStore';
 	import ContextMenu from '$lib/components/ContextMenu.svelte';
 	import type { ContextMenuItem } from '$lib/components/ContextMenu.svelte';
+	import Trash from 'phosphor-svelte/lib/Trash';
+	import Scissors from 'phosphor-svelte/lib/Scissors';
 
 	// Define node types
 	const nodeTypes: any = {
@@ -236,13 +238,13 @@ Analyze the following information and provide a response.`,
 		closeContextMenu();
 	}
 
-	// Context menu items - now dynamic
+	// Context menu items - now dynamic with Phosphor icons
 	const getContextMenuItems = (): ContextMenuItem[] => {
 		if (contextMenuNode) {
 			return [
 				{
 					label: 'Delete Node',
-					icon: '🗑️',
+					iconComponent: Trash,
 					action: deleteNode,
 					danger: true
 				}
@@ -251,7 +253,7 @@ Analyze the following information and provide a response.`,
 			return [
 				{
 					label: 'Delete Edge',
-					icon: '✂️',
+					iconComponent: Scissors,
 					action: deleteEdge,
 					danger: true
 				}
