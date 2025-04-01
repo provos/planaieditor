@@ -4,8 +4,7 @@
 	import { allClassNames } from '$lib/stores/classNameStore';
 	import Trash from 'phosphor-svelte/lib/Trash';
 	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
-	import CodeMirror from 'svelte-codemirror-editor';
-	import { python } from '@codemirror/lang-python';
+	import EditableCodeSection from '$lib/components/EditableCodeSection.svelte';
 
 	interface WorkerData {
 		workerName: string;
@@ -159,9 +158,9 @@
 		typeError = '';
 	}
 
-	// Handle code updates from CodeMirror
-	function handleCodeUpdate(event: CustomEvent) {
-		data.consumeWork = event.detail;
+	// Simplified handleCodeUpdate for the new component
+	function handleCodeUpdate(newCode: string) {
+		data.consumeWork = newCode;
 	}
 
 	// Add a new output type from the dropdown
@@ -345,42 +344,14 @@
 			</div>
 		</div>
 
-		<!-- Code Section -->
+		<!-- Code Section using new component -->
 		<div class="flex min-h-0 flex-grow flex-col overflow-hidden">
-			<div class="mb-1 flex flex-none items-center">
-				<h3 class="text-2xs font-semibold text-gray-600">consume_work()</h3>
-			</div>
-
-			<div class="flex-grow overflow-hidden">
-				<CodeMirror
-					value={data.consumeWork}
-					lang={python()}
-					styles={{
-						'&': {
-							border: '1px solid #e2e8f0',
-							borderRadius: '0.25rem',
-							fontSize: '0.7rem',
-							height: '100%',
-							width: '100%',
-							overflow: 'hidden',
-							display: 'flex',
-							flexDirection: 'column',
-							minHeight: '3rem'
-						},
-						'.cm-content': {
-							fontFamily: 'monospace'
-						},
-						'.cm-scroller': {
-							overflow: 'auto'
-						},
-						'.cm-editor': {
-							height: '100%'
-						}
-					}}
-					on:change={handleCodeUpdate}
-					basic={true}
-				/>
-			</div>
+			<EditableCodeSection
+				title="consume_work()"
+				code={data.consumeWork}
+				language="python"
+				onUpdate={handleCodeUpdate}
+			/>
 		</div>
 	</div>
 </div>

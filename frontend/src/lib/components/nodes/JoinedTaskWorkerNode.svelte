@@ -7,6 +7,8 @@
 	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
 	import Code from 'phosphor-svelte/lib/Code';
 	import ArrowsIn from 'phosphor-svelte/lib/ArrowsIn';
+	import EditableCodeSection from '$lib/components/EditableCodeSection.svelte';
+	import type { Node } from '@xyflow/svelte';
 
 	interface JoinedWorkerData {
 		workerName: string;
@@ -42,9 +44,7 @@
 	// State variables
 	let editingWorkerName = $state(false);
 	let nameError = $state('');
-	let editingCode = $state(false);
 	let tempWorkerName = $state(data.workerName);
-	let tempCode = $state(data.consumeWork);
 
 	// Type editing states
 	let editingInputType = $state<number | null>(null);
@@ -192,20 +192,9 @@
 		typeError = '';
 	}
 
-	// Code editing
-	function startEditingCode() {
-		tempCode = data.consumeWork;
-		editingCode = true;
-	}
-
-	function saveCode() {
-		data.consumeWork = tempCode;
-		editingCode = false;
-	}
-
-	function cancelEditingCode() {
-		tempCode = data.consumeWork;
-		editingCode = false;
+	// Simplified handleCodeUpdate for the new component
+	function handleCodeUpdate(newCode: string) {
+		data.consumeWork = newCode;
 	}
 
 	// Join method handling
@@ -218,7 +207,6 @@
 	function handleKeydown(event: KeyboardEvent) {
 		if (event.key === 'Escape') {
 			cancelTypeEditing();
-			cancelEditingCode();
 		}
 	}
 
@@ -532,51 +520,15 @@
 			</div>
 		</div>
 
-		<!-- Code Section (only shown when join method is 'custom') -->
+		<!-- Code Section using new component (only if joinMethod === 'custom') -->
 		{#if joinMethod === 'custom'}
 			<div class="flex min-h-0 flex-grow flex-col overflow-hidden">
-				<div class="mb-1 flex flex-none items-center justify-between">
-					<h3 class="text-2xs font-semibold text-gray-600">consume_work()</h3>
-					<button
-						class="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-blue-100 text-blue-500 shadow-sm hover:bg-blue-200"
-						onclick={startEditingCode}
-						title="Edit code"
-					>
-						<Code size={8} weight="bold" />
-					</button>
-				</div>
-
-				{#if editingCode}
-					<div
-						class="flex min-h-0 flex-grow flex-col rounded border border-blue-200 bg-blue-50 p-1"
-					>
-						<div class="min-h-0 flex-grow">
-							<textarea
-								bind:value={tempCode}
-								class="text-2xs h-full w-full rounded border border-gray-200 bg-gray-50 px-1.5 py-1 font-mono"
-								style="resize: none;"
-							></textarea>
-						</div>
-						<div class="mt-1 flex flex-none justify-end space-x-1">
-							<button
-								class="text-2xs rounded bg-gray-200 px-1 py-0.5 hover:bg-gray-300"
-								onclick={cancelEditingCode}
-							>
-								Cancel
-							</button>
-							<button
-								class="text-2xs rounded bg-blue-500 px-1 py-0.5 text-white hover:bg-blue-600"
-								onclick={saveCode}
-							>
-								Save
-							</button>
-						</div>
-					</div>
-				{:else}
-					<div class="flex-grow overflow-auto rounded border border-gray-200 bg-gray-50 p-1">
-						<pre class="text-2xs whitespace-pre-wrap font-mono">{data.consumeWork}</pre>
-					</div>
-				{/if}
+				<EditableCodeSection
+					title="consume_work()"
+					code={data.consumeWork}
+					language="python"
+					onUpdate={handleCodeUpdate}
+				/>
 			</div>
 		{/if}
 	</div>

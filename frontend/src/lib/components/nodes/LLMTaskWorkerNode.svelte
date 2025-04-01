@@ -4,8 +4,7 @@
 	import { allClassNames } from '$lib/stores/classNameStore';
 	import Trash from 'phosphor-svelte/lib/Trash';
 	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
-	import CodeMirror from 'svelte-codemirror-editor';
-	import { markdown } from '@codemirror/lang-markdown';
+	import EditableCodeSection from '$lib/components/EditableCodeSection.svelte';
 
 	interface LLMWorkerData {
 		workerName: string;
@@ -160,14 +159,14 @@
 		typeError = '';
 	}
 
-	// Handle prompt updates from CodeMirror
-	function handlePromptUpdate(event: CustomEvent) {
-		data.prompt = event.detail;
+	// Simplified handlePromptUpdate for the new component
+	function handlePromptUpdate(newCode: string) {
+		data.prompt = newCode;
 	}
 
-	// Handle system prompt updates from CodeMirror
-	function handleSystemPromptUpdate(event: CustomEvent) {
-		data.systemPrompt = event.detail;
+	// Simplified handleSystemPromptUpdate for the new component
+	function handleSystemPromptUpdate(newCode: string) {
+		data.systemPrompt = newCode;
 	}
 
 	// Add a new output type from the dropdown
@@ -344,81 +343,20 @@
 			</div>
 		</div>
 
-		<!-- Prompt and System Prompt Sections -->
-		<div class="flex min-h-0 flex-grow flex-col overflow-hidden">
-			<!-- Prompt Section -->
-			<div class="mb-2 flex min-h-0 flex-1 flex-col">
-				<div class="mb-1 flex flex-none items-center">
-					<h3 class="text-2xs font-semibold text-gray-600">Prompt</h3>
-				</div>
-				<div class="flex-grow overflow-hidden">
-					<CodeMirror
-						value={data.prompt}
-						lang={markdown()}
-						styles={{
-							'&': {
-								border: '1px solid #e2e8f0',
-								borderRadius: '0.25rem',
-								fontSize: '0.7rem',
-								height: '100%',
-								width: '100%',
-								overflow: 'hidden',
-								display: 'flex',
-								flexDirection: 'column',
-								minHeight: '3rem'
-							},
-							'.cm-content': {
-								fontFamily: 'monospace'
-							},
-							'.cm-scroller': {
-								overflow: 'auto'
-							},
-							'.cm-editor': {
-								height: '100%'
-							}
-						}}
-						on:change={handlePromptUpdate}
-						basic={true}
-					/>
-				</div>
-			</div>
-
-			<!-- System Prompt Section -->
-			<div class="flex min-h-0 flex-grow flex-col overflow-hidden">
-				<div class="mb-1 flex flex-none items-center">
-					<h3 class="text-2xs font-semibold text-gray-600">System Prompt</h3>
-				</div>
-				<div class="flex-grow overflow-hidden">
-					<CodeMirror
-						value={data.systemPrompt}
-						lang={markdown()}
-						styles={{
-							'&': {
-								border: '1px solid #e2e8f0',
-								borderRadius: '0.25rem',
-								fontSize: '0.7rem',
-								height: '100%',
-								width: '100%',
-								overflow: 'hidden',
-								display: 'flex',
-								flexDirection: 'column',
-								minHeight: '3rem'
-							},
-							'.cm-content': {
-								fontFamily: 'monospace'
-							},
-							'.cm-scroller': {
-								overflow: 'auto'
-							},
-							'.cm-editor': {
-								height: '100%'
-							}
-						}}
-						on:change={handleSystemPromptUpdate}
-						basic={true}
-					/>
-				</div>
-			</div>
+		<!-- Prompt and System Prompt Sections using new component -->
+		<div class="flex min-h-0 flex-grow flex-col space-y-2 overflow-hidden">
+			<EditableCodeSection
+				title="Prompt"
+				code={data.prompt}
+				language="markdown"
+				onUpdate={handlePromptUpdate}
+			/>
+			<EditableCodeSection
+				title="System Prompt"
+				code={data.systemPrompt}
+				language="markdown"
+				onUpdate={handleSystemPromptUpdate}
+			/>
 		</div>
 	</div>
 </div>
