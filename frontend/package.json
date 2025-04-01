@@ -42,6 +42,7 @@
 		"vitest": "^3.0.0"
 	},
 	"dependencies": {
+		"@codemirror/lang-markdown": "^6.3.2",
 		"@codemirror/lang-python": "^6.1.7",
 		"@xyflow/svelte": "^0.1.33",
 		"codemirror": "^6.0.1",
