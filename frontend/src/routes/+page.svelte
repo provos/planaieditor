@@ -10,6 +10,7 @@
 	import { writable } from 'svelte/store';
 	import { allClassNames } from '$lib/stores/classNameStore';
 	import ContextMenu from '$lib/components/ContextMenu.svelte';
+	import type { ContextMenuItem } from '$lib/components/ContextMenu.svelte';
 
 	// Define node types
 	const nodeTypes: any = {
@@ -28,6 +29,7 @@
 	let contextMenuX = $state(0);
 	let contextMenuY = $state(0);
 	let contextMenuNode = $state<Node | null>(null);
+	let contextMenuEdge = $state<Edge | null>(null);
 
 	// When nodes change, update the class name map
 	$effect(() => {
@@ -183,13 +185,22 @@ Analyze the following information and provide a response.`,
 
 	// Handle node context menu
 	function handleNodeContextMenu(event: MouseEvent, node: any) {
-		// Prevent the default context menu
 		event.preventDefault();
-
-		// Set the context menu position and node
 		contextMenuX = event.clientX;
 		contextMenuY = event.clientY;
 		contextMenuNode = node;
+		contextMenuEdge = null;
+		showContextMenu = true;
+	}
+
+	// Handle edge context menu
+	function handleEdgeContextMenu(event: CustomEvent) {
+		const { event: originalEvent, edge } = event.detail;
+		originalEvent.preventDefault();
+		contextMenuX = originalEvent.clientX;
+		contextMenuY = originalEvent.clientY;
+		contextMenuEdge = edge;
+		contextMenuNode = null;
 		showContextMenu = true;
 	}
 
@@ -197,6 +208,7 @@ Analyze the following information and provide a response.`,
 	function closeContextMenu() {
 		showContextMenu = false;
 		contextMenuNode = null;
+		contextMenuEdge = null;
 	}
 
 	// Delete the selected node
@@ -212,19 +224,41 @@ Analyze the following information and provide a response.`,
 			)
 		);
 
-		// Close the context menu
 		closeContextMenu();
 	}
 
-	// Context menu items
-	const getContextMenuItems = () => [
-		{
-			label: 'Delete Node',
-			icon: '🗑️',
-			action: deleteNode,
-			danger: true
+	// Delete the selected edge
+	function deleteEdge() {
+		if (!contextMenuEdge) return;
+
+		edges.update((currentEdges) => currentEdges.filter((edge) => edge.id !== contextMenuEdge!.id));
+
+		closeContextMenu();
+	}
+
+	// Context menu items - now dynamic
+	const getContextMenuItems = (): ContextMenuItem[] => {
+		if (contextMenuNode) {
+			return [
+				{
+					label: 'Delete Node',
+					icon: '🗑️',
+					action: deleteNode,
+					danger: true
+				}
+			];
+		} else if (contextMenuEdge) {
+			return [
+				{
+					label: 'Delete Edge',
+					icon: '✂️',
+					action: deleteEdge,
+					danger: true
+				}
+			];
 		}
-	];
+		return [];
+	};
 
 	// Handle pane click to close context menu
 	function onPaneClick() {
@@ -253,10 +287,10 @@ Analyze the following information and provide a response.`,
 			proOptions={{ hideAttribution: true }}
 			on:nodecontextmenu={({ detail: { event, node } }) => {
 				if ('clientX' in event) {
-					// Check if it's a MouseEvent
 					handleNodeContextMenu(event, node);
 				}
 			}}
+			on:edgecontextmenu={handleEdgeContextMenu}
 		>
 			<Background />
 			<Controls />
