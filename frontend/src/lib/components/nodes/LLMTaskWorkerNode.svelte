@@ -363,7 +363,8 @@
 								width: '100%',
 								overflow: 'hidden',
 								display: 'flex',
-								flexDirection: 'column'
+								flexDirection: 'column',
+								minHeight: '3rem'
 							},
 							'.cm-content': {
 								fontFamily: 'monospace'
@@ -399,7 +400,8 @@
 								width: '100%',
 								overflow: 'hidden',
 								display: 'flex',
-								flexDirection: 'column'
+								flexDirection: 'column',
+								minHeight: '3rem'
 							},
 							'.cm-content': {
 								fontFamily: 'monospace'
