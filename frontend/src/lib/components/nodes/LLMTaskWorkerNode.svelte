@@ -222,6 +222,7 @@
 				{/if}
 			</div>
 		{:else}
+			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<div
 				class="w-full cursor-pointer rounded px-1 py-0.5 text-center text-xs font-medium hover:bg-gray-100"
 				onclick={startEditingName}
@@ -350,7 +351,7 @@
 				<div class="mb-1 flex flex-none items-center">
 					<h3 class="text-2xs font-semibold text-gray-600">Prompt</h3>
 				</div>
-				<div class="min-h-0 flex-grow">
+				<div class="flex-grow overflow-hidden">
 					<CodeMirror
 						value={data.prompt}
 						lang={markdown()}
@@ -383,11 +384,11 @@
 			</div>
 
 			<!-- System Prompt Section -->
-			<div class="flex min-h-0 flex-1 flex-col">
+			<div class="flex min-h-0 flex-grow flex-col overflow-hidden">
 				<div class="mb-1 flex flex-none items-center">
 					<h3 class="text-2xs font-semibold text-gray-600">System Prompt</h3>
 				</div>
-				<div class="min-h-0 flex-grow">
+				<div class="flex-grow overflow-hidden">
 					<CodeMirror
 						value={data.systemPrompt}
 						lang={markdown()}
