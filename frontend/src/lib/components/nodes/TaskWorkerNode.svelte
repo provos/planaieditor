@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { Handle, Position } from '@xyflow/svelte';
-	import { isValidPythonClassName, isValidPythonIdentifier } from '$lib/utils/validation';
+	import { isValidPythonClassName } from '$lib/utils/validation';
 	import { allClassNames } from '$lib/stores/classNameStore';
-	import Plus from 'phosphor-svelte/lib/Plus';
 	import Trash from 'phosphor-svelte/lib/Trash';
 	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
-	import Code from 'phosphor-svelte/lib/Code';
+	import CodeMirror from 'svelte-codemirror-editor';
+	import { python } from '@codemirror/lang-python';
 
 	interface WorkerData {
 		workerName: string;
@@ -37,19 +37,28 @@
 	// State variables
 	let editingWorkerName = $state(false);
 	let nameError = $state('');
-	let editingCode = $state(false);
 	let tempWorkerName = $state(data.workerName);
-	let tempCode = $state(data.consumeWork);
 
 	// Type editing states
-	let editingInputType = $state<number | null>(null);
 	let editingOutputType = $state<number | null>(null);
 	let tempType = $state('');
 	let typeError = $state('');
 
+	// Available task classes for output selection
+	let availableTaskClasses = $state<string[]>([]);
+
 	// Track current types for rendering
-	let currentInputTypes = $state<string[]>([...data.inputTypes]);
+	let inferredInputTypes = $state<string[]>([]);
 	let currentOutputTypes = $state<string[]>([...data.outputTypes]);
+
+	// Subscribe to the allClassNames store for output type selection
+	$effect(() => {
+		const unsubscribe = allClassNames.subscribe((classMap) => {
+			availableTaskClasses = Array.from(classMap.values());
+		});
+
+		return unsubscribe;
+	});
 
 	function startEditingName() {
 		tempWorkerName = data.workerName;
@@ -94,39 +103,6 @@
 		} else if (event.key === 'Escape') {
 			cancelEditingName();
 		}
-	}
-
-	// Input type handling
-	function startEditingInputType(index: number = -1) {
-		if (index >= 0) {
-			tempType = data.inputTypes[index];
-		} else {
-			tempType = '';
-		}
-		editingInputType = index;
-		typeError = '';
-	}
-
-	function saveInputType() {
-		if (!validateType(tempType)) return;
-
-		if (editingInputType === -1) {
-			// Add new type
-			data.inputTypes = [...data.inputTypes, tempType];
-		} else {
-			// Update existing type
-			data.inputTypes = data.inputTypes.map((type: string, i: number) =>
-				i === editingInputType ? tempType : type
-			);
-		}
-
-		currentInputTypes = [...data.inputTypes];
-		cancelTypeEditing();
-	}
-
-	function deleteInputType(index: number) {
-		data.inputTypes = data.inputTypes.filter((_: string, i: number) => i !== index);
-		currentInputTypes = [...data.inputTypes];
 	}
 
 	// Output type handling
@@ -178,39 +154,42 @@
 	}
 
 	function cancelTypeEditing() {
-		editingInputType = null;
 		editingOutputType = null;
 		tempType = '';
 		typeError = '';
 	}
 
-	// Code editing
-	function startEditingCode() {
-		tempCode = data.consumeWork;
-		editingCode = true;
+	// Handle code updates from CodeMirror
+	function handleCodeUpdate(event: CustomEvent) {
+		data.consumeWork = event.detail;
 	}
 
-	function saveCode() {
-		data.consumeWork = tempCode;
-		editingCode = false;
-	}
+	// Add a new output type from the dropdown
+	function addOutputType(event: Event) {
+		const select = event.target as HTMLSelectElement;
+		if (select && select.value) {
+			const newType = select.value;
 
-	function cancelEditingCode() {
-		tempCode = data.consumeWork;
-		editingCode = false;
+			// Only add if it doesn't already exist
+			if (!data.outputTypes.includes(newType)) {
+				data.outputTypes = [...data.outputTypes, newType];
+				currentOutputTypes = [...data.outputTypes];
+			}
+
+			// Reset the select
+			select.value = '';
+		}
 	}
 
 	// Handle keydown for general editing events
 	function handleKeydown(event: KeyboardEvent) {
 		if (event.key === 'Escape') {
 			cancelTypeEditing();
-			cancelEditingCode();
 		}
 	}
 
 	// Update tracked fields when data changes
 	$effect(() => {
-		currentInputTypes = [...data.inputTypes];
 		currentOutputTypes = [...data.outputTypes];
 	});
 </script>
@@ -239,6 +218,7 @@
 				{/if}
 			</div>
 		{:else}
+			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<div
 				class="w-full cursor-pointer rounded px-1 py-0.5 text-center text-xs font-medium hover:bg-gray-100"
 				onclick={startEditingName}
@@ -251,114 +231,24 @@
 	</div>
 
 	<div class="max-h-64 overflow-y-auto p-1.5">
-		<!-- Input Types Section -->
+		<!-- Input Types Section - Now inferred from connections -->
 		<div class="mb-2">
 			<div class="flex items-center justify-between">
-				<h3 class="text-2xs font-semibold text-gray-600">Input Types</h3>
-				<button
-					class="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-blue-100 text-blue-500 shadow-sm hover:bg-blue-200"
-					onclick={() => startEditingInputType(-1)}
-					title="Add input type"
-				>
-					<Plus size={8} weight="bold" />
-				</button>
+				<h3 class="text-2xs font-semibold text-gray-600">Input Types (Auto)</h3>
 			</div>
 
-			{#if !currentInputTypes.length && editingInputType !== -1}
-				<div class="text-2xs py-0.5 italic text-gray-400">No input types</div>
+			{#if inferredInputTypes.length === 0}
+				<div class="text-2xs py-0.5 italic text-gray-400">
+					Connect Task nodes to infer input types
+				</div>
 			{/if}
 
 			<div class="mt-1 space-y-1">
-				{#each currentInputTypes as type, index}
-					{#if editingInputType === index}
-						<div class="rounded border border-blue-200 bg-blue-50 p-1">
-							<div class="mb-1">
-								<input
-									type="text"
-									bind:value={tempType}
-									onkeydown={handleKeydown}
-									class="text-2xs w-full rounded border border-gray-200 px-1 py-0.5 {typeError
-										? 'border-red-500'
-										: ''}"
-									autofocus
-								/>
-								{#if typeError}
-									<div class="text-2xs mt-0.5 text-red-500">{typeError}</div>
-								{/if}
-							</div>
-							<div class="flex justify-end space-x-1">
-								<button
-									class="text-2xs rounded bg-gray-200 px-1 py-0.5 hover:bg-gray-300"
-									onclick={cancelTypeEditing}
-								>
-									Cancel
-								</button>
-								<button
-									class="text-2xs rounded bg-blue-500 px-1 py-0.5 text-white hover:bg-blue-600"
-									onclick={saveInputType}
-								>
-									Save
-								</button>
-							</div>
-						</div>
-					{:else}
-						<div
-							class="text-2xs group flex items-center justify-between rounded bg-green-50 px-1 py-0.5"
-						>
-							<span class="font-mono">{type}</span>
-							<div class="flex">
-								<button
-									class="ml-1 flex h-3 w-3 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-gray-200 hover:text-blue-500 group-hover:opacity-100"
-									onclick={() => startEditingInputType(index)}
-									title="Edit type"
-								>
-									<PencilSimple size={8} weight="bold" />
-								</button>
-								<button
-									class="ml-1 flex h-3 w-3 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
-									onclick={() => deleteInputType(index)}
-									title="Remove type"
-								>
-									<Trash size={8} weight="bold" />
-								</button>
-							</div>
-						</div>
-					{/if}
-				{/each}
-
-				{#if editingInputType === -1}
-					<div class="rounded border border-blue-200 bg-blue-50 p-1">
-						<div class="mb-1">
-							<input
-								type="text"
-								bind:value={tempType}
-								onkeydown={handleKeydown}
-								placeholder="TaskClassName"
-								class="text-2xs w-full rounded border border-gray-200 px-1 py-0.5 {typeError
-									? 'border-red-500'
-									: ''}"
-								autofocus
-							/>
-							{#if typeError}
-								<div class="text-2xs mt-0.5 text-red-500">{typeError}</div>
-							{/if}
-						</div>
-						<div class="flex justify-end space-x-1">
-							<button
-								class="text-2xs rounded bg-gray-200 px-1 py-0.5 hover:bg-gray-300"
-								onclick={cancelTypeEditing}
-							>
-								Cancel
-							</button>
-							<button
-								class="text-2xs rounded bg-blue-500 px-1 py-0.5 text-white hover:bg-blue-600"
-								onclick={saveInputType}
-							>
-								Add
-							</button>
-						</div>
+				{#each inferredInputTypes as type}
+					<div class="text-2xs flex items-center rounded bg-green-50 px-1 py-0.5">
+						<span class="font-mono">{type}</span>
 					</div>
-				{/if}
+				{/each}
 			</div>
 		</div>
 
@@ -366,16 +256,27 @@
 		<div class="mb-2">
 			<div class="flex items-center justify-between">
 				<h3 class="text-2xs font-semibold text-gray-600">Output Types</h3>
-				<button
-					class="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-blue-100 text-blue-500 shadow-sm hover:bg-blue-200"
-					onclick={() => startEditingOutputType(-1)}
-					title="Add output type"
-				>
-					<Plus size={8} weight="bold" />
-				</button>
 			</div>
 
-			{#if !currentOutputTypes.length && editingOutputType !== -1}
+			{#if availableTaskClasses.length > 0}
+				<div class="mb-2 mt-1">
+					<select
+						class="text-2xs w-full rounded border border-gray-200 px-1 py-0.5"
+						onchange={addOutputType}
+					>
+						<option value="">Add an output type...</option>
+						{#each availableTaskClasses as className}
+							<option value={className}>{className}</option>
+						{/each}
+					</select>
+				</div>
+			{:else}
+				<div class="text-2xs py-0.5 italic text-gray-400">
+					Create Task nodes first to select output types
+				</div>
+			{/if}
+
+			{#if currentOutputTypes.length === 0 && !availableTaskClasses.length}
 				<div class="text-2xs py-0.5 italic text-gray-400">No output types</div>
 			{/if}
 
@@ -436,85 +337,31 @@
 						</div>
 					{/if}
 				{/each}
-
-				{#if editingOutputType === -1}
-					<div class="rounded border border-blue-200 bg-blue-50 p-1">
-						<div class="mb-1">
-							<input
-								type="text"
-								bind:value={tempType}
-								onkeydown={handleKeydown}
-								placeholder="TaskClassName"
-								class="text-2xs w-full rounded border border-gray-200 px-1 py-0.5 {typeError
-									? 'border-red-500'
-									: ''}"
-								autofocus
-							/>
-							{#if typeError}
-								<div class="text-2xs mt-0.5 text-red-500">{typeError}</div>
-							{/if}
-						</div>
-						<div class="flex justify-end space-x-1">
-							<button
-								class="text-2xs rounded bg-gray-200 px-1 py-0.5 hover:bg-gray-300"
-								onclick={cancelTypeEditing}
-							>
-								Cancel
-							</button>
-							<button
-								class="text-2xs rounded bg-blue-500 px-1 py-0.5 text-white hover:bg-blue-600"
-								onclick={saveOutputType}
-							>
-								Add
-							</button>
-						</div>
-					</div>
-				{/if}
 			</div>
 		</div>
 
 		<!-- Code Section -->
 		<div class="mt-3">
-			<div class="flex items-center justify-between">
+			<div class="mb-1 flex items-center">
 				<h3 class="text-2xs font-semibold text-gray-600">consume_work()</h3>
-				<button
-					class="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-blue-100 text-blue-500 shadow-sm hover:bg-blue-200"
-					onclick={startEditingCode}
-					title="Edit code"
-				>
-					<Code size={8} weight="bold" />
-				</button>
 			</div>
 
-			{#if editingCode}
-				<div class="mt-1 rounded border border-blue-200 bg-blue-50 p-1">
-					<div class="mb-1">
-						<textarea
-							bind:value={tempCode}
-							class="text-2xs h-32 w-full rounded border border-gray-200 bg-gray-50 px-1.5 py-1 font-mono"
-							style="resize: vertical;"
-						></textarea>
-					</div>
-					<div class="flex justify-end space-x-1">
-						<button
-							class="text-2xs rounded bg-gray-200 px-1 py-0.5 hover:bg-gray-300"
-							onclick={cancelEditingCode}
-						>
-							Cancel
-						</button>
-						<button
-							class="text-2xs rounded bg-blue-500 px-1 py-0.5 text-white hover:bg-blue-600"
-							onclick={saveCode}
-						>
-							Save
-						</button>
-					</div>
-				</div>
-			{:else}
-				<div class="mt-1 max-h-24 overflow-auto rounded border border-gray-200 bg-gray-50 p-1">
-					<pre class="text-2xs whitespace-pre-wrap font-mono">{data.consumeWork}</pre>
-				</div>
-			{/if}
+			<CodeMirror
+				value={data.consumeWork}
+				lang={python()}
+				styles={{
+					'&': {
+						border: '1px solid #e2e8f0',
+						borderRadius: '0.25rem',
+						fontSize: '0.7rem'
+					},
+					'.cm-content': {
+						fontFamily: 'monospace'
+					}
+				}}
+				on:change={handleCodeUpdate}
+				basic={true}
+			/>
 		</div>
 	</div>
 </div>
