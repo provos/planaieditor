@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Handle, Position } from '@xyflow/svelte';
+	import { Handle, Position, NodeResizer } from '@xyflow/svelte';
 	import { isValidPythonClassName, isValidPythonIdentifier } from '$lib/utils/validation';
 	import { allClassNames } from '$lib/stores/classNameStore';
 	import Plus from 'phosphor-svelte/lib/Plus';
@@ -222,13 +222,16 @@
 	});
 </script>
 
-<div class="task-node w-52 rounded-md border border-gray-300 bg-white shadow-md">
+<div class="task-node flex flex-col rounded-md border border-gray-300 bg-white shadow-md">
+	<!-- Node Resizer -->
+	<NodeResizer minWidth={200} minHeight={150} />
+
 	<!-- Node handles -->
 	<Handle type="source" position={Position.Bottom} id="output" />
 	<Handle type="target" position={Position.Top} id="input" />
 
 	<!-- Header with editable class name -->
-	<div class="border-b border-gray-200 bg-gray-50 p-1">
+	<div class="flex-none border-b border-gray-200 bg-gray-50 p-1">
 		{#if editingClassName}
 			<div class="flex flex-col">
 				<input
@@ -258,7 +261,7 @@
 	</div>
 
 	<!-- Fields list with compact styling -->
-	<div class="relative h-full max-h-48 overflow-y-auto p-1.5">
+	<div class="relative h-full flex-grow overflow-y-auto p-1.5">
 		{#if !currentFields.length && editingFieldIndex !== -1}
 			<div class="text-2xs py-0.5 italic text-gray-400">No fields</div>
 		{/if}

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Handle, Position } from '@xyflow/svelte';
+	import { Handle, Position, NodeResizer } from '@xyflow/svelte';
 	import { isValidPythonClassName } from '$lib/utils/validation';
 	import { allClassNames } from '$lib/stores/classNameStore';
 	import Trash from 'phosphor-svelte/lib/Trash';
@@ -194,7 +194,10 @@
 	});
 </script>
 
-<div class="taskworker-node w-64 rounded-md border border-gray-300 bg-white shadow-md">
+<div class="taskworker-node flex flex-col rounded-md border border-gray-300 bg-white shadow-md">
+	<!-- Node Resizer -->
+	<NodeResizer minWidth={250} minHeight={200} />
+
 	<!-- Node handles -->
 	<Handle type="target" position={Position.Top} id="input" />
 	<Handle type="source" position={Position.Bottom} id="output" />
@@ -230,9 +233,9 @@
 		{/if}
 	</div>
 
-	<div class="max-h-64 overflow-y-auto p-1.5">
+	<div class="flex h-full flex-col overflow-hidden p-1.5">
 		<!-- Input Types Section - Now inferred from connections -->
-		<div class="mb-2">
+		<div class="mb-2 flex-none">
 			<div class="flex items-center justify-between">
 				<h3 class="text-2xs font-semibold text-gray-600">Input Types (Auto)</h3>
 			</div>
@@ -253,7 +256,7 @@
 		</div>
 
 		<!-- Output Types Section -->
-		<div class="mb-2">
+		<div class="mb-2 flex-none">
 			<div class="flex items-center justify-between">
 				<h3 class="text-2xs font-semibold text-gray-600">Output Types</h3>
 			</div>
@@ -341,27 +344,40 @@
 		</div>
 
 		<!-- Code Section -->
-		<div class="mt-3">
-			<div class="mb-1 flex items-center">
+		<div class="mt-3 flex min-h-0 flex-grow flex-col overflow-hidden">
+			<div class="mb-1 flex flex-none items-center">
 				<h3 class="text-2xs font-semibold text-gray-600">consume_work()</h3>
 			</div>
 
-			<CodeMirror
-				value={data.consumeWork}
-				lang={python()}
-				styles={{
-					'&': {
-						border: '1px solid #e2e8f0',
-						borderRadius: '0.25rem',
-						fontSize: '0.7rem'
-					},
-					'.cm-content': {
-						fontFamily: 'monospace'
-					}
-				}}
-				on:change={handleCodeUpdate}
-				basic={true}
-			/>
+			<div class="flex-grow overflow-hidden">
+				<CodeMirror
+					value={data.consumeWork}
+					lang={python()}
+					styles={{
+						'&': {
+							border: '1px solid #e2e8f0',
+							borderRadius: '0.25rem',
+							fontSize: '0.7rem',
+							height: '100%',
+							width: '100%',
+							overflow: 'hidden',
+							display: 'flex',
+							flexDirection: 'column'
+						},
+						'.cm-content': {
+							fontFamily: 'monospace'
+						},
+						'.cm-scroller': {
+							overflow: 'auto'
+						},
+						'.cm-editor': {
+							height: '100%'
+						}
+					}}
+					on:change={handleCodeUpdate}
+					basic={true}
+				/>
+			</div>
 		</div>
 	</div>
 </div>

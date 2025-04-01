@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Handle, Position } from '@xyflow/svelte';
+	import { Handle, Position, NodeResizer } from '@xyflow/svelte';
 	import { isValidPythonClassName, isValidPythonIdentifier } from '$lib/utils/validation';
 	import { allClassNames } from '$lib/stores/classNameStore';
 	import Plus from 'phosphor-svelte/lib/Plus';
@@ -230,13 +230,18 @@
 	});
 </script>
 
-<div class="joinedtaskworker-node w-64 rounded-md border border-gray-300 bg-white shadow-md">
+<div
+	class="joinedtaskworker-node flex flex-col rounded-md border border-gray-300 bg-white shadow-md"
+>
+	<!-- Node Resizer -->
+	<NodeResizer minWidth={250} minHeight={200} />
+
 	<!-- Node handles -->
 	<Handle type="target" position={Position.Top} id="input" />
 	<Handle type="source" position={Position.Bottom} id="output" />
 
 	<!-- Header with editable worker name -->
-	<div class="border-b border-gray-200 bg-gray-50 p-1">
+	<div class="flex-none border-b border-gray-200 bg-gray-50 p-1">
 		{#if editingWorkerName}
 			<div class="flex flex-col">
 				<input
@@ -265,9 +270,9 @@
 		{/if}
 	</div>
 
-	<div class="max-h-64 overflow-y-auto p-1.5">
+	<div class="flex h-full flex-col overflow-hidden p-1.5">
 		<!-- Input Types Section -->
-		<div class="mb-2">
+		<div class="mb-2 flex-none">
 			<div class="flex items-center justify-between">
 				<h3 class="text-2xs font-semibold text-gray-600">Input Types</h3>
 				<button
@@ -378,7 +383,7 @@
 		</div>
 
 		<!-- Output Types Section -->
-		<div class="mb-2">
+		<div class="mb-2 flex-none">
 			<div class="flex items-center justify-between">
 				<h3 class="text-2xs font-semibold text-gray-600">Output Types</h3>
 				<button
@@ -489,7 +494,7 @@
 		</div>
 
 		<!-- Join Method Section -->
-		<div class="mb-2">
+		<div class="mb-2 flex-none">
 			<div class="flex items-center justify-between">
 				<h3 class="text-2xs font-semibold text-gray-600">Join Method</h3>
 				<div
@@ -529,8 +534,8 @@
 
 		<!-- Code Section (only shown when join method is 'custom') -->
 		{#if joinMethod === 'custom'}
-			<div class="mt-3">
-				<div class="flex items-center justify-between">
+			<div class="flex min-h-0 flex-grow flex-col overflow-hidden">
+				<div class="mb-1 flex flex-none items-center justify-between">
 					<h3 class="text-2xs font-semibold text-gray-600">consume_work()</h3>
 					<button
 						class="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-blue-100 text-blue-500 shadow-sm hover:bg-blue-200"
@@ -542,15 +547,17 @@
 				</div>
 
 				{#if editingCode}
-					<div class="mt-1 rounded border border-blue-200 bg-blue-50 p-1">
-						<div class="mb-1">
+					<div
+						class="flex min-h-0 flex-grow flex-col rounded border border-blue-200 bg-blue-50 p-1"
+					>
+						<div class="min-h-0 flex-grow">
 							<textarea
 								bind:value={tempCode}
-								class="text-2xs h-32 w-full rounded border border-gray-200 bg-gray-50 px-1.5 py-1 font-mono"
-								style="resize: vertical;"
+								class="text-2xs h-full w-full rounded border border-gray-200 bg-gray-50 px-1.5 py-1 font-mono"
+								style="resize: none;"
 							></textarea>
 						</div>
-						<div class="flex justify-end space-x-1">
+						<div class="mt-1 flex flex-none justify-end space-x-1">
 							<button
 								class="text-2xs rounded bg-gray-200 px-1 py-0.5 hover:bg-gray-300"
 								onclick={cancelEditingCode}
@@ -566,7 +573,7 @@
 						</div>
 					</div>
 				{:else}
-					<div class="mt-1 max-h-24 overflow-auto rounded border border-gray-200 bg-gray-50 p-1">
+					<div class="flex-grow overflow-auto rounded border border-gray-200 bg-gray-50 p-1">
 						<pre class="text-2xs whitespace-pre-wrap font-mono">{data.consumeWork}</pre>
 					</div>
 				{/if}

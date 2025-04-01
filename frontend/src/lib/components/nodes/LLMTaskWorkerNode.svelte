@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Handle, Position } from '@xyflow/svelte';
+	import { Handle, Position, NodeResizer } from '@xyflow/svelte';
 	import { isValidPythonClassName } from '$lib/utils/validation';
 	import { allClassNames } from '$lib/stores/classNameStore';
 	import Trash from 'phosphor-svelte/lib/Trash';
@@ -193,13 +193,16 @@
 	});
 </script>
 
-<div class="llmtaskworker-node w-64 rounded-md border border-gray-300 bg-white shadow-md">
+<div class="llmtaskworker-node flex flex-col rounded-md border border-gray-300 bg-white shadow-md">
+	<!-- Node Resizer -->
+	<NodeResizer minWidth={250} minHeight={250} />
+
 	<!-- Node handles -->
 	<Handle type="target" position={Position.Top} id="input" />
 	<Handle type="source" position={Position.Bottom} id="output" />
 
 	<!-- Header with editable worker name -->
-	<div class="border-b border-gray-200 bg-gray-50 p-1">
+	<div class="flex-none border-b border-gray-200 bg-gray-50 p-1">
 		{#if editingWorkerName}
 			<div class="flex flex-col">
 				<input
@@ -228,9 +231,9 @@
 		{/if}
 	</div>
 
-	<div class="max-h-64 overflow-y-auto p-1.5">
+	<div class="flex h-full flex-col overflow-hidden p-1.5">
 		<!-- Input Types Section - Now inferred from connections -->
-		<div class="mb-2">
+		<div class="mb-2 flex-none">
 			<div class="flex items-center justify-between">
 				<h3 class="text-2xs font-semibold text-gray-600">Input Types (Auto)</h3>
 			</div>
@@ -251,7 +254,7 @@
 		</div>
 
 		<!-- Output Types Section -->
-		<div class="mb-2">
+		<div class="mb-2 flex-none">
 			<div class="flex items-center justify-between">
 				<h3 class="text-2xs font-semibold text-gray-600">Output Types</h3>
 			</div>
@@ -338,52 +341,79 @@
 			</div>
 		</div>
 
-		<!-- Prompt Section -->
-		<div class="mt-3">
-			<div class="mb-1 flex items-center">
-				<h3 class="text-2xs font-semibold text-gray-600">Prompt</h3>
+		<!-- Prompt and System Prompt Sections - Each takes half of remaining space -->
+		<div class="flex min-h-0 flex-grow flex-col overflow-hidden">
+			<!-- Prompt Section -->
+			<div class="mb-2 min-h-0 flex-1">
+				<div class="mb-1 flex flex-none items-center">
+					<h3 class="text-2xs font-semibold text-gray-600">Prompt</h3>
+				</div>
+				<div class="h-full">
+					<CodeMirror
+						value={data.prompt}
+						lang={markdown()}
+						styles={{
+							'&': {
+								border: '1px solid #e2e8f0',
+								borderRadius: '0.25rem',
+								fontSize: '0.7rem',
+								height: '100%',
+								width: '100%',
+								overflow: 'hidden',
+								display: 'flex',
+								flexDirection: 'column'
+							},
+							'.cm-content': {
+								fontFamily: 'monospace'
+							},
+							'.cm-scroller': {
+								overflow: 'auto'
+							},
+							'.cm-editor': {
+								height: '100%'
+							}
+						}}
+						on:change={handlePromptUpdate}
+						basic={true}
+					/>
+				</div>
 			</div>
-			<CodeMirror
-				value={data.prompt}
-				lang={markdown()}
-				styles={{
-					'&': {
-						border: '1px solid #e2e8f0',
-						borderRadius: '0.25rem',
-						fontSize: '0.7rem',
-						maxHeight: '120px'
-					},
-					'.cm-content': {
-						fontFamily: 'monospace'
-					}
-				}}
-				on:change={handlePromptUpdate}
-				basic={true}
-			/>
-		</div>
 
-		<!-- System Prompt Section -->
-		<div class="mt-3">
-			<div class="mb-1 flex items-center">
-				<h3 class="text-2xs font-semibold text-gray-600">System Prompt</h3>
+			<!-- System Prompt Section -->
+			<div class="min-h-0 flex-1">
+				<div class="mb-1 flex flex-none items-center">
+					<h3 class="text-2xs font-semibold text-gray-600">System Prompt</h3>
+				</div>
+				<div class="h-full">
+					<CodeMirror
+						value={data.systemPrompt}
+						lang={markdown()}
+						styles={{
+							'&': {
+								border: '1px solid #e2e8f0',
+								borderRadius: '0.25rem',
+								fontSize: '0.7rem',
+								height: '100%',
+								width: '100%',
+								overflow: 'hidden',
+								display: 'flex',
+								flexDirection: 'column'
+							},
+							'.cm-content': {
+								fontFamily: 'monospace'
+							},
+							'.cm-scroller': {
+								overflow: 'auto'
+							},
+							'.cm-editor': {
+								height: '100%'
+							}
+						}}
+						on:change={handleSystemPromptUpdate}
+						basic={true}
+					/>
+				</div>
 			</div>
-			<CodeMirror
-				value={data.systemPrompt}
-				lang={markdown()}
-				styles={{
-					'&': {
-						border: '1px solid #e2e8f0',
-						borderRadius: '0.25rem',
-						fontSize: '0.7rem',
-						maxHeight: '120px'
-					},
-					'.cm-content': {
-						fontFamily: 'monospace'
-					}
-				}}
-				on:change={handleSystemPromptUpdate}
-				basic={true}
-			/>
 		</div>
 	</div>
 </div>
