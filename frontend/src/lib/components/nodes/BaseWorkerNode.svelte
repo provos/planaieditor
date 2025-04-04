@@ -7,7 +7,7 @@
 	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
 	import type { Node, Edge } from '@xyflow/svelte';
 	import type { Snippet } from 'svelte';
-	import { get } from 'svelte/store';
+	import type { Writable } from 'svelte/store';
 
 	// Base interface for worker node data
 	export interface BaseWorkerData {
@@ -50,33 +50,58 @@
 	let currentOutputTypes = $state<string[]>([...(data.outputTypes || [])]);
 
 	// --- Effects for Reactivity ---
-	// Update inferred input types when connections change
 	$effect(() => {
-		const currentNodes = get(store.nodes);
-		const currentEdges = get(store.edges);
+		let currentNodes: Node[] = [];
+		let currentEdges: Edge[] = [];
 
-		if (!currentEdges || !currentNodes) return;
+		// Subscribe to nodes store changes
+		const unsubNodes = store.nodes.subscribe((nodesValue) => {
+			currentNodes = nodesValue || [];
+			updateInferredTypes(currentNodes, currentEdges);
+		});
 
-		const incomingEdges = currentEdges.filter((edge: Edge) => edge.target === id);
+		// Subscribe to edges store changes
+		const unsubEdges = store.edges.subscribe((edgesValue) => {
+			currentEdges = edgesValue || [];
+			updateInferredTypes(currentNodes, currentEdges);
+		});
+
+		// Subscribe to the allClassNames store for output type selection
+		const unsubClassNames = allClassNames.subscribe((classMap) => {
+			const taskNodeClasses = Array.from(classMap.values());
+			availableTaskClasses = taskNodeClasses.filter((cn) => cn !== data.workerName);
+		});
+
+		// Initial update in case stores already have values
+		updateInferredTypes(currentNodes, currentEdges);
+
+		// Cleanup function
+		return () => {
+			unsubNodes();
+			unsubEdges();
+			unsubClassNames();
+		};
+	});
+
+	// Function to calculate and update inferred input types
+	function updateInferredTypes(nodes: Node[], edges: Edge[]) {
+		if (!edges || !nodes) {
+			inferredInputTypes = [];
+			return;
+		}
+
+		const incomingEdges = edges.filter((edge: Edge) => edge.target === id);
 		const sourceNodeIds = incomingEdges.map((edge: Edge) => edge.source);
 		const sourceClassNames: string[] = sourceNodeIds
 			.map((nodeId: string) => {
-				const sourceNode = currentNodes.find((node: Node) => node.id === nodeId);
+				const sourceNode = nodes.find((node: Node) => node.id === nodeId);
 				return sourceNode?.data?.className;
 			})
 			.filter(Boolean) as string[];
-		inferredInputTypes = sourceClassNames;
-		data.inputTypes = [...inferredInputTypes]; // Keep data in sync
-	});
 
-	// Update available Task classes from the global store
-	$effect(() => {
-		const unsubscribe = allClassNames.subscribe((classMap) => {
-			const taskNodeClasses = Array.from(classMap.values());
-			availableTaskClasses = taskNodeClasses.filter((cn) => cn !== data.workerName); // Exclude self if it's a Task
-		});
-		return unsubscribe;
-	});
+		// ONLY update the local reactive state used for display
+		inferredInputTypes = sourceClassNames;
+	}
 
 	// Update local output types when data changes
 	$effect(() => {
