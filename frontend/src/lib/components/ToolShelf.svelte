@@ -1,9 +1,13 @@
 <script lang="ts">
 	import Robot from 'phosphor-svelte/lib/Robot';
-	import RobotSimple from 'phosphor-svelte/lib/Cube';
 	import Cube from 'phosphor-svelte/lib/Cube';
 	import Brain from 'phosphor-svelte/lib/Brain';
 	import ArrowsIn from 'phosphor-svelte/lib/ArrowsIn';
+	import FileCode from 'phosphor-svelte/lib/FileCode';
+
+	let { onExport }: { onExport: () => void } = $props<{
+		onExport: () => void;
+	}>();
 
 	// Handles the start of dragging a new node
 	function onDragStart(event: DragEvent, nodeType: string) {
@@ -78,5 +82,15 @@
 			<div class="text-sm font-semibold">JoinedTaskWorker</div>
 		</div>
 		<div class="text-xs text-gray-500">Multi-input Worker</div>
+	</div>
+
+	<div class="flex items-center">
+		<button
+			onclick={onExport}
+			class="flex items-center rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700"
+		>
+			<FileCode size={18} class="mr-1.5" />
+			Export to Python
+		</button>
 	</div>
 </div>

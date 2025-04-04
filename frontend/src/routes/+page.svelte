@@ -13,8 +13,10 @@
 	import type { ContextMenuItem } from '$lib/components/ContextMenu.svelte';
 	import Trash from 'phosphor-svelte/lib/Trash';
 	import Scissors from 'phosphor-svelte/lib/Scissors';
+	import { io, Socket } from 'socket.io-client';
+	import { onMount } from 'svelte';
 
-	// Define node types
+	// Define node types and pass stores as props
 	const nodeTypes: any = {
 		task: TaskNode,
 		taskworker: TaskWorkerNode,
@@ -25,6 +27,52 @@
 	// Use Svelte stores for nodes and edges as required by @xyflow/svelte
 	const nodes = writable<Node[]>([]);
 	const edges = writable<Edge[]>([]);
+
+	// Socket.IO connection state
+	let socket: Socket | null = null;
+	let isConnected = $state(false);
+	let exportStatus = $state<{ type: 'idle' | 'loading' | 'success' | 'error'; message: string }>({
+		type: 'idle',
+		message: ''
+	});
+
+	onMount(() => {
+		// Connect to the backend Socket.IO server
+		socket = io('http://localhost:5001'); // Ensure this matches your backend port
+
+		socket.on('connect', () => {
+			console.log('Connected to backend:', socket?.id);
+			isConnected = true;
+		});
+
+		socket.on('disconnect', () => {
+			console.log('Disconnected from backend');
+			isConnected = false;
+			exportStatus = { type: 'idle', message: '' }; // Reset status on disconnect
+		});
+
+		socket.on('connect_error', (err) => {
+			console.error('Connection error:', err);
+			isConnected = false;
+			exportStatus = { type: 'error', message: `Connection failed: ${err.message}` };
+		});
+
+		// Listen for export results from the backend
+		socket.on('export_result', (data: { success: boolean; message?: string; error?: string }) => {
+			if (data.success) {
+				exportStatus = { type: 'success', message: data.message || 'Export successful!' };
+				console.log('Export successful:', data.message);
+			} else {
+				exportStatus = { type: 'error', message: data.error || 'Export failed.' };
+				console.error('Export failed:', data.error);
+			}
+		});
+
+		return () => {
+			// Disconnect the socket when the component is destroyed
+			socket?.disconnect();
+		};
+	});
 
 	// Context menu state
 	let showContextMenu = $state(false);
@@ -268,11 +316,53 @@ Analyze the following information and provide a response.`,
 			closeContextMenu();
 		}
 	}
+
+	// Function to handle the export button click
+	function handleExport() {
+		if (!socket || !isConnected) {
+			console.error('Socket not connected. Cannot export.');
+			exportStatus = { type: 'error', message: 'Not connected to backend.' };
+			return;
+		}
+
+		// Get current nodes and edges from the stores
+		let currentNodes: Node[] = [];
+		let currentEdges: Edge[] = [];
+		const unsubNodes = nodes.subscribe((value) => (currentNodes = value));
+		const unsubEdges = edges.subscribe((value) => (currentEdges = value));
+		unsubNodes();
+		unsubEdges();
+
+		const graphData = {
+			nodes: currentNodes,
+			edges: currentEdges
+		};
+
+		console.log('Exporting graph:', graphData);
+		exportStatus = { type: 'loading', message: 'Exporting...' };
+		socket.emit('export_graph', graphData);
+	}
 </script>
 
 <div class="flex h-screen w-screen flex-col">
-	<div class="w-full border-b border-gray-300 bg-gray-100 p-4">
-		<ToolShelf />
+	<div class="relative w-full border-b border-gray-300 bg-gray-100 p-4">
+		<ToolShelf onExport={handleExport} />
+		<!-- Display Connection and Export Status -->
+		<div class="absolute bottom-1 right-2 flex items-center space-x-2 text-xs">
+			{#if !isConnected}
+				<span class="rounded bg-red-100 px-1.5 py-0.5 text-red-700">Disconnected</span>
+			{/if}
+			{#if exportStatus.type === 'loading'}
+				<span class="rounded bg-yellow-100 px-1.5 py-0.5 text-yellow-700"
+					>{exportStatus.message}</span
+				>
+			{:else if exportStatus.type === 'success'}
+				<span class="rounded bg-green-100 px-1.5 py-0.5 text-green-700">{exportStatus.message}</span
+				>
+			{:else if exportStatus.type === 'error'}
+				<span class="rounded bg-red-100 px-1.5 py-0.5 text-red-700">{exportStatus.message}</span>
+			{/if}
+		</div>
 	</div>
 
 	<div class="flex-grow">
