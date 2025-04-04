@@ -1,18 +1,34 @@
+import importlib.util
+import os
+import sys
+import traceback
+from textwrap import dedent, indent
+
+import black  # Import black for formatting
 from flask import Flask, request
 from flask_socketio import SocketIO, emit
-import importlib.util
-import sys
-import os
-import traceback
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'secret!' # Change this in production!
-socketio = SocketIO(app, cors_allowed_origins="*") # Allow requests from frontend dev server
+app.config["SECRET_KEY"] = "secret!"  # Change this in production!
+socketio = SocketIO(
+    app, cors_allowed_origins="*"
+)  # Allow requests from frontend dev server
 
-# Placeholder function - replace with your actual graph to Python conversion logic
+
+# Function to convert frontend type names to valid Python class names
+def to_class_name(name: str) -> str:
+    """Converts a node type or task class name to a Python ClassName."""
+    if not name:
+        return "UnnamedClass"
+    # Remove invalid characters, capitalize parts
+    parts = name.replace("-", "_").split("_")
+    return "".join(part.capitalize() for part in parts)
+
+
+# Updated function to generate PlanAI Python code from graph data
 def generate_python_module(graph_data):
     """
-    Converts the graph data (nodes, edges) into executable Python code.
+    Converts the graph data (nodes, edges) into executable PlanAI Python code.
 
     Args:
         graph_data (dict): Dictionary containing 'nodes' and 'edges'.
@@ -21,30 +37,316 @@ def generate_python_module(graph_data):
         tuple: (python_code_string, suggested_module_name)
                Returns (None, None) if conversion fails.
     """
-    print("Generating Python module for graph:")
-    # print(graph_data) # Uncomment to see the received data
-
-    # --- Replace this with your actual conversion logic ---
-    # Example: Create a simple module based on node names
-    nodes = graph_data.get('nodes', [])
+    print("Generating PlanAI Python module from graph data...")
     module_name = "generated_plan"
-    python_code = f"# Auto-generated PlanAI module\n\n"
-    python_code += "print('Hello from the generated module!')\n\n"
-    python_code += "class GeneratedPlan:\n"
-    if not nodes:
-        python_code += "    pass\n"
+    nodes = graph_data.get("nodes", [])
+    edges = graph_data.get("edges", [])
+
+    # --- Code Generation Start ---
+    code = []
+
+    # 1. Imports
+    code.append(
+        dedent(
+            """
+        # Auto-generated PlanAI module
+        import sys
+        from typing import Any, Callable, Dict, List, Literal, Optional, Set, Tuple, Type
+        from planai import Graph, LLMInterface, Task, TaskWorker, LLMTaskWorker, JoinedTaskWorker, llm_from_config
+        from pydantic import Field, ConfigDict
+        # Add any other necessary imports based on worker code (e.g., planai.patterns)
+    """
+        )
+    )
+
+    # 2. Task Definitions (from 'task' nodes)
+    code.append("\n# --- Task Definitions ---")
+    task_nodes = [n for n in nodes if n.get("type") == "task"]
+    task_class_names = {}  # Map node ID to generated Task class name
+    if not task_nodes:
+        code.append("# No Task nodes defined in the graph.")
     else:
-        for node in nodes:
-            node_id = node.get('id', 'unknown_node')
-            python_code += f"    def task_{node_id.replace('-', '_')}(self):\n"
-            python_code += f"        print('Executing task {node_id}')\n"
-            python_code += f"        pass\n"
-    # --- End of replacement section ---
-    
-    print(f"Generated code for module: {module_name}")
-    print(python_code)
-    # print(python_code) # Uncomment to see the generated code
-    return python_code, module_name
+        for node in task_nodes:
+            node_id = node["id"]
+            data = node.get("data", {})
+            class_name = to_class_name(data.get("className", f"Task_{node_id}"))
+            task_class_names[node_id] = class_name
+            code.append(f"\nclass {class_name}(Task):")
+            fields = data.get("fields", [])
+            if not fields:
+                code.append("    pass # No fields defined")
+            else:
+                # Add ConfigDict for arbitrary_types_allowed if needed later
+                # code.append("    model_config = ConfigDict(arbitrary_types_allowed=True)")
+                for field in fields:
+                    field_name = field.get("name", "unnamed_field")
+                    field_type = field.get("type", "Any")  # Default to Any
+                    description = field.get("description", "No description")
+                    # Basic type mapping (can be expanded)
+                    if field_type.lower() == "string":
+                        py_type = "str"
+                    elif field_type.lower() == "integer":
+                        py_type = "int"
+                    elif field_type.lower() == "float":
+                        py_type = "float"
+                    elif field_type.lower() == "boolean":
+                        py_type = "bool"
+                    elif field_type.lower() == "list[string]":
+                        py_type = "List[str]"
+                    # TODO: Add more complex type mappings (Literal, Optional, etc.)
+                    else:
+                        py_type = "Any"
+
+                    code.append(
+                        f'    {field_name}: {py_type} = Field(..., description="{description}")'
+                    )
+
+    # Helper to map frontend type names (like 'TaskA') to generated Task class names
+    def get_task_class_name(type_name: str) -> str:
+        # Find the task node whose className matches type_name
+        for node_id, task_name in task_class_names.items():
+            if task_name == type_name:
+                return task_name
+        # Fallback or error if not found
+        print(
+            f"Warning: Could not find Task definition for type '{type_name}'. Using Any."
+        )
+        return "Any"  # Or maybe raise an error
+
+    # 3. Worker Definitions (from worker nodes)
+    code.append("\n# --- Worker Definitions ---")
+    worker_nodes = [
+        n
+        for n in nodes
+        if n.get("type") in ("taskworker", "llmtaskworker", "joinedtaskworker")
+    ]
+    worker_instances = {}  # Map node ID to worker instance variable name
+    if not worker_nodes:
+        code.append("# No Worker nodes defined in the graph.")
+    else:
+        for node in worker_nodes:
+            node_id = node["id"]
+            node_type = node["type"]
+            data = node.get("data", {})
+            worker_name = to_class_name(data.get("workerName", f"Worker_{node_id}"))
+            instance_name = (
+                worker_name[0].lower() + worker_name[1:]
+            )  # e.g., basicTaskWorker
+            worker_instances[node_id] = instance_name
+
+            base_class = "TaskWorker"
+            extra_args = ""
+            if node_type == "llmtaskworker":
+                base_class = "LLMTaskWorker"
+                # TODO: Map llm_input_type, llm_output_type if specified in data
+                # extra_args = ", llm_input_type=..., llm_output_type=..."
+            elif node_type == "joinedtaskworker":
+                base_class = "JoinedTaskWorker"
+                # TODO: Add join_method if specified
+                # join_method = data.get('joinMethod', 'merge')
+
+            code.append(f"\nclass {worker_name}({base_class}):")
+
+            # Input/Output Types
+            input_types_str = ", ".join(
+                get_task_class_name(t) for t in data.get("inputTypes", [])
+            )
+            output_types_str = ", ".join(
+                get_task_class_name(t) for t in data.get("outputTypes", [])
+            )
+            code.append(
+                f"    # input_types: List[Type[Task]] = [{input_types_str}] # Input types not directly used by PlanAI workers"
+            )
+            code.append(f"    output_types: List[Type[Task]] = [{output_types_str}]")
+
+            # LLM Specifics
+            if node_type == "llmtaskworker":
+                system_prompt = data.get("systemPrompt", "You are a helpful assistant.")
+                prompt = data.get("prompt", "# Define your prompt here")
+                code.append(f'    system_prompt: str = """{dedent(system_prompt)}"""')
+                code.append(f'    prompt: str = """{dedent(prompt)}"""')
+                # TODO: Add llm_input_type/llm_output_type mapping
+                # llm_input = data.get('llmInputType')
+                # llm_output = data.get('llmOutputType')
+                # if llm_input: code.append(f"    llm_input_type: Type[Task] = {get_task_class_name(llm_input)}")
+                # if llm_output: code.append(f"    llm_output_type: Type[Task] = {get_task_class_name(llm_output)}")
+
+            # Consume Work Method
+            consume_work_code = data.get("consumeWork", None)
+            if consume_work_code:
+                indented_consume_work = indent(dedent(consume_work_code), "    ")
+                code.append(
+                    "\n    def consume_work(self, task: Task): # TODO: Add specific input task type hint"
+                )
+                code.append(indented_consume_work)
+                code.append("\n")
+
+    # 4. Graph Creation Function
+    code.append("\n# --- Graph Setup ---")
+    code.append(
+        "\ndef create_graph(*, llm_fast: LLMInterface, llm_code: LLMInterface, llm_writing: LLMInterface) -> Tuple[Graph, Dict[str, TaskWorker]]:"
+    )
+    code.append('    graph = Graph(name="GeneratedPlan")')
+
+    code.append("\n    # Worker Instances")
+    if not worker_instances:
+        code.append("    # No workers to instantiate")
+    else:
+        for node_id, instance_name in worker_instances.items():
+            worker_node = next((n for n in worker_nodes if n["id"] == node_id), None)
+            if worker_node:
+                worker_class_name = to_class_name(
+                    worker_node.get("data", {}).get("workerName", f"Worker_{node_id}")
+                )
+                # Basic LLM assignment - needs refinement based on node config/needs
+                llm_arg = ""
+                if worker_node["type"] == "llmtaskworker":
+                    llm_arg = "llm=llm_code"  # Default to code llm for LLM workers
+                elif worker_node["type"] == "joinedtaskworker":
+                    pass  # Joined workers don't take LLM directly
+                else:  # Basic taskworker might sometimes need an LLM? Defaulting to none.
+                    pass
+                code.append(f"    {instance_name} = {worker_class_name}({llm_arg})")
+
+    code.append(f"\n    all_workers = [{', '.join(worker_instances.values())}]")
+    code.append("    graph.add_workers(*all_workers)")
+
+    code.append("\n    # Dependencies (Edges)")
+    if not edges:
+        code.append("    # No edges defined to set dependencies.")
+    else:
+        edge_chains = {}  # Store chains like {source_id: [target1_id, target2_id]}
+        processed_edges = set()
+        for edge in edges:
+            source_id = edge.get("source")
+            target_id = edge.get("target")
+            edge_id = edge.get("id")
+
+            if not source_id or not target_id or edge_id in processed_edges:
+                continue
+
+            if source_id not in worker_instances or target_id not in worker_instances:
+                print(
+                    f"Warning: Edge '{edge_id}' connects non-worker nodes or unknown nodes ({source_id} -> {target_id}). Skipping."
+                )
+                continue
+
+            source_instance = worker_instances[source_id]
+            target_instance = worker_instances[target_id]
+
+            # Build chains: graph.set_dependency(src, tgt1).next(tgt2)...
+            if source_id not in edge_chains:
+                edge_chains[source_id] = []
+            edge_chains[source_id].append(target_instance)
+            processed_edges.add(edge_id)
+
+        # Generate the set_dependency calls
+        for source_id, targets in edge_chains.items():
+            source_instance = worker_instances[source_id]
+            dep_str = f"    graph.set_dependency({source_instance}, {targets[0]})"
+            if len(targets) > 1:
+                dep_str += "".join([f".next({tgt})" for tgt in targets[1:]])
+            code.append(dep_str)
+
+    # Determine entry point(s) - nodes with no incoming edges
+    target_node_ids = {edge.get("target") for edge in edges if edge.get("target")}
+    entry_nodes = [
+        node_id
+        for node_id, instance in worker_instances.items()
+        if node_id not in target_node_ids
+    ]
+
+    if not entry_nodes:
+        code.append(
+            "    # Warning: Could not determine entry point (no worker node without incoming edges)."
+        )
+        code.append("    entry_worker = None # Set manually if needed")
+
+    elif len(entry_nodes) > 1:
+        code.append(
+            f"    # Warning: Multiple potential entry points found: {entry_nodes}. Using the first one."
+        )
+        entry_worker_instance = worker_instances[entry_nodes[0]]
+        code.append(f"    graph.set_entry({entry_worker_instance})")
+    else:
+        entry_worker_instance = worker_instances[entry_nodes[0]]
+        code.append(f"    graph.set_entry({entry_worker_instance})")
+
+    code.append(
+        "\n    # Return graph and a dictionary mapping instance names to workers for potential use"
+    )
+    code.append("    workers_dict = {")
+    for node_id, instance_name in worker_instances.items():
+        code.append(f"        '{instance_name}': {instance_name},")
+    code.append("    }")
+    code.append("    return graph, workers_dict")
+
+    # 5. Setup Graph Function (Simplified LLM config)
+    code.append(
+        "\n\ndef setup_graph(notify: Optional[Callable[Dict[str, Any], None]] = None) -> Tuple[Graph, Dict[str, TaskWorker]]:"
+    )
+    code.append("    # TODO: Replace with your actual LLM configuration")
+    code.append("    print('Warning: Using dummy LLM configurations.')")
+    code.append("    llm_fast = llm_code = llm_writing = LLMInterface() # Placeholder")
+    code.append(
+        "\n    graph, workers = create_graph(llm_fast=llm_fast, llm_code=llm_code, llm_writing=llm_writing)"
+    )
+    code.append("\n    # TODO: Configure sinks if needed, e.g.:")
+    code.append("    # response_publisher = workers.get('responsePublisher')")
+    code.append("    # if response_publisher:")
+    code.append("    #    response_publisher.sink(Response, notify=notify)")
+    code.append("\n    return graph, workers")
+
+    # 6. Main Execution Block (Simplified)
+    code.append("\n\nif __name__ == '__main__':")
+    code.append('    print("Setting up and running the generated PlanAI graph...")')
+    code.append("    graph, workers = setup_graph()")
+    code.append("\n    # TODO: Define initial task(s) and target entry worker")
+    code.append(
+        "    entry_worker_name = list(workers.keys())[0] if workers else None # Example: Get first worker"
+    )
+    code.append("    if entry_worker_name:")
+    code.append(
+        "        initial_task = Task() # Replace with your actual starting Task"
+    )
+    code.append(
+        "        print(f'Running graph with initial task on worker: {entry_worker_name}')"
+    )
+    code.append("        graph.run(")
+    code.append(
+        "           initial_tasks=[(workers[entry_worker_name], initial_task)],"
+    )
+    code.append("           # display_terminal=False,")
+    code.append("           # run_dashboard=True,")
+    code.append("           # dashboard_port=8080,")
+    code.append("        )")
+    code.append("        print('\\nGraph execution finished.')")
+    code.append("        # outputs: List[Task] = graph.get_output_tasks()")
+    code.append("        # print(f'Output tasks: {outputs}')")
+    code.append("    else:")
+    code.append(
+        "        print('Error: Could not find an entry worker to start the graph.')"
+    )
+
+    # --- Code Generation End ---
+
+    final_code = "\n".join(code)
+
+    # Format the generated code using black
+    try:
+        formatted_code = black.format_str(final_code, mode=black.FileMode())
+        print(f"Successfully generated and formatted code for module: {module_name}")
+        print("--- Generated Code ---")
+        print(formatted_code)
+        print("--- End Generated Code ---")
+        return formatted_code, module_name
+    except black.InvalidInput as e:
+        print(f"Error formatting generated code with black: {e}")
+        print("--- Generated Code (Unformatted) ---")
+        print(final_code)
+        print("--- End Generated Code (Unformatted) ---")
+        return None, None  # Indicate failure
+
 
 # Function to safely load the generated code as a module
 def load_module_from_string(module_name, code_string):
@@ -52,7 +354,7 @@ def load_module_from_string(module_name, code_string):
     module_path = f"{module_name}.py"
     try:
         # Write the code to a temporary file
-        with open(module_path, 'w') as f:
+        with open(module_path, "w") as f:
             f.write(code_string)
 
         # Dynamically import the module
@@ -61,32 +363,34 @@ def load_module_from_string(module_name, code_string):
             raise ImportError(f"Could not create module spec for {module_name}")
 
         module = importlib.util.module_from_spec(spec)
-        sys.modules[module_name] = module # Add to sys.modules before execution
+        sys.modules[module_name] = module  # Add to sys.modules before execution
         spec.loader.exec_module(module)
         print(f"Successfully loaded module '{module_name}'")
-        return module, None # Return module and no error
+        return module, None  # Return module and no error
     except Exception as e:
         print(f"Error loading module '{module_name}': {e}")
         print(traceback.format_exc())
         # Ensure the failed module is removed from sys.modules
         if module_name in sys.modules:
             del sys.modules[module_name]
-        return None, traceback.format_exc() # Return no module and the error traceback
+        return None, traceback.format_exc()  # Return no module and the error traceback
     finally:
         # Clean up the temporary file
         if os.path.exists(module_path):
             os.remove(module_path)
 
 
-@socketio.on('connect')
+@socketio.on("connect")
 def handle_connect():
-    print('Client connected:', request.sid)
+    print("Client connected:", request.sid)
 
-@socketio.on('disconnect')
+
+@socketio.on("disconnect")
 def handle_disconnect():
-    print('Client disconnected:', request.sid)
+    print("Client disconnected:", request.sid)
 
-@socketio.on('export_graph')
+
+@socketio.on("export_graph")
 def handle_export_graph(data):
     """Receives graph data, generates Python module, attempts to load it."""
     print(f"Received export_graph event from {request.sid}")
@@ -95,19 +399,33 @@ def handle_export_graph(data):
     python_code, module_name = generate_python_module(data)
 
     if python_code is None or module_name is None:
-        emit('export_result', {'success': False, 'error': 'Failed to generate Python code from graph.'})
+        emit(
+            "export_result",
+            {"success": False, "error": "Failed to generate Python code from graph."},
+        )
         return
 
     # Attempt to load the generated module
     _, error = load_module_from_string(module_name, python_code)
 
     if error:
-        emit('export_result', {'success': False, 'error': f"Failed to load generated module:\n{error}"})
+        emit(
+            "export_result",
+            {"success": False, "error": f"Failed to load generated module:\n{error}"},
+        )
     else:
-        emit('export_result', {'success': True, 'message': f"Successfully generated and loaded module '{module_name}'."})
+        emit(
+            "export_result",
+            {
+                "success": True,
+                "message": f"Successfully generated and loaded module '{module_name}'.",
+            },
+        )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     print("Starting Flask-SocketIO server...")
     # Use eventlet for better performance if available
-    socketio.run(app, debug=True, port=5001, use_reloader=True) # Use a different port than SvelteKit dev server 
+    socketio.run(
+        app, debug=True, port=5001, use_reloader=True
+    )  # Use a different port than SvelteKit dev server
