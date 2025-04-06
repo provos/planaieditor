@@ -345,10 +345,10 @@ Analyze the following information and provide a response.`,
 </script>
 
 <div class="flex h-screen w-screen flex-col">
-	<div class="relative w-full border-b border-gray-300 bg-gray-100 p-4">
+	<div class="w-full border-b border-gray-300 bg-gray-100 p-4">
 		<ToolShelf onExport={handleExport} />
 		<!-- Display Connection and Export Status -->
-		<div class="absolute bottom-1 right-2 flex items-center space-x-2 text-xs">
+		<div class="mt-2 flex items-center justify-end space-x-2 text-xs">
 			{#if !isConnected}
 				<span class="rounded bg-red-100 px-1.5 py-0.5 text-red-700">Disconnected</span>
 			{/if}
