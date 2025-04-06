@@ -83,26 +83,38 @@
 
 	// When nodes change, update the class name map
 	$effect(() => {
-		let classNameMap = new Map<string, string>();
+		let nameMap = new Map<string, string>();
 
 		// Subscribe to get current nodes
 		const unsubNodes = nodes.subscribe((currentNodes) => {
 			// Reset the map
-			classNameMap = new Map();
+			nameMap = new Map();
 
-			// Add each node's class name with its ID
+			// Add each node's class name or worker name with its ID
 			currentNodes.forEach((node) => {
-				if (node.data?.className && typeof node.data.className === 'string') {
-					classNameMap.set(node.id, node.data.className);
+				const name = node.data?.className || node.data?.workerName;
+				if (name && typeof name === 'string') {
+					nameMap.set(node.id, name);
 				}
 			});
 
 			// Update the store
-			allClassNames.set(classNameMap);
+			allClassNames.set(nameMap);
 		});
 
 		return unsubNodes;
 	});
+
+	// Helper to generate unique node names
+	function generateUniqueName(baseName: string, existingNames: Set<string>): string {
+		let counter = 1;
+		let uniqueName = `${baseName}${counter}`;
+		while (existingNames.has(uniqueName)) {
+			counter++;
+			uniqueName = `${baseName}${counter}`;
+		}
+		return uniqueName;
+	}
 
 	// Process drag and drop of new nodes
 	function onDrop(event: DragEvent) {
@@ -135,38 +147,30 @@
 		// Configure node data based on node type
 		let nodeData: any = {};
 
+		// Get current existing names
+		let currentNameMap = new Map<string, string>();
+		const unsubscribeNames = allClassNames.subscribe((map) => {
+			currentNameMap = map;
+		});
+		unsubscribeNames();
+		const existingNames = new Set(currentNameMap.values());
+
 		switch (nodeType) {
-			case 'task':
-				// Generate a unique class name
-				let uniqueClassName = 'Task';
-				let counter = 1;
-				let classNameMap = new Map<string, string>();
-
-				// Get current class names
-				const unsubscribe = allClassNames.subscribe((map) => {
-					classNameMap = map;
-				});
-				unsubscribe();
-
-				// Get all existing class names
-				const existingNames = new Set(classNameMap.values());
-
-				// Make sure the class name is unique
-				while (existingNames.has(uniqueClassName)) {
-					uniqueClassName = `Task${counter}`;
-					counter++;
-				}
-
+			case 'task': {
+				const baseName = 'Task';
+				const uniqueName = generateUniqueName(baseName, existingNames);
 				nodeData = {
-					className: uniqueClassName,
+					className: uniqueName,
 					fields: [],
 					nodeId: id
 				};
 				break;
-
-			case 'taskworker':
+			}
+			case 'taskworker': {
+				const baseName = 'TaskWorker'; // Use base name for uniqueness check
+				const uniqueName = generateUniqueName(baseName, existingNames);
 				nodeData = {
-					workerName: 'BasicTaskWorker',
+					workerName: uniqueName, // Assign the unique name
 					inputTypes: [],
 					outputTypes: [],
 					consumeWork: `def consume_work(self, task):
@@ -176,10 +180,12 @@
 					nodeId: id
 				};
 				break;
-
-			case 'llmtaskworker':
+			}
+			case 'llmtaskworker': {
+				const baseName = 'LLMTaskWorker';
+				const uniqueName = generateUniqueName(baseName, existingNames);
 				nodeData = {
-					workerName: 'LLMTaskWorker',
+					workerName: uniqueName, // Assign the unique name
 					inputTypes: [],
 					outputTypes: [],
 					prompt: `# Process the task using an LLM
@@ -188,21 +194,23 @@ Analyze the following information and provide a response.`,
 					nodeId: id
 				};
 				break;
-
-			case 'joinedtaskworker':
+			}
+			case 'joinedtaskworker': {
+				const baseName = 'JoinedTaskWorker';
+				const uniqueName = generateUniqueName(baseName, existingNames);
 				nodeData = {
-					workerName: 'JoinedTaskWorker',
+					workerName: uniqueName, // Assign the unique name
 					inputTypes: [],
 					outputTypes: [],
 					consumeWork: `def consume_work(self, task):
     # Process the input task and produce output
-    # self.publish_work(output_task, input_task=task)
+    
     pass`,
 					joinMethod: 'merge',
 					nodeId: id
 				};
 				break;
-
+			}
 			default:
 				console.log(`Unknown node type: ${nodeType}`);
 				return;
