@@ -1,5 +1,6 @@
 import importlib.util
 import os
+import re
 import sys
 import traceback
 from textwrap import dedent, indent
@@ -15,14 +16,9 @@ socketio = SocketIO(
 )  # Allow requests from frontend dev server
 
 
-# Function to convert frontend type names to valid Python class names
-def to_class_name(name: str) -> str:
-    """Converts a node type or task class name to a Python ClassName."""
-    if not name:
-        return "UnnamedClass"
-    # Remove invalid characters, capitalize parts
-    parts = name.replace("-", "_").split("_")
-    return "".join(part.capitalize() for part in parts)
+def is_valid_python_class_name(name: str) -> bool:
+    """Check if a string is a valid Python class name."""
+    return bool(re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", name))
 
 
 # Updated function to generate PlanAI Python code from graph data
@@ -41,6 +37,9 @@ def generate_python_module(graph_data):
     module_name = "generated_plan"
     nodes = graph_data.get("nodes", [])
     edges = graph_data.get("edges", [])
+
+    print("--------------------------------")
+    print(graph_data)
 
     # --- Code Generation Start ---
     code = []
@@ -69,7 +68,9 @@ def generate_python_module(graph_data):
         for node in task_nodes:
             node_id = node["id"]
             data = node.get("data", {})
-            class_name = to_class_name(data.get("className", f"Task_{node_id}"))
+            class_name = data.get("className", f"Task_{node_id}")
+            if not is_valid_python_class_name(class_name):
+                raise ValueError(f"Invalid class name: {class_name}")
             task_class_names[node_id] = class_name
             code.append(f"\nclass {class_name}(Task):")
             fields = data.get("fields", [])
@@ -105,14 +106,12 @@ def generate_python_module(graph_data):
     # Helper to map frontend type names (like 'TaskA') to generated Task class names
     def get_task_class_name(type_name: str) -> str:
         # Find the task node whose className matches type_name
+        print("--------------------------------")
+        print(task_class_names)
         for node_id, task_name in task_class_names.items():
             if task_name == type_name:
                 return task_name
-        # Fallback or error if not found
-        print(
-            f"Warning: Could not find Task definition for type '{type_name}'. Using Any."
-        )
-        return "Any"  # Or maybe raise an error
+        raise ValueError(f"Could not find Task definition for type '{type_name}'")
 
     # 3. Worker Definitions (from worker nodes)
     code.append("\n# --- Worker Definitions ---")
@@ -129,7 +128,9 @@ def generate_python_module(graph_data):
             node_id = node["id"]
             node_type = node["type"]
             data = node.get("data", {})
-            worker_name = to_class_name(data.get("workerName", f"Worker_{node_id}"))
+            worker_name = data.get("workerName", f"Worker_{node_id}")
+            if not is_valid_python_class_name(worker_name):
+                raise ValueError(f"Invalid worker name: {worker_name}")
             instance_name = (
                 worker_name[0].lower() + worker_name[1:]
             )  # e.g., basicTaskWorker
@@ -149,19 +150,22 @@ def generate_python_module(graph_data):
             code.append(f"\nclass {worker_name}({base_class}):")
 
             # Input/Output Types
-            input_types_str = ", ".join(
-                get_task_class_name(t) for t in data.get("inputTypes", [])
-            )
+            if len(data.get("inputTypes", [])) > 1 and node_type != "mergedtaskworker":
+                raise ValueError(
+                    f'Only MergedTaskWorker can have multiple input types. Got {len(data.get("inputTypes", []))} for {worker_name}.'
+                )
             output_types_str = ", ".join(
                 get_task_class_name(t) for t in data.get("outputTypes", [])
-            )
-            code.append(
-                f"    # input_types: List[Type[Task]] = [{input_types_str}] # Input types not directly used by PlanAI workers"
             )
             code.append(f"    output_types: List[Type[Task]] = [{output_types_str}]")
 
             # LLM Specifics
+            print("--------------------------------")
+            print(data)
+            print(data.get("inputTypes", ["Task"]))
+            input_type = get_task_class_name(data.get("inputTypes", ["Task"])[0])
             if node_type == "llmtaskworker":
+                code.append(f"    llm_input_type: Type[Task] = {input_type}")
                 system_prompt = data.get("systemPrompt", "You are a helpful assistant.")
                 prompt = data.get("prompt", "# Define your prompt here")
                 code.append(f'    system_prompt: str = """{dedent(system_prompt)}"""')
@@ -176,9 +180,7 @@ def generate_python_module(graph_data):
             consume_work_code = data.get("consumeWork", None)
             if consume_work_code:
                 indented_consume_work = indent(dedent(consume_work_code), "    ")
-                code.append(
-                    "\n    def consume_work(self, task: Task): # TODO: Add specific input task type hint"
-                )
+                code.append(f"\n    def consume_work(self, task: {input_type}):")
                 code.append(indented_consume_work)
                 code.append("\n")
 
@@ -196,9 +198,11 @@ def generate_python_module(graph_data):
         for node_id, instance_name in worker_instances.items():
             worker_node = next((n for n in worker_nodes if n["id"] == node_id), None)
             if worker_node:
-                worker_class_name = to_class_name(
-                    worker_node.get("data", {}).get("workerName", f"Worker_{node_id}")
+                worker_class_name = worker_node.get("data", {}).get(
+                    "workerName", f"Worker_{node_id}"
                 )
+                if not is_valid_python_class_name(worker_class_name):
+                    raise ValueError(f"Invalid worker name: {worker_class_name}")
                 # Basic LLM assignment - needs refinement based on node config/needs
                 llm_arg = ""
                 if worker_node["type"] == "llmtaskworker":
