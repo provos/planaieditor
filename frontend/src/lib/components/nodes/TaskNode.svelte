@@ -14,7 +14,7 @@
 		type: FieldType;
 		isList: boolean;
 		required: boolean;
-		default?: any;
+		description?: string;
 	}
 
 	interface NodeData {
@@ -41,6 +41,7 @@
 	let editingFieldType = $state<BaseFieldType>('string');
 	let editingFieldIsList = $state(false);
 	let editingFieldRequired = $state(true);
+	let editingFieldDescription = $state<string | undefined>(undefined);
 	let fieldNameError = $state('');
 	let tempClassName = $state(data.className);
 
@@ -108,7 +109,7 @@
 		editingFieldName = field.name;
 		editingFieldIsList = field.isList;
 		editingFieldType = field.type as BaseFieldType;
-
+		editingFieldDescription = field.description;
 		editingFieldRequired = field.required;
 		fieldNameError = '';
 	}
@@ -120,6 +121,7 @@
 		editingFieldIsList = false;
 		editingFieldRequired = true;
 		fieldNameError = '';
+		editingFieldDescription = undefined;
 	}
 
 	function validateFieldName(name: string, currentIndex: number): boolean {
@@ -150,7 +152,8 @@
 			name: editingFieldName,
 			type: editingFieldType,
 			isList: editingFieldIsList,
-			required: editingFieldRequired
+			required: editingFieldRequired,
+			description: editingFieldDescription || undefined
 		};
 
 		if (editingFieldIndex === -1) {
@@ -174,6 +177,7 @@
 		editingFieldIndex = null;
 		editingFieldName = '';
 		fieldNameError = '';
+		editingFieldDescription = undefined;
 	}
 
 	function deleteField(index: number) {
@@ -219,7 +223,7 @@
 
 	<!-- Node handles -->
 	<Handle type="source" position={Position.Right} id="output" />
-	
+
 	<!-- Header with editable class name -->
 	<div class="flex-none border-b border-gray-200 bg-gray-50 p-1">
 		{#if editingClassName}
@@ -296,6 +300,17 @@
 							<div class="text-2xs mb-1 text-red-500">{fieldNameError}</div>
 						{/if}
 
+						<!-- Description Input -->
+						<div class="mb-1">
+							<input
+								type="text"
+								bind:value={editingFieldDescription}
+								placeholder="Description (optional)"
+								class="text-2xs w-full rounded border border-gray-200 px-1 py-0.5"
+								onkeydown={handleFieldKeydown}
+							/>
+						</div>
+
 						<div class="flex items-center justify-between">
 							<div class="text-2xs flex items-center">
 								<input
@@ -335,6 +350,14 @@
 							<span class="font-medium">{field.name}</span>
 							<span class="text-gray-500">:</span>
 							<span class="text-gray-600">{formatFieldType(field)}</span>
+							{#if field.description}
+								<span
+									class="ml-1 truncate text-ellipsis italic text-gray-400"
+									title={field.description}
+								>
+									({field.description})
+								</span>
+							{/if}
 							{#if !field.required}
 								<span class="text-gray-400">?</span>
 							{/if}
@@ -402,6 +425,17 @@
 					{#if fieldNameError}
 						<div class="text-2xs mb-1 text-red-500">{fieldNameError}</div>
 					{/if}
+
+					<!-- Description Input for New Field -->
+					<div class="mb-1">
+						<input
+							type="text"
+							bind:value={editingFieldDescription}
+							placeholder="Description (optional)"
+							class="text-2xs w-full rounded border border-gray-200 px-1 py-0.5"
+							onkeydown={handleFieldKeydown}
+						/>
+					</div>
 
 					<div class="flex items-center justify-between">
 						<div class="text-2xs flex items-center">
