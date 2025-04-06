@@ -7,11 +7,12 @@
 	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
 
 	type BaseFieldType = 'string' | 'integer' | 'float';
-	type FieldType = BaseFieldType | `list_${BaseFieldType}`;
+	type FieldType = BaseFieldType;
 
 	interface Field {
 		name: string;
 		type: FieldType;
+		isList: boolean;
 		required: boolean;
 		default?: any;
 	}
@@ -105,14 +106,8 @@
 		const field = data.fields[index];
 		editingFieldIndex = index;
 		editingFieldName = field.name;
-
-		if (field.type.startsWith('list_')) {
-			editingFieldIsList = true;
-			editingFieldType = field.type.substring(5) as BaseFieldType;
-		} else {
-			editingFieldIsList = false;
-			editingFieldType = field.type as BaseFieldType;
-		}
+		editingFieldIsList = field.isList;
+		editingFieldType = field.type as BaseFieldType;
 
 		editingFieldRequired = field.required;
 		fieldNameError = '';
@@ -148,16 +143,13 @@
 		return true;
 	}
 
-	function getFullFieldType(): FieldType {
-		return editingFieldIsList ? (`list_${editingFieldType}` as FieldType) : editingFieldType;
-	}
-
 	function saveField() {
 		if (!validateFieldName(editingFieldName, editingFieldIndex!)) return;
 
 		const newField = {
 			name: editingFieldName,
-			type: getFullFieldType(),
+			type: editingFieldType,
+			isList: editingFieldIsList,
 			required: editingFieldRequired
 		};
 
@@ -208,12 +200,11 @@
 	}
 
 	// Format field type for display
-	function formatFieldType(type: FieldType): string {
-		if (type.startsWith('list_')) {
-			const baseType = type.substring(5) as BaseFieldType;
-			return `List[${BASE_TYPE_LABELS[baseType]}]`;
+	function formatFieldType(field: Field): string {
+		if (field.isList) {
+			return `List[${BASE_TYPE_LABELS[field.type as BaseFieldType]}]`;
 		}
-		return BASE_TYPE_LABELS[type as BaseFieldType];
+		return BASE_TYPE_LABELS[field.type as BaseFieldType];
 	}
 
 	// Update local fields when data.fields changes
@@ -343,7 +334,7 @@
 						<div class="flex items-center gap-1">
 							<span class="font-medium">{field.name}</span>
 							<span class="text-gray-500">:</span>
-							<span class="text-gray-600">{formatFieldType(field.type)}</span>
+							<span class="text-gray-600">{formatFieldType(field)}</span>
 							{#if !field.required}
 								<span class="text-gray-400">?</span>
 							{/if}

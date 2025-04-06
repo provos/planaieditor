@@ -83,19 +83,20 @@ def generate_python_module(graph_data):
                     field_type = field.get("type", "Any")  # Default to Any
                     description = field.get("description", "No description")
                     # Basic type mapping (can be expanded)
-                    if field_type.lower() == "string":
-                        py_type = "str"
-                    elif field_type.lower() == "integer":
-                        py_type = "int"
-                    elif field_type.lower() == "float":
-                        py_type = "float"
-                    elif field_type.lower() == "boolean":
-                        py_type = "bool"
-                    elif field_type.lower() == "list[string]":
-                        py_type = "List[str]"
-                    # TODO: Add more complex type mappings (Literal, Optional, etc.)
-                    else:
-                        py_type = "Any"
+                    match field_type.lower():
+                        case "string":
+                            py_type = "str"
+                        case "integer":
+                            py_type = "int"
+                        case "float":
+                            py_type = "float"
+                        case "boolean":
+                            py_type = "bool"
+                        case _:
+                            py_type = "Any"
+
+                    if field.get("isList", False):
+                        py_type = f"List[{py_type}]"
 
                     code.append(
                         f'    {field_name}: {py_type} = Field(..., description="{description}")'
