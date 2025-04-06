@@ -2,12 +2,10 @@
 	import { Handle, Position, NodeResizer, useStore } from '@xyflow/svelte';
 	import { isValidPythonClassName } from '$lib/utils/validation';
 	import { allClassNames } from '$lib/stores/classNameStore';
-	import Plus from 'phosphor-svelte/lib/Plus';
 	import Trash from 'phosphor-svelte/lib/Trash';
 	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
 	import type { Node, Edge } from '@xyflow/svelte';
 	import type { Snippet } from 'svelte';
-	import type { Writable } from 'svelte/store';
 
 	// Base interface for worker node data
 	export interface BaseWorkerData {
@@ -99,8 +97,8 @@
 			})
 			.filter(Boolean) as string[];
 
-		// ONLY update the local reactive state used for display
 		inferredInputTypes = sourceClassNames;
+		data.inputTypes = sourceClassNames;
 	}
 
 	// Update local output types when data changes
