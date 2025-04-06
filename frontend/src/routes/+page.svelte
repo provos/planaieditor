@@ -406,3 +406,24 @@ Analyze the following information and provide a response.`,
 		{/if}
 	</div>
 </div>
+
+<style>
+	:global(.svelte-flow .svelte-flow__handle) {
+		width: 14px;
+		height: 30px;
+		border-radius: 3px;
+		background-color: #784be8;
+	}
+
+	:global(.svelte-flow .svelte-flow__handle-left) {
+		left: -7px;
+	}
+
+	:global(.svelte-flow .svelte-flow__handle-right) {
+		right: -7px;
+	}
+
+	:global(.svelte-flow .svelte-flow__edge path, .svelte-flow__connectionline path) {
+		stroke-width: 2;
+	}
+</style>
