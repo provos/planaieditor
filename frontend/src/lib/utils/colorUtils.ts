@@ -46,26 +46,21 @@ export function getColorForType(typeName: string): string {
  * @returns A percentage string for the 'top' CSS property.
  */
 export function calculateHandlePosition(index: number, total: number, nodeHeight: number = 100): string {
-    if (total <= 0) return '50%'; // Default center if no handles somehow
+    if (total <= 0) return '50%'; // Default center if no handles
+    if (total === 1) return '50%'; // Center a single handle
 
-    // Calculate spacing to distribute handles evenly, leaving some padding
-    const totalSpacing = nodeHeight * 0.25; // Use 80% of height for handles
-    const spacingPerHandle = total > 1 ? totalSpacing / (total - 1) : 0; // Avoid division by zero for single handle
-    const startOffset = (nodeHeight - totalSpacing) / 2; // Center the block of handles vertically
+    // Define a fixed height for the handle cluster
+    const clusterHeight = 70; // e.g., 70 pixels high for the cluster
+    const spacingPerHandle = clusterHeight / (total - 1); // Space between handles within the cluster
 
-    let topPositionPx = startOffset + (index * spacingPerHandle);
+    // Calculate the top offset to center the cluster vertically
+    const clusterTopOffset = (nodeHeight - clusterHeight) / 2;
 
-    // For a single handle, center it
-    if (total === 1) {
-        topPositionPx = nodeHeight / 2;
-    }
+    // Calculate the top position for the specific handle within the cluster
+    const handleTopWithinCluster = index * spacingPerHandle;
 
-    // Convert to percentage - Assuming the parent container's height corresponds somewhat to nodeHeight
-    // This might need adjustment depending on the actual node layout.
-    // A fixed pixel offset might be more reliable if percentage causes issues.
-    // Let's try pixels first for more direct control.
+    // Final top position relative to the node
+    const topPositionPx = clusterTopOffset + handleTopWithinCluster;
 
-    // Return pixel value for direct style application
-    // The parent container needs relative positioning for this to work.
     return `${topPositionPx}px`;
 } 
