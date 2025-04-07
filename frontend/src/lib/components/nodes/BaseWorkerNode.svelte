@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { Handle, Position, NodeResizer, useStore } from '@xyflow/svelte';
+	import { Handle, Position, NodeResizer, useStore, useUpdateNodeInternals } from '@xyflow/svelte';
 	import { isValidPythonClassName } from '$lib/utils/validation';
+	import { getColorForType, calculateHandlePosition } from '$lib/utils/colorUtils';
 	import { allClassNames } from '$lib/stores/classNameStore';
 	import Trash from 'phosphor-svelte/lib/Trash';
 	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
@@ -33,8 +34,9 @@
 		defaultName?: string;
 	}>();
 
-	// Access the SvelteFlow store
+	// Access the SvelteFlow store and internals update hook
 	const store = useStore();
+	const updateNodeInternals = useUpdateNodeInternals();
 
 	// --- State Variables ---
 	let editingWorkerName = $state(false);
@@ -46,6 +48,7 @@
 	let availableTaskClasses = $state<string[]>([]);
 	let inferredInputTypes = $state<string[]>([]);
 	let currentOutputTypes = $state<string[]>([...(data.outputTypes || [])]);
+	let nodeRef: HTMLElement | null = $state(null);
 
 	// --- Effects for Reactivity ---
 	$effect(() => {
@@ -93,6 +96,11 @@
 		const sourceClassNames: string[] = sourceNodeIds
 			.map((nodeId: string) => {
 				const sourceNode = nodes.find((node: Node) => node.id === nodeId);
+				const edge = incomingEdges.find((e) => e.source === nodeId);
+				const sourceHandleId = edge?.sourceHandle;
+				if (sourceHandleId && sourceHandleId.startsWith('output-')) {
+					return sourceHandleId.substring(7);
+				}
 				return sourceNode?.data?.className;
 			})
 			.filter(Boolean) as string[];
@@ -101,9 +109,12 @@
 		data.inputTypes = sourceClassNames;
 	}
 
-	// Update local output types when data changes
+	// Update local output types when data changes AND update node internals
 	$effect(() => {
 		currentOutputTypes = [...(data.outputTypes || [])];
+		if (id) {
+			updateNodeInternals(id);
+		}
 	});
 
 	// --- Worker Name Editing Logic ---
@@ -164,14 +175,13 @@
 
 	function saveOutputType() {
 		if (!validateType(tempType)) return;
-		if (editingOutputType === -1) {
-			data.outputTypes = [...data.outputTypes, tempType];
-		} else {
-			data.outputTypes = data.outputTypes.map((type: string, i: number) =>
-				i === editingOutputType ? tempType : type
-			);
-		}
 		currentOutputTypes = [...data.outputTypes];
+		if (editingOutputType === -1) {
+			currentOutputTypes.push(tempType);
+		} else if (editingOutputType !== null) {
+			currentOutputTypes[editingOutputType] = tempType;
+		}
+		data.outputTypes = currentOutputTypes;
 		cancelTypeEditing();
 	}
 
@@ -200,11 +210,30 @@
 </script>
 
 <div
-	class="base-worker-node flex h-full flex-col rounded-md border border-gray-300 bg-white shadow-md"
+	bind:this={nodeRef}
+	class="base-worker-node relative flex h-full flex-col rounded-md border border-gray-300 bg-white shadow-md"
 >
 	<NodeResizer {minWidth} {minHeight} />
+
+	<!-- Input Handle (Single for now) -->
 	<Handle type="target" position={Position.Left} id="input" />
-	<Handle type="source" position={Position.Right} id="output" />
+
+	<!-- Output Handles (Dynamically created) -->
+	{#each currentOutputTypes as type, index (type)}
+		{@const handleId = `output-${type}`}
+		{@const color = getColorForType(type)}
+		{@const topPos = calculateHandlePosition(
+			index,
+			currentOutputTypes.length,
+			nodeRef?.clientHeight ?? minHeight
+		)}
+		<Handle
+			type="source"
+			position={Position.Right}
+			id={handleId}
+			style={`background-color: ${color}; top: ${topPos};`}
+		/>
+	{/each}
 
 	<!-- Header -->
 	<div class="flex-none border-b border-gray-200 bg-gray-50 p-1">
@@ -276,7 +305,8 @@
 				<div class="text-2xs py-0.5 italic text-gray-400">No output types defined</div>
 			{/if}
 			<div class="mt-1 space-y-1">
-				{#each currentOutputTypes as type, index}
+				{#each currentOutputTypes as type, index (type)}
+					{@const color = getColorForType(type)}
 					{#if editingOutputType === index}
 						<!-- Output Type Edit Form -->
 						<div class="rounded border border-blue-200 bg-blue-50 p-1">
@@ -304,9 +334,10 @@
 							</div>
 						</div>
 					{:else}
-						<!-- Output Type Display Item -->
+						<!-- Output Type Display Item - Now with color -->
 						<div
-							class="text-2xs group flex items-center justify-between rounded bg-purple-50 px-1 py-0.5"
+							class="text-2xs group flex items-center justify-between rounded px-1 py-0.5"
+							style={`background-color: ${color}20; border-left: 3px solid ${color};`}
 						>
 							<span class="font-mono">{type}</span>
 							<div class="flex">
@@ -339,5 +370,28 @@
 	.text-2xs {
 		font-size: 0.65rem;
 		line-height: 1rem;
+	}
+
+	/* Make node relative for absolute handle positioning */
+	.base-worker-node {
+		position: relative;
+	}
+
+	/* Override default handle size/shape for better visibility */
+	:global(.svelte-flow .svelte-flow__handle) {
+		width: 10px; /* Make handles smaller squares */
+		height: 10px;
+		border-radius: 2px;
+		border: 1px solid rgba(0, 0, 0, 0.2);
+		/* background-color is set inline */
+	}
+
+	/* Adjust horizontal positioning */
+	:global(.svelte-flow .svelte-flow__handle-left) {
+		left: -5px; /* Center the smaller handle */
+	}
+
+	:global(.svelte-flow .svelte-flow__handle-right) {
+		right: -5px; /* Center the smaller handle */
 	}
 </style>

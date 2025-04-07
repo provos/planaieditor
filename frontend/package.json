@@ -44,8 +44,10 @@
 	"dependencies": {
 		"@codemirror/lang-markdown": "^6.3.2",
 		"@codemirror/lang-python": "^6.1.7",
+		"@types/d3-scale-chromatic": "^3.1.0",
 		"@xyflow/svelte": "^0.1.33",
 		"codemirror": "^6.0.1",
+		"d3-scale-chromatic": "^3.1.0",
 		"phosphor-svelte": "^3.0.1",
 		"socket.io-client": "^4.8.1",
 		"svelte-codemirror-editor": "^1.4.1"
