@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { SvelteFlow, Background, Controls } from '@xyflow/svelte';
+	import { SvelteFlow, Background, Controls, useSvelteFlow } from '@xyflow/svelte';
 	import type { Node, Edge, Connection } from '@xyflow/svelte';
 	import '@xyflow/svelte/dist/style.css';
 	import ToolShelf from '$lib/components/ToolShelf.svelte';
@@ -25,7 +25,10 @@
 		joinedtaskworker: JoinedTaskWorkerNode
 	};
 
-	// Use Svelte stores for nodes and edges as required by @xyflow/svelte
+	// Use SvelteFlow hook
+	const { screenToFlowPosition } = useSvelteFlow();
+
+	// Use Svelte stores for nodes and edges
 	const nodes = writable<Node[]>([]);
 	const edges = writable<Edge[]>([]);
 
@@ -128,19 +131,11 @@
 			return;
 		}
 
-		// Get the position where the node is dropped
-		const wrapper = document.querySelector('.svelte-flow__pane');
-		const wrapperBounds = wrapper?.getBoundingClientRect();
-
-		if (!wrapperBounds) {
-			console.log('Could not find flow wrapper element');
-			return;
-		}
-
-		const position = {
-			x: event.clientX - wrapperBounds.left,
-			y: event.clientY - wrapperBounds.top
-		};
+		// Get the position using screenToFlowPosition
+		const position = screenToFlowPosition({
+			x: event.clientX,
+			y: event.clientY
+		});
 
 		// Create a unique ID for the new node
 		const id = `${nodeType}-${Date.now()}`;
@@ -218,7 +213,7 @@ Analyze the following information and provide a response.`,
 		}
 
 		// Create a new node object
-		const newNode = {
+		const newNode: Node = {
 			id,
 			type: nodeType,
 			position,
@@ -228,7 +223,8 @@ Analyze the following information and provide a response.`,
 			selected: false,
 			dragging: false,
 			zIndex: 0,
-			data: nodeData
+			data: nodeData,
+			origin: [0, 0] // Set origin to top-left
 		};
 
 		// Update our nodes store
@@ -362,7 +358,7 @@ Analyze the following information and provide a response.`,
 			return false;
 		}
 		const targetNodeData = targetNode.data as BaseWorkerData;
-		if (targetNode.type !== "mergedtaskworker" && targetNodeData.inputTypes.length > 0) {
+		if (targetNode.type !== 'mergedtaskworker' && targetNodeData.inputTypes.length > 0) {
 			// all workers but merged task workers have only one input type
 			return false;
 		}
@@ -399,7 +395,7 @@ Analyze the following information and provide a response.`,
 			ondrop={onDrop}
 			ondragover={onDragOver}
 			onclick={onPaneClick}
-			isValidConnection={isValidConnection}
+			{isValidConnection}
 			class="flex-grow"
 			fitView
 			nodesDraggable

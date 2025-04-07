@@ -1,7 +1,9 @@
 <script lang="ts">
 	import '../app.css';
-
-	let { children } = $props();
+	import { SvelteFlowProvider } from '@xyflow/svelte';
+	export let data;
 </script>
 
-{@render children()}
+<SvelteFlowProvider>
+	<slot />
+</SvelteFlowProvider>
