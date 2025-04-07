@@ -216,7 +216,12 @@
 	<NodeResizer {minWidth} {minHeight} />
 
 	<!-- Input Handle (Single for now) -->
-	<Handle type="target" position={Position.Left} id="input" style={`background-color: ${getColorForType(inferredInputTypes[0])};`}/>
+	<Handle
+		type="target"
+		position={Position.Left}
+		id="input"
+		style={`background-color: ${getColorForType(inferredInputTypes[0])};`}
+	/>
 
 	<!-- Output Handles (Dynamically created) -->
 	{#each currentOutputTypes as type, index (type)}
@@ -277,8 +282,12 @@
 				<div class="text-2xs py-0.5 italic text-gray-400">Connect Task nodes</div>
 			{/if}
 			<div class="mt-1 space-y-1">
-				{#each inferredInputTypes as type}
-					<div class="text-2xs flex items-center rounded bg-green-50 px-1 py-0.5">
+				{#each inferredInputTypes as type (type)}
+					{@const color = getColorForType(type)}
+					<div
+						class="text-2xs flex items-center rounded px-1 py-0.5"
+						style={`background-color: ${color}20; border-left: 3px solid ${color};`}
+					>
 						<span class="font-mono">{type}</span>
 					</div>
 				{/each}
