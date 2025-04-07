@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { SvelteFlow, Background, Controls } from '@xyflow/svelte';
-	import type { Node, Edge } from '@xyflow/svelte';
+	import type { Node, Edge, Connection } from '@xyflow/svelte';
 	import '@xyflow/svelte/dist/style.css';
 	import ToolShelf from '$lib/components/ToolShelf.svelte';
 	import TaskNode from '$lib/components/nodes/TaskNode.svelte';
 	import TaskWorkerNode from '$lib/components/nodes/TaskWorkerNode.svelte';
 	import LLMTaskWorkerNode from '$lib/components/nodes/LLMTaskWorkerNode.svelte';
 	import JoinedTaskWorkerNode from '$lib/components/nodes/JoinedTaskWorkerNode.svelte';
+	import type { BaseWorkerData } from '$lib/components/nodes/BaseWorkerNode.svelte';
 	import { writable } from 'svelte/store';
 	import { allClassNames } from '$lib/stores/classNameStore';
 	import ContextMenu from '$lib/components/ContextMenu.svelte';
@@ -350,6 +351,23 @@ Analyze the following information and provide a response.`,
 		exportStatus = { type: 'loading', message: 'Exporting...' };
 		socket.emit('export_graph', graphData);
 	}
+
+	function isValidConnection(connection: Connection | Edge): boolean {
+		let currentNodes: Node[] = [];
+		const unsubNodes = nodes.subscribe((value) => (currentNodes = value));
+		unsubNodes();
+		const targetNode = currentNodes.find((node) => node.id === connection.target);
+		const sourceNode = currentNodes.find((node) => node.id === connection.source);
+		if (!targetNode || !sourceNode) {
+			return false;
+		}
+		const targetNodeData = targetNode.data as BaseWorkerData;
+		if (targetNode.type !== "mergedtaskworker" && targetNodeData.inputTypes.length > 0) {
+			// all workers but merged task workers have only one input type
+			return false;
+		}
+		return true;
+	}
 </script>
 
 <div class="flex h-screen w-screen flex-col">
@@ -381,6 +399,7 @@ Analyze the following information and provide a response.`,
 			ondrop={onDrop}
 			ondragover={onDragOver}
 			onclick={onPaneClick}
+			isValidConnection={isValidConnection}
 			class="flex-grow"
 			fitView
 			nodesDraggable
