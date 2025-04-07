@@ -14,6 +14,9 @@ function createOrdinalScale(range: readonly string[]) {
     let nextIndex = 0;
 
     return function (domainValue: string): string {
+        if (!domainValue) {
+            return '#784be8';
+        }
         if (domainMap.has(domainValue)) {
             return domainMap.get(domainValue)!;
         }

@@ -216,7 +216,7 @@
 	<NodeResizer {minWidth} {minHeight} />
 
 	<!-- Input Handle (Single for now) -->
-	<Handle type="target" position={Position.Left} id="input" />
+	<Handle type="target" position={Position.Left} id="input" style={`background-color: ${getColorForType(inferredInputTypes[0])};`}/>
 
 	<!-- Output Handles (Dynamically created) -->
 	{#each currentOutputTypes as type, index (type)}

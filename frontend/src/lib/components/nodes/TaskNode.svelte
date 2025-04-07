@@ -2,6 +2,7 @@
 	import { Handle, Position, NodeResizer } from '@xyflow/svelte';
 	import { isValidPythonClassName, isValidPythonIdentifier } from '$lib/utils/validation';
 	import { allClassNames } from '$lib/stores/classNameStore';
+	import { getColorForType } from '$lib/utils/colorUtils';
 	import Plus from 'phosphor-svelte/lib/Plus';
 	import Trash from 'phosphor-svelte/lib/Trash';
 	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
@@ -222,7 +223,7 @@
 	<NodeResizer minWidth={200} minHeight={150} />
 
 	<!-- Node handles -->
-	<Handle type="source" position={Position.Right} id="output" />
+	<Handle type="source" position={Position.Right} id="output" style={`background-color: ${getColorForType(data.className)};`}/>
 
 	<!-- Header with editable class name -->
 	<div class="flex-none border-b border-gray-200 bg-gray-50 p-1">
