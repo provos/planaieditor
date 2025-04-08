@@ -169,10 +169,9 @@
 					workerName: uniqueName, // Assign the unique name
 					inputTypes: [],
 					outputTypes: [],
-					consumeWork: `def consume_work(self, task):
-    # Process the input task and produce output
-    # self.publish_work(output_task, input_task=task)
-    pass`,
+					consumeWork: `# Process the input task and produce output
+# self.publish_work(output_task, input_task=task)
+pass`,
 					nodeId: id
 				};
 				break;
