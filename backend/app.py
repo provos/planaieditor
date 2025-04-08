@@ -179,7 +179,7 @@ def generate_python_module(graph_data):
             # Consume Work Method
             consume_work_code = data.get("consumeWork", None)
             if consume_work_code:
-                indented_consume_work = indent(dedent(consume_work_code), "    ")
+                indented_consume_work = indent(dedent(consume_work_code), "        ")
                 code.append(f"\n    def consume_work(self, task: {input_type}):")
                 code.append(indented_consume_work)
                 code.append("\n")
