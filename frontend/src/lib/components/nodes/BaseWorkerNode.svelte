@@ -101,6 +101,7 @@
 				if (sourceHandleId && sourceHandleId.startsWith('output-')) {
 					return sourceHandleId.substring(7);
 				}
+				// Fallback if handle ID is missing/unexpected
 				return sourceNode?.data?.className;
 			})
 			.filter(Boolean) as string[];

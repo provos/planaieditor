@@ -2,11 +2,72 @@
 	import BaseWorkerNode from '$lib/components/nodes/BaseWorkerNode.svelte';
 	import EditableCodeSection from '$lib/components/EditableCodeSection.svelte';
 	import type { BaseWorkerData as WorkerData } from '$lib/components/nodes/BaseWorkerNode.svelte'; // Correct import
+	import { useStore } from '@xyflow/svelte'; // Import useStore
+	import type { Node, Edge } from '@xyflow/svelte';
 
 	let { id, data } = $props<{
 		id: string;
 		data: WorkerData;
 	}>();
+
+	const store = useStore(); // Access the store
+
+	// Use $state for the title and $effect for reactivity based on store changes
+	const defaultTitle = 'def consume_work(self, task):';
+	let reactiveTitle = $state(defaultTitle);
+
+	$effect(() => {
+		let currentNodes: Node[] = [];
+		let currentEdges: Edge[] = [];
+
+		// Subscribe to nodes store changes
+		const unsubNodes = store.nodes.subscribe((nodesValue) => {
+			currentNodes = nodesValue || [];
+			updateTitleBasedOnInputs(currentNodes, currentEdges);
+		});
+
+		// Subscribe to edges store changes
+		const unsubEdges = store.edges.subscribe((edgesValue) => {
+			currentEdges = edgesValue || [];
+			updateTitleBasedOnInputs(currentNodes, currentEdges);
+		});
+
+		// Initial update
+		updateTitleBasedOnInputs(currentNodes, currentEdges);
+
+		// Cleanup
+		return () => {
+			unsubNodes();
+			unsubEdges();
+		};
+	});
+
+	// Helper function to calculate inputs and update title
+	function updateTitleBasedOnInputs(nodes: Node[], edges: Edge[]) {
+		if (!edges || !nodes) {
+			reactiveTitle = defaultTitle;
+			return;
+		}
+
+		const incomingEdges = edges.filter((edge: Edge) => edge.target === id);
+		const sourceNodeIds = incomingEdges.map((edge: Edge) => edge.source);
+		const sourceClassNames: string[] = sourceNodeIds
+			.map((nodeId: string) => {
+				const sourceNode = nodes.find((node: Node) => node.id === nodeId);
+				const edge = incomingEdges.find((e) => e.source === nodeId);
+				const sourceHandleId = edge?.sourceHandle;
+				if (sourceHandleId && sourceHandleId.startsWith('output-')) {
+					return sourceHandleId.substring(7);
+				}
+				return sourceNode?.data?.className;
+			})
+			.filter(Boolean) as string[];
+
+		// Update the title based on the *first* calculated input type
+		reactiveTitle = sourceClassNames[0]
+			? `def consume_work(self, task: ${sourceClassNames[0]}):`
+			: defaultTitle;
+	}
 
 	// Handler for code updates
 	function handleCodeUpdate(newCode: string) {
@@ -17,7 +78,7 @@
 <BaseWorkerNode {id} {data} defaultName="TaskWorker">
 	<div class="flex min-h-0 flex-grow flex-col overflow-hidden">
 		<EditableCodeSection
-			title="consume_work()"
+			title={reactiveTitle}
 			code={data.consumeWork}
 			language="python"
 			onUpdate={handleCodeUpdate}
