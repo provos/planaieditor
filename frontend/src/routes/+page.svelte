@@ -8,7 +8,7 @@
 	import LLMTaskWorkerNode from '$lib/components/nodes/LLMTaskWorkerNode.svelte';
 	import JoinedTaskWorkerNode from '$lib/components/nodes/JoinedTaskWorkerNode.svelte';
 	import type { BaseWorkerData } from '$lib/components/nodes/BaseWorkerNode.svelte';
-	import { writable } from 'svelte/store';
+	import { writable, get } from 'svelte/store';
 	import { allClassNames } from '$lib/stores/classNameStore';
 	import ContextMenu from '$lib/components/ContextMenu.svelte';
 	import type { ContextMenuItem } from '$lib/components/ContextMenu.svelte';
@@ -16,6 +16,13 @@
 	import Scissors from 'phosphor-svelte/lib/Scissors';
 	import { io, Socket } from 'socket.io-client';
 	import { onMount } from 'svelte';
+
+	// Type for the structured error from the backend
+	interface BackendError {
+		message: string;
+		nodeName: string | null; // The name of the class/worker identified in the traceback
+		fullTraceback?: string;
+	}
 
 	// Define node types and pass stores as props
 	const nodeTypes: any = {
@@ -62,15 +69,58 @@
 		});
 
 		// Listen for export results from the backend
-		socket.on('export_result', (data: { success: boolean; message?: string; error?: string }) => {
-			if (data.success) {
-				exportStatus = { type: 'success', message: data.message || 'Export successful!' };
-				console.log('Export successful:', data.message);
-			} else {
-				exportStatus = { type: 'error', message: data.error || 'Export failed.' };
-				console.error('Export failed:', data.error);
+		socket.on(
+			'export_result',
+			(data: { success: boolean; message?: string; error?: BackendError }) => {
+				const currentNodes = get(nodes); // Get current nodes state
+				clearNodeErrors(); // Clear any previous errors
+
+				if (data.success) {
+					exportStatus = { type: 'success', message: data.message || 'Export successful!' };
+					console.log('Export successful:', data.message);
+				} else {
+					const errorInfo = data.error;
+					if (!errorInfo) {
+						exportStatus = { type: 'error', message: 'Unknown export error occurred.' };
+						console.error('Export failed with no error details.');
+						return;
+					}
+
+					console.error(`Export failed: ${errorInfo.message}`, errorInfo.fullTraceback);
+
+					if (errorInfo.nodeName) {
+						// Find the node by the name identified in the backend
+						const targetNode = currentNodes.find(
+							(n) =>
+								n.data?.className === errorInfo.nodeName ||
+								n.data?.workerName === errorInfo.nodeName
+						);
+
+						if (targetNode) {
+							// Assign the core message to the specific node's data
+							nodes.update((nds) =>
+								nds.map((n) =>
+									n.id === targetNode.id
+										? { ...n, data: { ...n.data, error: errorInfo.message } }
+										: n
+								)
+							);
+							exportStatus = {
+								type: 'error',
+								message: `Error in node ${errorInfo.nodeName}: ${errorInfo.message}`
+							};
+						} else {
+							// Couldn't find node for the name, show generic message with details
+							console.warn(`Could not find node with name: ${errorInfo.nodeName}`);
+							exportStatus = { type: 'error', message: `Error (unlinked): ${errorInfo.message}` };
+						}
+					} else {
+						// Show generic error message if backend couldn't identify a node name
+						exportStatus = { type: 'error', message: errorInfo.message };
+					}
+				}
 			}
-		});
+		);
 
 		return () => {
 			// Disconnect the socket when the component is destroyed
@@ -362,6 +412,20 @@ Analyze the following information and provide a response.`,
 			return false;
 		}
 		return true;
+	}
+
+	// Helper function to clear errors from all node data
+	function clearNodeErrors() {
+		nodes.update((currentNodes) =>
+			currentNodes.map((node) => {
+				if (node.data?.error) {
+					const { error, ...restData } = node.data; // Destructure to remove error
+					return { ...node, data: restData };
+				} else {
+					return node; // No error property to remove
+				}
+			})
+		);
 	}
 </script>
 

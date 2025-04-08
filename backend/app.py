@@ -1,4 +1,5 @@
 import os
+import re
 import subprocess
 import tempfile
 import traceback
@@ -16,7 +17,7 @@ socketio = SocketIO(
 
 # Function to validate the generated code by running it in a specific venv
 def validate_code_in_venv(module_name, code_string):
-    """Attempts to execute Python code in a separate virtual environment using a temporary file."""
+    """Attempts to execute Python code in a separate venv and returns structured error info."""
     # Define the path to the virtual environment's Python executable
     # TODO: Make this configurable
     venv_path = (
@@ -27,9 +28,17 @@ def validate_code_in_venv(module_name, code_string):
     )  # Assumes Linux/macOS structure
 
     if not os.path.exists(python_executable):
-        error_message = f"Python executable not found at {python_executable}. Please ensure the venv exists and is correctly structured."
+        error_message = f"Python executable not found at {python_executable}. Please ensure the venv exists."
         print(error_message)
-        return False, error_message
+        # Return structured error
+        return {
+            "success": False,
+            "error": {
+                "message": error_message,
+                "nodeName": None,
+                "fullTraceback": None,
+            },
+        }
 
     # Use a temporary file for the generated code
     # delete=False is needed on Windows to allow the subprocess to open the file.
@@ -49,7 +58,7 @@ def validate_code_in_venv(module_name, code_string):
             capture_output=True,
             text=True,
             check=False,
-            timeout=30,
+            timeout=60,  # Increased timeout slightly
         )
 
         print(f"Execution in venv completed with exit code: {result.returncode}")
@@ -65,31 +74,72 @@ def validate_code_in_venv(module_name, code_string):
         # Check if the execution was successful (exit code 0)
         if result.returncode == 0:
             print(f"Successfully validated '{module_name}' in venv '{venv_path}'")
-            return True, None
+            return {"success": True}  # Return success structure
         else:
+            # Parse stderr for node name and error message
             error_output = result.stderr or result.stdout or "Unknown execution error"
-            print(f"Error validating module '{module_name}' in venv: {error_output}")
-            # Construct the error message without complex f-string interpolation
-            error_message = (
-                "Execution failed with code "
-                + str(result.returncode)
-                + ":\n"
-                + error_output
+            lines = error_output.strip().split("\n")
+            core_error_message = lines[-1] if lines else "Unknown execution error line."
+
+            # Regex to find potential class/worker names (e.g., Task1, LLMTaskWorker3)
+            # Looks for assignments like 'workerName =' or class instantiations 'workerName(...)'
+            name_regex = (
+                r"\b([A-Za-z_][A-Za-z0-9_]*?)(?:Task|Worker)\d+\b(?:\s*=|\s*\()"
             )
-            return False, error_message
+            found_node_name = None
+            matches = re.findall(name_regex, error_output)
+            if matches:
+                # Use the first match found in the traceback as the likely source
+                # This assumes the error happens during instantiation or use of the generated class
+                found_node_name = matches[0]  # Get the first captured group
+                # Simple heuristic: remove common prefixes if they exist for cleaner matching
+                if (
+                    found_node_name.startswith("l")
+                    and len(found_node_name) > 1
+                    and found_node_name[1].isupper()
+                ):
+                    found_node_name = found_node_name[
+                        1:
+                    ]  # Crude way to handle 'lLMTaskWorker1' -> 'LMTaskWorker1'
+
+            print(
+                f"Error validating module '{module_name}' in venv. Node found: {found_node_name}, Error: {core_error_message}"
+            )
+            # Return structured error
+            return {
+                "success": False,
+                "error": {
+                    "message": core_error_message,
+                    "nodeName": found_node_name,
+                    "fullTraceback": error_output,
+                },
+            }
 
     except subprocess.TimeoutExpired:
-        error_message = f"Execution of '{module_name}' timed out."
+        error_message = f"Execution of '{module_name}' timed out after 60 seconds."
         print(error_message)
-        return False, error_message
+        # Return structured error
+        return {
+            "success": False,
+            "error": {
+                "message": error_message,
+                "nodeName": None,
+                "fullTraceback": None,
+            },
+        }
     except Exception as e:
-        # Format traceback separately before including in the error message
         tb_str = traceback.format_exc()
         error_details = f"Error during validation process for '{module_name}': {e}"
         print(f"{error_details}\n{tb_str}")
-        # Combine the message for return
-        error_message = f"{error_details}\n{tb_str}"
-        return False, error_message
+        # Return structured error
+        return {
+            "success": False,
+            "error": {
+                "message": f"Internal validation error: {e}",
+                "nodeName": None,
+                "fullTraceback": tb_str,
+            },
+        }
     finally:
         # Clean up the temporary file explicitly if it was created
         if tmp_file and os.path.exists(tmp_file.name):
@@ -108,7 +158,7 @@ def handle_disconnect():
 
 @socketio.on("export_graph")
 def handle_export_graph(data):
-    """Receives graph data, generates Python module, attempts to validate it in a separate venv."""
+    """Receives graph data, generates Python module, validates it, and returns structured result."""
     print(f"Received export_graph event from {request.sid}")
     # You might want to add validation for the 'data' structure here
 
@@ -117,31 +167,23 @@ def handle_export_graph(data):
     if python_code is None or module_name is None:
         emit(
             "export_result",
-            {"success": False, "error": "Failed to generate Python code from graph."},
+            {
+                "success": False,
+                "error": {
+                    "message": "Failed to generate Python code from graph.",
+                    "nodeName": None,
+                    "fullTraceback": None,
+                },
+            },
             room=request.sid,
         )
         return
 
     # Attempt to validate the generated module in the specified venv
-    is_valid, error = validate_code_in_venv(module_name, python_code)
+    validation_result = validate_code_in_venv(module_name, python_code)
 
-    if not is_valid:
-        # Construct error message separately to avoid issues with newlines in f-string
-        error_message = f"Generated code failed validation:\n{error}"
-        emit(
-            "export_result",
-            {"success": False, "error": error_message},
-            room=request.sid,
-        )
-    else:
-        emit(
-            "export_result",
-            {
-                "success": True,
-                "message": f"Successfully generated and validated module '{module_name}' in designated environment.",
-            },
-            room=request.sid,
-        )
+    # Emit the entire result structure (which includes success status and error details if any)
+    emit("export_result", validation_result, room=request.sid)
 
 
 if __name__ == "__main__":
