@@ -290,32 +290,6 @@ def generate_python_module(graph_data):
     code.append("\n\nif __name__ == '__main__':")
     code.append('    print("Setting up and running the generated PlanAI graph...")')
     code.append("    graph, workers = setup_graph()")
-    code.append("\n    # TODO: Define initial task(s) and target entry worker")
-    code.append(
-        "    entry_worker_name = list(workers.keys())[0] if workers else None # Example: Get first worker"
-    )
-    code.append("    if entry_worker_name:")
-    code.append(
-        "        initial_task = Task() # Replace with your actual starting Task"
-    )
-    code.append(
-        "        print(f'Running graph with initial task on worker: {entry_worker_name}')"
-    )
-    code.append("        graph.run(")
-    code.append(
-        "           initial_tasks=[(workers[entry_worker_name], initial_task)],"
-    )
-    code.append("           # display_terminal=False,")
-    code.append("           # run_dashboard=True,")
-    code.append("           # dashboard_port=8080,")
-    code.append("        )")
-    code.append("        print('\\nGraph execution finished.')")
-    code.append("        # outputs: List[Task] = graph.get_output_tasks()")
-    code.append("        # print(f'Output tasks: {outputs}')")
-    code.append("    else:")
-    code.append(
-        "        print('Error: Could not find an entry worker to start the graph.')"
-    )
 
     # --- Code Generation End ---
 
