@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import subprocess
@@ -17,7 +18,7 @@ socketio = SocketIO(
 
 # Function to validate the generated code by running it in a specific venv
 def validate_code_in_venv(module_name, code_string):
-    """Attempts to execute Python code in a separate venv and returns structured error info."""
+    """Executes Python code in a venv, parses structured JSON output, and returns the result."""
     # Define the path to the virtual environment's Python executable
     # TODO: Make this configurable
     venv_path = (
@@ -71,47 +72,104 @@ def validate_code_in_venv(module_name, code_string):
             print("stderr:")
             print(result.stderr)
 
-        # Check if the execution was successful (exit code 0)
+        # Combine stdout and stderr for parsing
+        combined_output = result.stdout + "\n" + result.stderr
+
+        # Try to parse structured JSON error output first
+        error_match = re.search(
+            r"##ERROR_JSON_START##\s*(.*?)\s*##ERROR_JSON_END##",
+            combined_output,
+            re.DOTALL,
+        )
+        if error_match:
+            json_str = error_match.group(1)
+            try:
+                error_data = json.loads(json_str)
+                print(f"Parsed error JSON from script output: {error_data}")
+                return error_data  # Return the structured error from the script
+            except json.JSONDecodeError as e:
+                print(
+                    f"Error decoding JSON from script error output: {e}\nJSON string: {json_str}"
+                )
+                # Fallback to generic error if JSON parsing fails
+                return {
+                    "success": False,
+                    "error": {
+                        "message": "Script failed with undecipherable JSON error output.",
+                        "nodeName": None,
+                        "fullTraceback": combined_output,
+                    },
+                }
+
+        # Try to parse structured JSON success output
+        success_match = re.search(
+            r"##SUCCESS_JSON_START##\s*(.*?)\s*##SUCCESS_JSON_END##",
+            combined_output,
+            re.DOTALL,
+        )
+        if success_match:
+            json_str = success_match.group(1)
+            try:
+                success_data = json.loads(json_str)
+                print(f"Parsed success JSON from script output: {success_data}")
+                return success_data  # Return the structured success info
+            except json.JSONDecodeError as e:
+                print(
+                    f"Error decoding JSON from script success output: {e}\nJSON string: {json_str}"
+                )
+                # Fallback, but assume success if marker was present
+                return {
+                    "success": True,
+                    "message": "Script indicated success, but JSON output was malformed.",
+                }
+
+        # --- Fallback Logic (if no JSON markers found) ---
+        print(
+            "No structured JSON markers found in script output. Falling back to exit code check."
+        )
+
         if result.returncode == 0:
-            print(f"Successfully validated '{module_name}' in venv '{venv_path}'")
-            return {"success": True}  # Return success structure
+            # Script finished with exit code 0 but didn't print success JSON
+            print(
+                f"Script '{module_name}' completed with exit code 0 but no success JSON marker."
+            )
+            return {
+                "success": True,
+                "message": "Script validation finished without explicit success confirmation.",
+            }  # Assume success?
         else:
-            # Parse stderr for node name and error message
+            # Script failed before printing JSON markers (e.g., syntax error)
+            print(
+                f"Script failed with exit code {result.returncode} before printing JSON markers."
+            )
             error_output = result.stderr or result.stdout or "Unknown execution error"
             lines = error_output.strip().split("\n")
             core_error_message = lines[-1] if lines else "Unknown execution error line."
 
-            # Regex to find potential class/worker names (e.g., Task1, LLMTaskWorker3)
-            # Looks for assignments like 'workerName =' or class instantiations 'workerName(...)'
+            # Use the simpler regex fallback for node name from raw output
             name_regex = (
                 r"\b([A-Za-z_][A-Za-z0-9_]*?)(?:Task|Worker)\d+\b(?:\s*=|\s*\()"
             )
             found_node_name = None
             matches = re.findall(name_regex, error_output)
             if matches:
-                # Use the first match found in the traceback as the likely source
-                # This assumes the error happens during instantiation or use of the generated class
-                found_node_name = matches[0]  # Get the first captured group
-                # Simple heuristic: remove common prefixes if they exist for cleaner matching
+                found_node_name = matches[0]
                 if (
                     found_node_name.startswith("l")
                     and len(found_node_name) > 1
                     and found_node_name[1].isupper()
                 ):
-                    found_node_name = found_node_name[
-                        1:
-                    ]  # Crude way to handle 'lLMTaskWorker1' -> 'LMTaskWorker1'
+                    found_node_name = found_node_name[1:]
 
             print(
-                f"Error validating module '{module_name}' in venv. Node found: {found_node_name}, Error: {core_error_message}"
+                f"Fallback Error: Node found: {found_node_name}, Error: {core_error_message}"
             )
-            # Return structured error
             return {
                 "success": False,
                 "error": {
                     "message": core_error_message,
                     "nodeName": found_node_name,
-                    "fullTraceback": error_output,
+                    "fullTraceback": error_output,  # Provide the raw output as traceback
                 },
             }
 

@@ -2,13 +2,13 @@
 from textwrap import dedent, indent
 
 import black
-
 from app.utils import is_valid_python_class_name
 
 
 def generate_python_module(graph_data):
     """
-    Converts the graph data (nodes, edges) into executable PlanAI Python code.
+    Converts the graph data (nodes, edges) into executable PlanAI Python code,
+    including internal error handling that outputs structured JSON.
 
     Args:
         graph_data (dict): Dictionary containing 'nodes' and 'edges'.
@@ -33,7 +33,9 @@ def generate_python_module(graph_data):
         dedent(
             """
         # Auto-generated PlanAI module
+        import json
         import sys
+        import traceback
         from typing import Any, Callable, Dict, List, Literal, Optional, Set, Tuple, Type
         from planai import Graph, LLMInterface, Task, TaskWorker, LLMTaskWorker, JoinedTaskWorker, llm_from_config
         from pydantic import Field, ConfigDict
@@ -104,7 +106,8 @@ def generate_python_module(graph_data):
         for n in nodes
         if n.get("type") in ("taskworker", "llmtaskworker", "joinedtaskworker")
     ]
-    worker_instances = {}  # Map node ID to worker instance variable name
+    worker_classes = {}  # Map node ID to worker class name
+    # Instance names will be generated later
     if not worker_nodes:
         code.append("# No Worker nodes defined in the graph.")
     else:
@@ -115,10 +118,7 @@ def generate_python_module(graph_data):
             worker_name = data.get("workerName", f"Worker_{node_id}")
             if not is_valid_python_class_name(worker_name):
                 raise ValueError(f"Invalid worker name: {worker_name}")
-            instance_name = (
-                worker_name[0].lower() + worker_name[1:]
-            )  # e.g., basicTaskWorker
-            worker_instances[node_id] = instance_name
+            worker_classes[node_id] = worker_name  # Store class name
 
             base_class = "TaskWorker"
             extra_args = ""
@@ -175,18 +175,19 @@ def generate_python_module(graph_data):
     )
     code.append('    graph = Graph(name="GeneratedPlan")')
 
-    code.append("\n    # Worker Instances")
-    if not worker_instances:
+    code.append("\n    # --- Worker Instantiation with Error Handling ---")
+    code.append("    workers_dict: Dict[str, TaskWorker] = {}")
+    # Keep track of mapping from generated instance name back to original frontend node ID
+    code.append("    instance_to_node_id: Dict[str, str] = {}")
+
+    if not worker_classes:
         code.append("    # No workers to instantiate")
     else:
-        for node_id, instance_name in worker_instances.items():
-            worker_node = next((n for n in worker_nodes if n["id"] == node_id), None)
+        for node_id, worker_class_name in worker_classes.items():
+            worker_node = next((n for n in nodes if n["id"] == node_id), None)
             if worker_node:
-                worker_class_name = worker_node.get("data", {}).get(
-                    "workerName", f"Worker_{node_id}"
-                )
-                if not is_valid_python_class_name(worker_class_name):
-                    raise ValueError(f"Invalid worker name: {worker_class_name}")
+                instance_name = worker_class_name[0].lower() + worker_class_name[1:]
+
                 # Basic LLM assignment - needs refinement based on node config/needs
                 llm_arg = ""
                 if worker_node["type"] == "llmtaskworker":
@@ -195,80 +196,158 @@ def generate_python_module(graph_data):
                     pass  # Joined workers don't take LLM directly
                 else:  # Basic taskworker might sometimes need an LLM? Defaulting to none.
                     pass
-                code.append(f"    {instance_name} = {worker_class_name}({llm_arg})")
 
-    code.append(f"\n    all_workers = [{', '.join(worker_instances.values())}]")
-    code.append("    graph.add_workers(*all_workers)")
-
-    code.append("\n    # Dependencies (Edges)")
-    if not edges:
-        code.append("    # No edges defined to set dependencies.")
-    else:
-        edge_chains = {}  # Store chains like {source_id: [target1_id, target2_id]}
-        processed_edges = set()
-        for edge in edges:
-            source_id = edge.get("source")
-            target_id = edge.get("target")
-            edge_id = edge.get("id")
-
-            if not source_id or not target_id or edge_id in processed_edges:
-                continue
-
-            if source_id not in worker_instances or target_id not in worker_instances:
-                print(
-                    f"Warning: Edge '{edge_id}' connects non-worker nodes or unknown nodes ({source_id} -> {target_id}). Skipping."
+                # Wrap instantiation in try-except
+                code.append(f"\n    # Instantiate: {worker_class_name}")
+                code.append(f"    try:")
+                code.append(f"        {instance_name} = {worker_class_name}({llm_arg})")
+                code.append(
+                    f"        workers_dict['{instance_name}'] = {instance_name}"
                 )
-                continue
+                code.append(
+                    f"        instance_to_node_id['{instance_name}'] = '{node_id}'"
+                )  # Map generated instance name to original node ID
+                code.append(f"    except Exception as e:")
+                # Format error JSON including the worker_class_name which failed
+                # We construct the Python code that will *create* the dictionary string
+                # Use repr(str(e)) to safely embed the exception message
+                code.append(
+                    f'        error_info_dict = {{ "success": False, "error": {{ "message": f"Failed to instantiate {worker_class_name}: {{repr(str(e))}}", "nodeName": "{worker_class_name}", "fullTraceback": traceback.format_exc() }} }}'
+                )
+                code.append(
+                    f'        print("##ERROR_JSON_START##", flush=True)'
+                )  # Marker start
+                code.append(f"        print(json.dumps(error_info_dict), flush=True)")
+                code.append(
+                    f'        print("##ERROR_JSON_END##", flush=True)'
+                )  # Marker end
+                code.append(f"        sys.exit(1)")  # Exit after reporting error
 
-            source_instance = worker_instances[source_id]
-            target_instance = worker_instances[target_id]
-
-            # Build chains: graph.set_dependency(src, tgt1).next(tgt2)...
-            if source_id not in edge_chains:
-                edge_chains[source_id] = []
-            edge_chains[source_id].append(target_instance)
-            processed_edges.add(edge_id)
-
-        # Generate the set_dependency calls
-        for source_id, targets in edge_chains.items():
-            source_instance = worker_instances[source_id]
-            dep_str = f"    graph.set_dependency({source_instance}, {targets[0]})"
-            if len(targets) > 1:
-                dep_str += "".join([f".next({tgt})" for tgt in targets[1:]])
-            code.append(dep_str)
-
-    # Determine entry point(s) - nodes with no incoming edges
-    target_node_ids = {edge.get("target") for edge in edges if edge.get("target")}
-    entry_nodes = [
-        node_id
-        for node_id, instance in worker_instances.items()
-        if node_id not in target_node_ids
-    ]
-
-    if not entry_nodes:
-        code.append(
-            "    # Warning: Could not determine entry point (no worker node without incoming edges)."
-        )
-        code.append("    entry_worker = None # Set manually if needed")
-
-    elif len(entry_nodes) > 1:
-        code.append(
-            f"    # Warning: Multiple potential entry points found: {entry_nodes}. Using the first one."
-        )
-        entry_worker_instance = worker_instances[entry_nodes[0]]
-        code.append(f"    graph.set_entry({entry_worker_instance})")
-    else:
-        entry_worker_instance = worker_instances[entry_nodes[0]]
-        code.append(f"    graph.set_entry({entry_worker_instance})")
-
+    # Add graph workers *after* instantiation block
+    code.append(f"\n    all_worker_instances = list(workers_dict.values())")
+    code.append("    if all_worker_instances:")  # Only add if any were successful
+    code.append("        graph.add_workers(*all_worker_instances)")
+    code.append("    else:")
     code.append(
-        "\n    # Return graph and a dictionary mapping instance names to workers for potential use"
+        '        print("Warning: No worker instances were successfully created.")'
     )
-    code.append("    workers_dict = {")
-    for node_id, instance_name in worker_instances.items():
-        code.append(f"        '{instance_name}': {instance_name},")
-    code.append("    }")
-    code.append("    return graph, workers_dict")
+
+    # --- Generate Code for Dependencies and Entry Point *inside* create_graph ---
+    code.append("\n    # Set Dependencies (Edges)")
+    code.append("    if not workers_dict:")
+    code.append(
+        '        print("Warning: Skipping dependency setup as no workers were instantiated.")'
+    )
+    code.append("    else:")
+    if not edges:
+        code.append("        # No edges defined in the graph data.")
+    else:
+        # Create the dependency setting code strings
+        dep_code_lines = []
+        for edge in edges:
+            source_node_id = edge.get("source")
+            target_node_id = edge.get("target")
+
+            # Find the instance names corresponding to these node IDs
+            # This check happens *at runtime* inside the generated code
+            dep_code_lines.append(
+                f"        source_inst_name = next((inst for inst, node_id in instance_to_node_id.items() if node_id == '{source_node_id}'), None)"
+            )
+            dep_code_lines.append(
+                f"        target_inst_name = next((inst for inst, node_id in instance_to_node_id.items() if node_id == '{target_node_id}'), None)"
+            )
+            dep_code_lines.append(
+                f"        if source_inst_name in workers_dict and target_inst_name in workers_dict:"
+            )
+            # Assuming simple one-to-one dependencies for now, not chaining .next()
+            dep_code_lines.append(
+                f"            try:"
+            )  # Add try-except for set_dependency
+            dep_code_lines.append(
+                f"                graph.set_dependency(workers_dict[source_inst_name], workers_dict[target_inst_name])"
+            )
+            dep_code_lines.append(f"            except Exception as e:")
+            dep_code_lines.append(
+                f'                print(f"Warning: Failed to set dependency {{source_inst_name}} -> {{target_inst_name}}: {{e}}")'
+            )
+            dep_code_lines.append(
+                f"        elif source_inst_name or target_inst_name:"
+            )  # Only print warning if at least one was expected
+            dep_code_lines.append(
+                f'            print(f"Warning: Skipping edge {source_node_id} -> {target_node_id} due to failed worker instantiation.")'
+            )
+
+        # Add the generated dependency lines to the main code block
+        code.extend([f"    {line}" for line in dep_code_lines])
+
+    # --- Generate Code for Entry Point *inside* create_graph ---
+    code.append("\n    # Determine Entry Point")
+    code.append("    if not workers_dict:")
+    code.append(
+        '        print("Warning: Cannot set entry point as no workers were instantiated.")'
+    )
+    code.append("    else:")
+    code.append("        target_node_ids_instantiated = set()")
+    # Re-calculate target_node_ids based on *successful* workers and valid edges
+    if edges:
+        code.append(
+            "        for edge in " + repr(edges) + ": # Use repr to embed edges data"
+        )
+        code.append('            source_node_id = edge.get("source")')
+        code.append('            target_node_id = edge.get("target")')
+        code.append(
+            "            source_inst = next((inst for inst, nodeid in instance_to_node_id.items() if nodeid == source_node_id), None)"
+        )
+        code.append(
+            "            target_inst = next((inst for inst, nodeid in instance_to_node_id.items() if nodeid == target_node_id), None)"
+        )
+        code.append(
+            "            if source_inst in workers_dict and target_inst in workers_dict:"
+        )
+        code.append("                 target_node_ids_instantiated.add(target_node_id)")
+
+    code.append("        entry_node_ids = [")
+    code.append("            node_id")
+    code.append("            for instance_name, node_id in instance_to_node_id.items()")
+    code.append(
+        "            if instance_name in workers_dict and node_id not in target_node_ids_instantiated"
+    )
+    code.append("        ]")
+
+    code.append("        if not entry_node_ids:")
+    code.append(
+        '            print("Warning: Could not determine entry point among instantiated workers.")'
+    )
+    code.append("        elif len(entry_node_ids) > 1:")
+    code.append(
+        '            print(f"Warning: Multiple potential entry points found: {entry_node_ids}. Using the first one: {entry_node_ids[0]}")'
+    )
+    code.append(
+        "            entry_instance_name = next(inst_name for inst_name, nodeid in instance_to_node_id.items() if nodeid == entry_node_ids[0])"
+    )
+    code.append(
+        "            if entry_instance_name in workers_dict:"
+    )  # Check before accessing
+    code.append("                 graph.set_entry(workers_dict[entry_instance_name])")
+    code.append("            else:")
+    code.append(
+        '                 print(f"Error: Selected entry instance {entry_instance_name} not found in workers_dict.")'
+    )
+    code.append("        else:")
+    code.append("            entry_node_id = entry_node_ids[0]")
+    code.append(
+        "            entry_instance_name = next(inst_name for inst_name, nodeid in instance_to_node_id.items() if nodeid == entry_node_id)"
+    )
+    code.append(
+        "            if entry_instance_name in workers_dict:"
+    )  # Check before accessing
+    code.append("                 graph.set_entry(workers_dict[entry_instance_name])")
+    code.append("            else:")
+    code.append(
+        '                 print(f"Error: Selected entry instance {entry_instance_name} not found in workers_dict.")'
+    )
+
+    code.append("\n    return graph, workers_dict")
 
     # 5. Setup Graph Function (Simplified LLM config)
     code.append(
@@ -277,19 +356,52 @@ def generate_python_module(graph_data):
     code.append("    # TODO: Replace with your actual LLM configuration")
     code.append("    print('Warning: Using dummy LLM configurations.')")
     code.append("    llm_fast = llm_code = llm_writing = LLMInterface() # Placeholder")
+
+    code.append("\n    graph = None")  # Initialize
+    code.append("    workers = None")
+    code.append("    try:")
     code.append(
-        "\n    graph, workers = create_graph(llm_fast=llm_fast, llm_code=llm_code, llm_writing=llm_writing)"
+        "        graph, workers = create_graph(llm_fast=llm_fast, llm_code=llm_code, llm_writing=llm_writing)"
     )
+
+    code.append(
+        "    except Exception as e:"
+    )  # Catch errors during create_graph itself (e.g., edge setup)
+    code.append(
+        f'        error_info_dict = {{ "success": False, "error": {{ "message": f"Error during graph setup: {{repr(str(e))}}", "nodeName": None, "fullTraceback": traceback.format_exc() }} }}'
+    )
+    code.append(f'        print("##ERROR_JSON_START##", flush=True)')
+    code.append(f"        print(json.dumps(error_info_dict), flush=True)")
+    code.append(f'        print("##ERROR_JSON_END##", flush=True)')
+    code.append(f"        sys.exit(1)")
+
     code.append("\n    # TODO: Configure sinks if needed, e.g.:")
     code.append("    # response_publisher = workers.get('responsePublisher')")
-    code.append("    # if response_publisher:")
-    code.append("    #    response_publisher.sink(Response, notify=notify)")
-    code.append("\n    return graph, workers")
 
     # 6. Main Execution Block (Simplified)
     code.append("\n\nif __name__ == '__main__':")
     code.append('    print("Setting up and running the generated PlanAI graph...")')
-    code.append("    graph, workers = setup_graph()")
+    code.append("    try:")
+    code.append("        graph, workers = setup_graph()")
+    code.append("        # If setup completes without error, print success JSON")
+    code.append(
+        '        success_info = { "success": True, "message": "Graph setup successful." }'
+    )
+    code.append(f'        print("##SUCCESS_JSON_START##", flush=True)')
+    code.append(f"        print(json.dumps(success_info), flush=True)")
+    code.append(f'        print("##SUCCESS_JSON_END##", flush=True)')
+    code.append("    except SystemExit:")  # Don't catch sys.exit(1) from inner blocks
+    code.append("        pass")
+    code.append(
+        "    except Exception as e:"
+    )  # Catch errors during setup_graph call itself
+    code.append(
+        f'        error_info_dict = {{ "success": False, "error": {{ "message": f"Error running setup_graph: {{repr(str(e))}}", "nodeName": None, "fullTraceback": traceback.format_exc() }} }}'
+    )
+    code.append(f'        print("##ERROR_JSON_START##", flush=True)')
+    code.append(f"        print(json.dumps(error_info_dict), flush=True)")
+    code.append(f'        print("##ERROR_JSON_END##", flush=True)')
+    # No sys.exit here, script will end naturally
 
     # --- Code Generation End ---
 

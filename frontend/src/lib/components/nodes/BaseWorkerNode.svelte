@@ -364,6 +364,14 @@
 		<div class="min-h-0 flex-grow">
 			{@render children?.()}
 		</div>
+
+		<!-- Error Display Area -->
+		{#if data.error}
+			<div class="mt-auto flex-none border-t border-red-200 bg-red-50 p-1.5">
+				<p class="text-2xs font-semibold text-red-700">Error:</p>
+				<p class="text-2xs text-red-600">{data.error}</p>
+			</div>
+		{/if}
 	</div>
 </div>
 

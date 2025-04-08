@@ -22,6 +22,7 @@
 		className: string;
 		fields: Field[];
 		nodeId: string; // The node's ID for validation
+		error?: string;
 	}
 
 	let { id, data } = $props<{
@@ -223,7 +224,12 @@
 	<NodeResizer minWidth={200} minHeight={150} />
 
 	<!-- Node handles -->
-	<Handle type="source" position={Position.Right} id="output" style={`background-color: ${getColorForType(data.className)};`}/>
+	<Handle
+		type="source"
+		position={Position.Right}
+		id="output"
+		style={`background-color: ${getColorForType(data.className)};`}
+	/>
 
 	<!-- Header with editable class name -->
 	<div class="flex-none border-b border-gray-200 bg-gray-50 p-1">
@@ -481,6 +487,14 @@
 			</div>
 		{/if}
 	</div>
+
+	<!-- Error Display Area -->
+	{#if data.error}
+		<div class="mt-auto flex-none border-t border-red-200 bg-red-50 p-1.5">
+			<p class="text-2xs font-semibold text-red-700">Error:</p>
+			<p class="text-2xs text-red-600">{data.error}</p>
+		</div>
+	{/if}
 </div>
 
 <style>
