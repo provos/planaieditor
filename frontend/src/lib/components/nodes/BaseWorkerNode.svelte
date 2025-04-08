@@ -110,14 +110,6 @@
 		data.inputTypes = sourceClassNames;
 	}
 
-	// Update local output types when data changes AND update node internals
-	$effect(() => {
-		currentOutputTypes = [...(data.outputTypes || [])];
-		if (id) {
-			updateNodeInternals(id);
-		}
-	});
-
 	// --- Worker Name Editing Logic ---
 	function startEditingName() {
 		tempWorkerName = data.workerName || defaultName;
