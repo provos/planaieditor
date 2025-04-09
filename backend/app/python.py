@@ -1,8 +1,20 @@
 # Updated function to generate PlanAI Python code from graph data
+import os
+from pathlib import Path
 from textwrap import dedent, indent
 
 import black
 from app.utils import is_valid_python_class_name
+
+CODE_SNIPPETS_DIR = os.path.join(os.path.dirname(__file__), "codesnippets")
+
+
+def return_code_snippet(name):
+    """
+    Returns a code snippet from the codesnippets directory.
+    """
+    with Path(CODE_SNIPPETS_DIR, f"{name}.py").open("r", encoding="utf-8") as f:
+        return f.read() + "\n\n"
 
 
 def generate_python_module(graph_data):
@@ -29,20 +41,7 @@ def generate_python_module(graph_data):
     code = []
 
     # 1. Imports
-    code.append(
-        dedent(
-            """
-        # Auto-generated PlanAI module
-        import json
-        import sys
-        import traceback
-        from typing import Any, Callable, Dict, List, Literal, Optional, Set, Tuple, Type
-        from planai import Graph, LLMInterface, Task, TaskWorker, LLMTaskWorker, JoinedTaskWorker, llm_from_config
-        from pydantic import Field, ConfigDict
-        # Add any other necessary imports based on worker code (e.g., planai.patterns)
-    """
-        )
-    )
+    code.append(return_code_snippet("imports"))
 
     # 2. Task Definitions (from 'task' nodes)
     code.append("\n# --- Task Definitions ---")
