@@ -47,7 +47,7 @@ def generate_python_module(graph_data):
     task_nodes = [n for n in nodes if n.get("type") == "task"]
     task_class_names = {}  # Map node ID to generated Task class name
     if not task_nodes:
-        code.append("# No Task nodes defined in the graph.")
+        tasks.append("# No Task nodes defined in the graph.")
     else:
         for node in task_nodes:
             node_id = node["id"]
