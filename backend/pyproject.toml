@@ -12,7 +12,8 @@ dependencies = [
     "flask-socketio (>=5.5.1,<6.0.0)",
     "black (>=25.1.0,<26.0.0)",
     "eventlet (>=0.39.1,<0.40.0)",
-    "planai[all] (>=0.4.1) ; python_version >= \"3.10\" and python_version < \"4.0\""
+    "planai[all] (>=0.4.1) ; python_version >= \"3.10\" and python_version < \"4.0\"",
+    "flask-cors (>=5.0.1) ; python_version >= \"3.10\" and python_version < \"4.0\""
 ]
 
 
