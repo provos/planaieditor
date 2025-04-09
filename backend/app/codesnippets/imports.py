@@ -16,3 +16,11 @@ from planai import (
 from pydantic import ConfigDict, Field
 
 # Add any other necessary imports based on worker code (e.g., planai.patterns)
+
+# Task Definitions
+
+{task_definitions}
+
+# Worker Definitions
+
+{worker_definitions}

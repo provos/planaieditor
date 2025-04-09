@@ -38,13 +38,12 @@ def generate_python_module(graph_data):
     print(graph_data)
 
     # --- Code Generation Start ---
-    code = []
 
     # 1. Imports
-    code.append(return_code_snippet("imports"))
-
+    code_to_format = return_code_snippet("imports")
+    
     # 2. Task Definitions (from 'task' nodes)
-    code.append("\n# --- Task Definitions ---")
+    tasks = []
     task_nodes = [n for n in nodes if n.get("type") == "task"]
     task_class_names = {}  # Map node ID to generated Task class name
     if not task_nodes:
@@ -57,10 +56,10 @@ def generate_python_module(graph_data):
             if not is_valid_python_class_name(class_name):
                 raise ValueError(f"Invalid class name: {class_name}")
             task_class_names[node_id] = class_name
-            code.append(f"\nclass {class_name}(Task):")
+            tasks.append(f"\nclass {class_name}(Task):")
             fields = data.get("fields", [])
             if not fields:
-                code.append("    pass # No fields defined")
+                tasks.append("    pass # No fields defined")
             else:
                 # Add ConfigDict for arbitrary_types_allowed if needed later
                 # code.append("    model_config = ConfigDict(arbitrary_types_allowed=True)")
@@ -84,7 +83,7 @@ def generate_python_module(graph_data):
                     if field.get("isList", False):
                         py_type = f"List[{py_type}]"
 
-                    code.append(
+                    tasks.append(
                         f'    {field_name}: {py_type} = Field(..., description="{description}")'
                     )
 
@@ -99,7 +98,7 @@ def generate_python_module(graph_data):
         raise ValueError(f"Could not find Task definition for type '{type_name}'")
 
     # 3. Worker Definitions (from worker nodes)
-    code.append("\n# --- Worker Definitions ---")
+    workers = []
     worker_nodes = [
         n
         for n in nodes
@@ -108,7 +107,7 @@ def generate_python_module(graph_data):
     worker_classes = {}  # Map node ID to worker class name
     # Instance names will be generated later
     if not worker_nodes:
-        code.append("# No Worker nodes defined in the graph.")
+        workers.append("# No Worker nodes defined in the graph.")
     else:
         for node in worker_nodes:
             node_id = node["id"]
@@ -130,7 +129,7 @@ def generate_python_module(graph_data):
                 # TODO: Add join_method if specified
                 # join_method = data.get('joinMethod', 'merge')
 
-            code.append(f"\nclass {worker_name}({base_class}):")
+            workers.append(f"\nclass {worker_name}({base_class}):")
 
             # Input/Output Types
             if len(data.get("inputTypes", [])) > 1 and node_type != "mergedtaskworker":
@@ -140,7 +139,7 @@ def generate_python_module(graph_data):
             output_types_str = ", ".join(
                 get_task_class_name(t) for t in data.get("outputTypes", [])
             )
-            code.append(f"    output_types: List[Type[Task]] = [{output_types_str}]")
+            workers.append(f"    output_types: List[Type[Task]] = [{output_types_str}]")
 
             # LLM Specifics
             print("--------------------------------")
@@ -148,11 +147,11 @@ def generate_python_module(graph_data):
             print(data.get("inputTypes", ["Task"]))
             input_type = get_task_class_name(data.get("inputTypes", ["Task"])[0])
             if node_type == "llmtaskworker":
-                code.append(f"    llm_input_type: Type[Task] = {input_type}")
+                workers.append(f"    llm_input_type: Type[Task] = {input_type}")
                 system_prompt = data.get("systemPrompt", "You are a helpful assistant.")
                 prompt = data.get("prompt", "# Define your prompt here")
-                code.append(f'    system_prompt: str = """{dedent(system_prompt)}"""')
-                code.append(f'    prompt: str = """{dedent(prompt)}"""')
+                workers.append(f'    system_prompt: str = """{dedent(system_prompt)}"""')
+                workers.append(f'    prompt: str = """{dedent(prompt)}"""')
                 # TODO: Add llm_input_type/llm_output_type mapping
                 # llm_input = data.get('llmInputType')
                 # llm_output = data.get('llmOutputType')
@@ -163,9 +162,17 @@ def generate_python_module(graph_data):
             consume_work_code = data.get("consumeWork", None)
             if consume_work_code:
                 indented_consume_work = indent(dedent(consume_work_code), "        ")
-                code.append(f"\n    def consume_work(self, task: {input_type}):")
-                code.append(indented_consume_work)
-                code.append("\n")
+                workers.append(f"\n    def consume_work(self, task: {input_type}):")
+                workers.append(indented_consume_work)
+                workers.append("\n")
+                
+    code_to_format = code_to_format.format(
+        task_definitions="\n".join(tasks),
+        worker_definitions="\n".join(workers),
+    )
+    
+    code = []
+    code.append(code_to_format)
 
     # 4. Graph Creation Function
     code.append("\n# --- Graph Setup ---")
