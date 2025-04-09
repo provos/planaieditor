@@ -41,7 +41,7 @@ def generate_python_module(graph_data):
 
     # 1. Imports
     code_to_format = return_code_snippet("imports")
-    
+
     # 2. Task Definitions (from 'task' nodes)
     tasks = []
     task_nodes = [n for n in nodes if n.get("type") == "task"]
@@ -90,9 +90,7 @@ def generate_python_module(graph_data):
     # Helper to map frontend type names (like 'TaskA') to generated Task class names
     def get_task_class_name(type_name: str) -> str:
         # Find the task node whose className matches type_name
-        print("--------------------------------")
-        print(task_class_names)
-        for node_id, task_name in task_class_names.items():
+        for _, task_name in task_class_names.items():
             if task_name == type_name:
                 return task_name
         raise ValueError(f"Could not find Task definition for type '{type_name}'")
@@ -142,15 +140,14 @@ def generate_python_module(graph_data):
             workers.append(f"    output_types: List[Type[Task]] = [{output_types_str}]")
 
             # LLM Specifics
-            print("--------------------------------")
-            print(data)
-            print(data.get("inputTypes", ["Task"]))
             input_type = get_task_class_name(data.get("inputTypes", ["Task"])[0])
             if node_type == "llmtaskworker":
                 workers.append(f"    llm_input_type: Type[Task] = {input_type}")
                 system_prompt = data.get("systemPrompt", "You are a helpful assistant.")
                 prompt = data.get("prompt", "# Define your prompt here")
-                workers.append(f'    system_prompt: str = """{dedent(system_prompt)}"""')
+                workers.append(
+                    f'    system_prompt: str = """{dedent(system_prompt)}"""'
+                )
                 workers.append(f'    prompt: str = """{dedent(prompt)}"""')
                 # TODO: Add llm_input_type/llm_output_type mapping
                 # llm_input = data.get('llmInputType')
@@ -165,29 +162,12 @@ def generate_python_module(graph_data):
                 workers.append(f"\n    def consume_work(self, task: {input_type}):")
                 workers.append(indented_consume_work)
                 workers.append("\n")
-                
-    code_to_format = code_to_format.format(
-        task_definitions="\n".join(tasks),
-        worker_definitions="\n".join(workers),
-    )
-    
-    code = []
-    code.append(code_to_format)
 
     # 4. Graph Creation Function
-    code.append("\n# --- Graph Setup ---")
-    code.append(
-        "\ndef create_graph(*, llm_fast: LLMInterface, llm_code: LLMInterface, llm_writing: LLMInterface) -> Tuple[Graph, Dict[str, TaskWorker]]:"
-    )
-    code.append('    graph = Graph(name="GeneratedPlan")')
-
-    code.append("\n    # --- Worker Instantiation with Error Handling ---")
-    code.append("    workers_dict: Dict[str, TaskWorker] = {}")
-    # Keep track of mapping from generated instance name back to original frontend node ID
-    code.append("    instance_to_node_id: Dict[str, str] = {}")
+    worker_setup = []
 
     if not worker_classes:
-        code.append("    # No workers to instantiate")
+        worker_setup.append("# No workers to instantiate")
     else:
         for node_id, worker_class_name in worker_classes.items():
             worker_node = next((n for n in nodes if n["id"] == node_id), None)
@@ -204,52 +184,40 @@ def generate_python_module(graph_data):
                     pass
 
                 # Wrap instantiation in try-except
-                code.append(f"\n    # Instantiate: {worker_class_name}")
-                code.append(f"    try:")
-                code.append(f"        {instance_name} = {worker_class_name}({llm_arg})")
-                code.append(
-                    f"        workers_dict['{instance_name}'] = {instance_name}"
+                worker_setup.append(f"\n# Instantiate: {worker_class_name}")
+                worker_setup.append("try:")
+                worker_setup.append(
+                    f"  {instance_name} = {worker_class_name}({llm_arg})"
                 )
-                code.append(
-                    f"        instance_to_node_id['{instance_name}'] = '{node_id}'"
+                worker_setup.append(
+                    f"  workers_dict['{instance_name}'] = {instance_name}"
+                )
+                worker_setup.append(
+                    f"  instance_to_node_id['{instance_name}'] = '{node_id}'"
                 )  # Map generated instance name to original node ID
-                code.append(f"    except Exception as e:")
+                worker_setup.append("except Exception as e:")
                 # Format error JSON including the worker_class_name which failed
                 # We construct the Python code that will *create* the dictionary string
                 # Use repr(str(e)) to safely embed the exception message
-                code.append(
-                    f'        error_info_dict = {{ "success": False, "error": {{ "message": f"Failed to instantiate {worker_class_name}: {{repr(str(e))}}", "nodeName": "{worker_class_name}", "fullTraceback": traceback.format_exc() }} }}'
+                worker_setup.append(
+                    f'  error_info_dict = {{ "success": False, "error": {{ "message": f"Failed to instantiate {worker_class_name}: {{repr(str(e))}}", "nodeName": "{worker_class_name}", "fullTraceback": traceback.format_exc() }} }}'
                 )
-                code.append(
-                    f'        print("##ERROR_JSON_START##", flush=True)'
+                worker_setup.append(
+                    '  print("##ERROR_JSON_START##", flush=True)'
                 )  # Marker start
-                code.append(f"        print(json.dumps(error_info_dict), flush=True)")
-                code.append(
-                    f'        print("##ERROR_JSON_END##", flush=True)'
+                worker_setup.append("  print(json.dumps(error_info_dict), flush=True)")
+                worker_setup.append(
+                    '  print("##ERROR_JSON_END##", flush=True)'
                 )  # Marker end
-                code.append(f"        sys.exit(1)")  # Exit after reporting error
+                worker_setup.append("  sys.exit(1)")  # Exit after reporting error
 
-    # Add graph workers *after* instantiation block
-    code.append(f"\n    all_worker_instances = list(workers_dict.values())")
-    code.append("    if all_worker_instances:")  # Only add if any were successful
-    code.append("        graph.add_workers(*all_worker_instances)")
-    code.append("    else:")
-    code.append(
-        '        print("Warning: No worker instances were successfully created.")'
-    )
+    dep_code_lines = []
 
     # --- Generate Code for Dependencies and Entry Point *inside* create_graph ---
-    code.append("\n    # Set Dependencies (Edges)")
-    code.append("    if not workers_dict:")
-    code.append(
-        '        print("Warning: Skipping dependency setup as no workers were instantiated.")'
-    )
-    code.append("    else:")
     if not edges:
-        code.append("        # No edges defined in the graph data.")
+        dep_code_lines.append("# No edges defined in the graph data.")
     else:
         # Create the dependency setting code strings
-        dep_code_lines = []
         for edge in edges:
             source_node_id = edge.get("source")
             target_node_id = edge.get("target")
@@ -257,103 +225,39 @@ def generate_python_module(graph_data):
             # Find the instance names corresponding to these node IDs
             # This check happens *at runtime* inside the generated code
             dep_code_lines.append(
-                f"        source_inst_name = next((inst for inst, node_id in instance_to_node_id.items() if node_id == '{source_node_id}'), None)"
+                f"source_inst_name = next((inst for inst, node_id in instance_to_node_id.items() if node_id == '{source_node_id}'), None)"
             )
             dep_code_lines.append(
-                f"        target_inst_name = next((inst for inst, node_id in instance_to_node_id.items() if node_id == '{target_node_id}'), None)"
+                f"target_inst_name = next((inst for inst, node_id in instance_to_node_id.items() if node_id == '{target_node_id}'), None)"
             )
             dep_code_lines.append(
-                f"        if source_inst_name in workers_dict and target_inst_name in workers_dict:"
+                "if source_inst_name in workers_dict and target_inst_name in workers_dict:"
             )
             # Assuming simple one-to-one dependencies for now, not chaining .next()
+            dep_code_lines.append("  try:")  # Add try-except for set_dependency
             dep_code_lines.append(
-                f"            try:"
-            )  # Add try-except for set_dependency
-            dep_code_lines.append(
-                f"                graph.set_dependency(workers_dict[source_inst_name], workers_dict[target_inst_name])"
+                "    graph.set_dependency(workers_dict[source_inst_name], workers_dict[target_inst_name])"
             )
-            dep_code_lines.append(f"            except Exception as e:")
+            dep_code_lines.append("  except Exception as e:")
             dep_code_lines.append(
-                f'                print(f"Warning: Failed to set dependency {{source_inst_name}} -> {{target_inst_name}}: {{e}}")'
+                '    print(f"Warning: Failed to set dependency {{source_inst_name}} -> {{target_inst_name}}: {{e}}")'
             )
             dep_code_lines.append(
-                f"        elif source_inst_name or target_inst_name:"
+                "elif source_inst_name or target_inst_name:"
             )  # Only print warning if at least one was expected
             dep_code_lines.append(
-                f'            print(f"Warning: Skipping edge {source_node_id} -> {target_node_id} due to failed worker instantiation.")'
+                f'  print(f"Warning: Skipping edge {source_node_id} -> {target_node_id} due to failed worker instantiation.")'
             )
 
-        # Add the generated dependency lines to the main code block
-        code.extend([f"    {line}" for line in dep_code_lines])
-
-    # --- Generate Code for Entry Point *inside* create_graph ---
-    code.append("\n    # Determine Entry Point")
-    code.append("    if not workers_dict:")
-    code.append(
-        '        print("Warning: Cannot set entry point as no workers were instantiated.")'
-    )
-    code.append("    else:")
-    code.append("        target_node_ids_instantiated = set()")
-    # Re-calculate target_node_ids based on *successful* workers and valid edges
-    if edges:
-        code.append(
-            "        for edge in " + repr(edges) + ": # Use repr to embed edges data"
-        )
-        code.append('            source_node_id = edge.get("source")')
-        code.append('            target_node_id = edge.get("target")')
-        code.append(
-            "            source_inst = next((inst for inst, nodeid in instance_to_node_id.items() if nodeid == source_node_id), None)"
-        )
-        code.append(
-            "            target_inst = next((inst for inst, nodeid in instance_to_node_id.items() if nodeid == target_node_id), None)"
-        )
-        code.append(
-            "            if source_inst in workers_dict and target_inst in workers_dict:"
-        )
-        code.append("                 target_node_ids_instantiated.add(target_node_id)")
-
-    code.append("        entry_node_ids = [")
-    code.append("            node_id")
-    code.append("            for instance_name, node_id in instance_to_node_id.items()")
-    code.append(
-        "            if instance_name in workers_dict and node_id not in target_node_ids_instantiated"
-    )
-    code.append("        ]")
-
-    code.append("        if not entry_node_ids:")
-    code.append(
-        '            print("Warning: Could not determine entry point among instantiated workers.")'
-    )
-    code.append("        elif len(entry_node_ids) > 1:")
-    code.append(
-        '            print(f"Warning: Multiple potential entry points found: {entry_node_ids}. Using the first one: {entry_node_ids[0]}")'
-    )
-    code.append(
-        "            entry_instance_name = next(inst_name for inst_name, nodeid in instance_to_node_id.items() if nodeid == entry_node_ids[0])"
-    )
-    code.append(
-        "            if entry_instance_name in workers_dict:"
-    )  # Check before accessing
-    code.append("                 graph.set_entry(workers_dict[entry_instance_name])")
-    code.append("            else:")
-    code.append(
-        '                 print(f"Error: Selected entry instance {entry_instance_name} not found in workers_dict.")'
-    )
-    code.append("        else:")
-    code.append("            entry_node_id = entry_node_ids[0]")
-    code.append(
-        "            entry_instance_name = next(inst_name for inst_name, nodeid in instance_to_node_id.items() if nodeid == entry_node_id)"
-    )
-    code.append(
-        "            if entry_instance_name in workers_dict:"
-    )  # Check before accessing
-    code.append("                 graph.set_entry(workers_dict[entry_instance_name])")
-    code.append("            else:")
-    code.append(
-        '                 print(f"Error: Selected entry instance {entry_instance_name} not found in workers_dict.")'
+    code_to_format = code_to_format.format(
+        task_definitions="\n".join(tasks),
+        worker_definitions="\n".join(workers),
+        worker_instantiation=indent(dedent("\n".join(worker_setup)), "    "),
+        dependency_setup=indent(dedent("\n".join(dep_code_lines)), "    "),
     )
 
-    code.append("\n    return graph, workers_dict")
+    code = []
+    code.append(code_to_format)
 
     # 5. Setup Graph Function (Simplified LLM config)
     code.append(
@@ -374,12 +278,12 @@ def generate_python_module(graph_data):
         "    except Exception as e:"
     )  # Catch errors during create_graph itself (e.g., edge setup)
     code.append(
-        f'        error_info_dict = {{ "success": False, "error": {{ "message": f"Error during graph setup: {{repr(str(e))}}", "nodeName": None, "fullTraceback": traceback.format_exc() }} }}'
+        '        error_info_dict = {{ "success": False, "error": {{ "message": f"Error during graph setup: {{repr(str(e))}}", "nodeName": None, "fullTraceback": traceback.format_exc() }} }}'
     )
-    code.append(f'        print("##ERROR_JSON_START##", flush=True)')
-    code.append(f"        print(json.dumps(error_info_dict), flush=True)")
-    code.append(f'        print("##ERROR_JSON_END##", flush=True)')
-    code.append(f"        sys.exit(1)")
+    code.append('        print("##ERROR_JSON_START##", flush=True)')
+    code.append("        print(json.dumps(error_info_dict), flush=True)")
+    code.append('        print("##ERROR_JSON_END##", flush=True)')
+    code.append("        sys.exit(1)")
 
     code.append("\n    # TODO: Configure sinks if needed, e.g.:")
     code.append("    # response_publisher = workers.get('responsePublisher')")
