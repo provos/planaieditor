@@ -249,73 +249,12 @@ def generate_python_module(graph_data):
                 f'  print(f"Warning: Skipping edge {source_node_id} -> {target_node_id} due to failed worker instantiation.")'
             )
 
-    code_to_format = code_to_format.format(
+    final_code = code_to_format.format(
         task_definitions="\n".join(tasks),
         worker_definitions="\n".join(workers),
-        worker_instantiation=indent(dedent("\n".join(worker_setup)), "    "),
-        dependency_setup=indent(dedent("\n".join(dep_code_lines)), "    "),
+        worker_instantiation=indent(dedent("\n".join(worker_setup)), "    ")[4:],
+        dependency_setup=indent(dedent("\n".join(dep_code_lines)), "    ")[4:],
     )
-
-    code = []
-    code.append(code_to_format)
-
-    # 5. Setup Graph Function (Simplified LLM config)
-    code.append(
-        "\n\ndef setup_graph(notify: Optional[Callable[Dict[str, Any], None]] = None) -> Tuple[Graph, Dict[str, TaskWorker]]:"
-    )
-    code.append("    # TODO: Replace with your actual LLM configuration")
-    code.append("    print('Warning: Using dummy LLM configurations.')")
-    code.append("    llm_fast = llm_code = llm_writing = LLMInterface() # Placeholder")
-
-    code.append("\n    graph = None")  # Initialize
-    code.append("    workers = None")
-    code.append("    try:")
-    code.append(
-        "        graph, workers = create_graph(llm_fast=llm_fast, llm_code=llm_code, llm_writing=llm_writing)"
-    )
-
-    code.append(
-        "    except Exception as e:"
-    )  # Catch errors during create_graph itself (e.g., edge setup)
-    code.append(
-        '        error_info_dict = {{ "success": False, "error": {{ "message": f"Error during graph setup: {{repr(str(e))}}", "nodeName": None, "fullTraceback": traceback.format_exc() }} }}'
-    )
-    code.append('        print("##ERROR_JSON_START##", flush=True)')
-    code.append("        print(json.dumps(error_info_dict), flush=True)")
-    code.append('        print("##ERROR_JSON_END##", flush=True)')
-    code.append("        sys.exit(1)")
-
-    code.append("\n    # TODO: Configure sinks if needed, e.g.:")
-    code.append("    # response_publisher = workers.get('responsePublisher')")
-
-    # 6. Main Execution Block (Simplified)
-    code.append("\n\nif __name__ == '__main__':")
-    code.append('    print("Setting up and running the generated PlanAI graph...")')
-    code.append("    try:")
-    code.append("        graph, workers = setup_graph()")
-    code.append("        # If setup completes without error, print success JSON")
-    code.append(
-        '        success_info = { "success": True, "message": "Graph setup successful." }'
-    )
-    code.append(f'        print("##SUCCESS_JSON_START##", flush=True)')
-    code.append(f"        print(json.dumps(success_info), flush=True)")
-    code.append(f'        print("##SUCCESS_JSON_END##", flush=True)')
-    code.append("    except SystemExit:")  # Don't catch sys.exit(1) from inner blocks
-    code.append("        pass")
-    code.append(
-        "    except Exception as e:"
-    )  # Catch errors during setup_graph call itself
-    code.append(
-        f'        error_info_dict = {{ "success": False, "error": {{ "message": f"Error running setup_graph: {{repr(str(e))}}", "nodeName": None, "fullTraceback": traceback.format_exc() }} }}'
-    )
-    code.append(f'        print("##ERROR_JSON_START##", flush=True)')
-    code.append(f"        print(json.dumps(error_info_dict), flush=True)")
-    code.append(f'        print("##ERROR_JSON_END##", flush=True)')
-    # No sys.exit here, script will end naturally
-
-    # --- Code Generation End ---
-
-    final_code = "\n".join(code)
 
     # Format the generated code using black
     try:
