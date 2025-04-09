@@ -16,6 +16,7 @@
 	import Scissors from 'phosphor-svelte/lib/Scissors';
 	import { io, Socket } from 'socket.io-client';
 	import { onMount } from 'svelte';
+	import PythonInterpreterSelector from '$lib/components/PythonInterpreterSelector.svelte';
 
 	// Type for the structured error from the backend
 	interface BackendError {
@@ -434,6 +435,7 @@ Analyze the following information and provide a response.`,
 		<ToolShelf onExport={handleExport} />
 		<!-- Display Connection and Export Status -->
 		<div class="mt-2 flex items-center justify-end space-x-2 text-xs">
+			<PythonInterpreterSelector />
 			{#if !isConnected}
 				<span class="rounded bg-red-100 px-1.5 py-0.5 text-red-700">Disconnected</span>
 			{/if}

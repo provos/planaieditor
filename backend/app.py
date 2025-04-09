@@ -2,34 +2,170 @@ import json
 import os
 import re
 import subprocess
+import sys
 import tempfile
 import traceback
+from pathlib import Path
+from typing import Dict, List, Optional, Union
 
 from app.python import generate_python_module
-from flask import Flask, request
+from flask import Flask, jsonify, request
+from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "secret!"  # Change this in production!
+app.config["SELECTED_VENV_PATH"] = (
+    None  # Will store the selected Python interpreter path
+)
+# Enable CORS for the Flask app
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 socketio = SocketIO(
     app, cors_allowed_origins="*"
 )  # Allow requests from frontend dev server
 
 
+# Function to discover Python environments
+def discover_python_environments() -> List[Dict[str, str]]:
+    """
+    Discover Python interpreters available on the system.
+    Returns a list of dictionaries with 'path' and 'name' keys.
+    """
+    environments = []
+
+    # Current directory venvs
+    base_dir = Path(os.path.abspath(__file__)).parent.parent.parent
+    potential_dirs = base_dir.glob("**/.venv")
+    common_venv_paths = [
+        dir / "bin" / "python" for dir in potential_dirs if dir.is_dir()
+    ]
+
+    # Add macOS/Linux specific paths
+    if sys.platform != "win32":
+        # Check home directory for virtual environments
+        home_dir = os.path.expanduser("~")
+        for env_dir in [".virtualenvs", "venvs", "Envs"]:
+            venvs_dir = os.path.join(home_dir, env_dir)
+            if os.path.isdir(venvs_dir):
+                for venv in os.listdir(venvs_dir):
+                    venv_path = os.path.join(venvs_dir, venv, "bin", "python")
+                    if os.path.isfile(venv_path) and os.access(venv_path, os.X_OK):
+                        environments.append(
+                            {
+                                "path": venv_path,
+                                "name": f"~/{env_dir}/{venv}/bin/python",
+                            }
+                        )
+
+    # Add common venv paths
+    for venv_path in common_venv_paths:
+        if os.path.isfile(venv_path) and os.access(venv_path, os.X_OK):
+            environments.append(
+                {
+                    "path": str(venv_path),
+                    "name": f"Python (Nearby venv: {venv_path.parent.parent.parent.name})",
+                }
+            )
+
+    # Filter out all duplicate paths
+    unique_environments = []
+    seen = set()
+    for env in environments:
+        env_path = env["path"]
+        if env_path not in seen:
+            unique_environments.append(env)
+            seen.add(env_path)
+
+    return unique_environments
+
+
+# API endpoints for Python interpreter selection
+@app.route("/api/venvs", methods=["GET"])
+def get_venvs():
+    """Get available Python environments."""
+    try:
+        environments = discover_python_environments()
+        return jsonify({"success": True, "environments": environments})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/current-venv", methods=["GET"])
+def get_current_venv():
+    """Get the currently selected Python environment."""
+    return jsonify({"success": True, "path": app.config["SELECTED_VENV_PATH"]})
+
+
+@app.route("/api/set-venv", methods=["POST"])
+def set_venv():
+    """Set the Python environment to use for validation."""
+    try:
+        data = request.json
+        if not data or "path" not in data:
+            return jsonify({"success": False, "error": "Missing path parameter"}), 400
+
+        path = data["path"]
+        if not os.path.isfile(path) or not os.access(path, os.X_OK):
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": f"Invalid Python executable path: {path}",
+                    }
+                ),
+                400,
+            )
+
+        # Verify it's a Python interpreter
+        try:
+            result = subprocess.run(
+                [path, "--version"], capture_output=True, text=True, check=True
+            )
+            if not result.stdout.strip().startswith("Python "):
+                return (
+                    jsonify(
+                        {"success": False, "error": f"Not a Python interpreter: {path}"}
+                    ),
+                    400,
+                )
+        except subprocess.SubprocessError as e:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": f"Failed to verify Python interpreter: {str(e)}",
+                    }
+                ),
+                400,
+            )
+
+        # Store the selected path
+        app.config["SELECTED_VENV_PATH"] = path
+        return jsonify({"success": True, "path": path})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 # Function to validate the generated code by running it in a specific venv
 def validate_code_in_venv(module_name, code_string):
     """Executes Python code in a venv, parses structured JSON output, and returns the result."""
-    # Define the path to the virtual environment's Python executable
-    # TODO: Make this configurable
-    venv_path = (
-        "/Users/provos/src/deepsearch/.venv"  # Hardcoded path to the venv directory
-    )
-    python_executable = os.path.join(
-        venv_path, "bin", "python"
-    )  # Assumes Linux/macOS structure
+    # Get the selected Python executable path
+    python_executable = app.config.get("SELECTED_VENV_PATH")
 
+    # If no path is selected, return an error
+    if not python_executable:
+        return {
+            "success": False,
+            "error": {
+                "message": "No Python interpreter selected. Please select a Python interpreter in the settings.",
+                "nodeName": None,
+                "fullTraceback": None,
+            },
+        }
+
+    # Verify the path still exists
     if not os.path.exists(python_executable):
-        error_message = f"Python executable not found at {python_executable}. Please ensure the venv exists."
+        error_message = f"Python executable not found at {python_executable}. Please select another interpreter."
         print(error_message)
         # Return structured error
         return {
