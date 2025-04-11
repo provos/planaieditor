@@ -68,9 +68,10 @@ def generate_python_module(graph_data):
                     field_type_frontend = field.get(
                         "type", "Any"
                     )  # Type from frontend/import
-                    description = field.get("description", "No description")
+                    description = field.get("description", "")
                     is_list = field.get("isList", False)
                     literal_values = field.get("literalValues", None)
+                    is_required = field.get("required", True)
 
                     # Handle Literal types
                     if field_type_frontend == "literal" and literal_values:
@@ -89,8 +90,6 @@ def generate_python_module(graph_data):
 
                         # Create the Literal type expression
                         py_type = f"Literal[{', '.join(literal_items)}]"
-                        # Make sure we add the import for Literal if not already present
-                        # We'll handle this at the top of the code generation
                     else:
                         # Map frontend primitive types to Python types
                         primitive_type_mapping = {
@@ -121,26 +120,28 @@ def generate_python_module(graph_data):
                     if is_list:
                         py_type = f"List[{py_type}]"
 
-                    # Handle Optional fields (basic check: !required)
-                    # TODO: Enhance based on how optionality is represented in frontend/import
-                    if not field.get("required", True):
+                    # Handle Optional fields
+                    if not is_required:
                         py_type = f"Optional[{py_type}]"
                         default_value = "None"
                     else:
                         default_value = "..."
 
-                    # Include description in Field
-                    # Escape quotes within description if necessary
+                    # Build Field arguments
+                    field_args = []
+                    # Always add the default value as first argument
+                    field_args.append(default_value)
 
+                    # Add description if we have one
                     if description:
+                        # Escape quotes within description if necessary
                         escaped_description = description.replace('"', '\\"')
-                        field_args = f'description="{escaped_description}"'
-                    else:
-                        field_args = ""
+                        field_args.append(f'description="{escaped_description}"')
 
-                    # Assemble the field definition line
+                    # Format the complete field with appropriate spacing
+                    field_args_str = ", ".join(field_args)
                     tasks.append(
-                        f"    {field_name}: {py_type} = Field({default_value}, {field_args})"
+                        f"    {field_name}: {py_type} = Field({field_args_str})"
                     )
 
     # Helper to map frontend type names (like 'TaskA') to generated Task class names

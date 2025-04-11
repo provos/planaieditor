@@ -65,14 +65,44 @@ def filter_derived_classes(
 
 def _parse_annotation(
     annotation: ast.expr, known_task_types: Set[str]
-) -> Tuple[str, bool, Optional[List[str]]]:
+) -> Tuple[str, bool, Optional[List[str]], bool]:
     """Parses a type annotation AST node into a type string, list status, and literal values.
 
-    Recognizes basic types, List[...], known custom Task types, and Literal types.
+    Recognizes basic types, List[...], Optional[...], known custom Task types, and Literal types.
+    Returns:
+        - Type name (str): The extracted type name
+        - Is List (bool): Whether the type is wrapped in List[]
+        - Literal values (Optional[List[str]]): Values for Literal types
+        - Is Optional (bool): Whether the type is wrapped in Optional[]
     """
     is_list = False
+    is_optional = False
     base_type_str = "Any"  # Default type string
     literal_values = None  # For Literal["val1", "val2", ...]
+
+    # Helper to unwrap Optional
+    def unwrap_optional(annotation_node):
+        nonlocal is_optional
+        if (
+            isinstance(annotation_node, ast.Subscript)
+            and isinstance(annotation_node.value, ast.Name)
+            and annotation_node.value.id == "Optional"
+        ):
+            is_optional = True
+            # Extract the inner type
+            if isinstance(annotation_node.slice, ast.Name):
+                return annotation_node.slice  # Return inner type node
+            elif isinstance(annotation_node.slice, ast.Subscript):
+                return (
+                    annotation_node.slice
+                )  # Return inner type node (could be List[str], etc.)
+            else:
+                # Fallback for other versions
+                return annotation_node.slice
+        return annotation_node  # Not Optional, return as is
+
+    # Check for and unwrap Optional
+    annotation = unwrap_optional(annotation)
 
     if isinstance(annotation, ast.Name):
         base_type_str = annotation.id
@@ -120,19 +150,32 @@ def _parse_annotation(
             "list",
         ):
             is_list = True
-            # Get the inner type
-            if isinstance(annotation.slice, ast.Name):
-                base_type_str = annotation.slice.id
+            # Get the inner type - might be Optional[...] too, so check recursively
+            inner_annotation = annotation.slice
+            if isinstance(inner_annotation, ast.Name):
+                base_type_str = inner_annotation.id
             elif isinstance(
-                annotation.slice, ast.Constant
+                inner_annotation, ast.Constant
             ):  # Handle List['str'] etc. Python 3.9+
-                base_type_str = str(annotation.slice.value)
+                base_type_str = str(inner_annotation.value)
+            elif (
+                isinstance(inner_annotation, ast.Subscript)
+                and isinstance(inner_annotation.value, ast.Name)
+                and inner_annotation.value.id == "Optional"
+            ):
+                # Handle List[Optional[...]]
+                is_optional = True
+                # Extract inner type from Optional
+                if isinstance(inner_annotation.slice, ast.Name):
+                    base_type_str = inner_annotation.slice.id
+                else:
+                    base_type_str = ast.unparse(inner_annotation.slice)
             else:
                 base_type_str = ast.unparse(
-                    annotation.slice
+                    inner_annotation
                 )  # Fallback for complex inner types
         else:
-            # Handle other subscripted types like Dict, Optional, Union etc. if needed
+            # Handle other subscripted types like Dict, Union etc. (not Optional, we handled it earlier)
             # For now, just unparse it
             base_type_str = ast.unparse(annotation)
     elif isinstance(
@@ -161,16 +204,20 @@ def _parse_annotation(
     else:
         frontend_type = "literal"  # Keep our special type
 
-    return frontend_type, is_list, literal_values
+    return frontend_type, is_list, literal_values, is_optional
 
 
 def _get_field_description(node: ast.AnnAssign) -> Optional[str]:
-    keywords = node.value.keywords
-    for keyword in keywords:
-        if keyword.arg == "description":
-            return keyword.value.s
-
-    # Could also check for comments on the line above, but that's more complex.
+    """Extract description from Field() constructor keywords."""
+    # Check for Field call with keywords
+    if (
+        isinstance(node.value, ast.Call)
+        and isinstance(node.value.func, ast.Name)
+        and node.value.func.id == "Field"
+    ):
+        for keyword in node.value.keywords:
+            if keyword.arg == "description" and isinstance(keyword.value, ast.Constant):
+                return keyword.value.value
     return None
 
 
@@ -186,14 +233,36 @@ def extract_task_fields(
             if not field_name:
                 continue  # Skip complex targets for now
 
-            field_type, is_list, literal_values = _parse_annotation(
+            # Debug output
+            print("--------------------------------")
+            print(ast.unparse(node))
+            print(ast.dump(node))
+
+            field_type, is_list, literal_values, is_optional = _parse_annotation(
                 node.annotation, known_task_types
             )
+            print(f"field_type: {field_type}")
+            print(f"is_list: {is_list}")
+            print(f"literal_values: {literal_values}")
+            print(f"is_optional: {is_optional}")
 
-            # Determine if required (simple check: no default value implies required)
-            # A more robust check could look for Optional[...] or Union[..., None]
-            # TODO: Improve required check (consider Optional, Union[..., None], = None)
-            is_required = node.value is None
+            # Field is not required if:
+            # 1. It has an Optional[] annotation
+            # 2. Field has None as first arg in pydantic Field constructor
+            is_default_none = False
+            if (
+                isinstance(node.value, ast.Call)
+                and isinstance(node.value.func, ast.Name)
+                and node.value.func.id == "Field"
+                and node.value.args
+                and isinstance(node.value.args[0], ast.Constant)
+                and node.value.args[0].value is None
+            ):
+                is_default_none = True
+
+            is_required = not (is_optional or is_default_none)
+            print(f"is_required: {is_required}")
+            print("--------------------------------")
 
             description = _get_field_description(node)
 
@@ -210,7 +279,6 @@ def extract_task_fields(
                 field_data["literalValues"] = literal_values
 
             fields.append(field_data)
-        # TODO: Could potentially parse fields from __init__ as well, but AnnAssign is preferred
     return fields
 
 

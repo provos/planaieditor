@@ -31,7 +31,7 @@
 	// Type for the field data coming from the import endpoint
 	interface ImportedField {
 		name: string;
-		type: 'string' | 'integer' | 'float' | 'boolean'; // Sync with backend types
+		type: string; // Can be primitive types or custom Task names
 		isList: boolean;
 		required: boolean;
 		description?: string;
