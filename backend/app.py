@@ -43,17 +43,17 @@ def discover_python_environments() -> List[Dict[str, str]]:
     # Add macOS/Linux specific paths
     if sys.platform != "win32":
         # Check home directory for virtual environments
-        home_dir = os.path.expanduser("~")
-        for env_dir in [".virtualenvs", "venvs", "Envs"]:
-            venvs_dir = os.path.join(home_dir, env_dir)
-            if os.path.isdir(venvs_dir):
-                for venv in os.listdir(venvs_dir):
-                    venv_path = os.path.join(venvs_dir, venv, "bin", "python")
-                    if os.path.isfile(venv_path) and os.access(venv_path, os.X_OK):
+        home_dir = Path.home()
+        for env_dir in [".virtualenvs", "venvs", "Envs", ".cache/pypoetry/virtualenvs"]:
+            venvs_dir = home_dir / env_dir
+            if venvs_dir.exists():
+                for venv in venvs_dir.iterdir():
+                    venv_path = venv / "bin" / "python"
+                    if venv_path.exists() and venv_path.is_file():
                         environments.append(
                             {
-                                "path": venv_path,
-                                "name": f"~/{env_dir}/{venv}/bin/python",
+                                "path": str(venv_path),
+                                "name": f"{venv.name}",
                             }
                         )
 
