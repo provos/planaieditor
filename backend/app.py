@@ -35,7 +35,7 @@ def discover_python_environments() -> List[Dict[str, str]]:
 
     # Current directory venvs
     base_dir = Path(os.path.abspath(__file__)).parent.parent.parent
-    potential_dirs = base_dir.glob("**/.venv")
+    potential_dirs = base_dir.glob("*/.venv")
     common_venv_paths = [
         dir / "bin" / "python" for dir in potential_dirs if dir.is_dir()
     ]
@@ -63,7 +63,7 @@ def discover_python_environments() -> List[Dict[str, str]]:
             environments.append(
                 {
                     "path": str(venv_path),
-                    "name": f"Python (Nearby venv: {venv_path.parent.parent.parent.name})",
+                    "name": f"Python ({venv_path.parent.parent.parent.name})",
                 }
             )
 
