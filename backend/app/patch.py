@@ -179,7 +179,6 @@ def extract_task_fields(
 ) -> List[Dict[str, Any]]:
     """Extracts field definitions (AnnAssign) from a Task class AST node."""
     fields = []
-    source_lines = source_code.splitlines()
 
     for node in class_def.body:
         if isinstance(node, ast.AnnAssign):
