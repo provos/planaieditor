@@ -8,8 +8,10 @@
 	import LLMTaskWorkerNode from '$lib/components/nodes/LLMTaskWorkerNode.svelte';
 	import JoinedTaskWorkerNode from '$lib/components/nodes/JoinedTaskWorkerNode.svelte';
 	import type { BaseWorkerData } from '$lib/components/nodes/BaseWorkerNode.svelte';
+	import type { NodeData } from '$lib/components/nodes/TaskNode.svelte';
 	import { writable, get } from 'svelte/store';
 	import { allClassNames } from '$lib/stores/classNameStore';
+	import { taskClassNamesStore } from '$lib/stores/taskClassNamesStore';
 	import ContextMenu from '$lib/components/ContextMenu.svelte';
 	import type { ContextMenuItem } from '$lib/components/ContextMenu.svelte';
 	import Trash from 'phosphor-svelte/lib/Trash';
@@ -164,11 +166,13 @@
 	// When nodes change, update the class name map
 	$effect(() => {
 		let nameMap = new Map<string, string>();
+		let taskNameSet = new Set<string>(); // Set for task class names
 
 		// Subscribe to get current nodes
 		const unsubNodes = nodes.subscribe((currentNodes) => {
-			// Reset the map
+			// Reset the map and set
 			nameMap = new Map();
+			taskNameSet = new Set<string>();
 
 			// Add each node's class name or worker name with its ID
 			currentNodes.forEach((node) => {
@@ -176,10 +180,16 @@
 				if (name && typeof name === 'string') {
 					nameMap.set(node.id, name);
 				}
+				// Specifically add Task node class names to the task set
+				if (node.type === 'task' && node.data?.className) {
+					const nodeData = node.data as NodeData;
+					taskNameSet.add(nodeData.className);
+				}
 			});
 
-			// Update the store
+			// Update the stores
 			allClassNames.set(nameMap);
+			taskClassNamesStore.set(taskNameSet);
 		});
 
 		return unsubNodes;
@@ -535,6 +545,13 @@ Analyze the following information and provide a response.`,
 				type: 'success',
 				message: `Successfully imported ${newNodes.length} Task node(s).`
 			};
+
+			// Also update the taskClassNamesStore with the newly imported names
+			const importedTaskNames = new Set(importedTasks.map((task) => task.className));
+			taskClassNamesStore.update((existingNames) => {
+				importedTaskNames.forEach((name) => existingNames.add(name));
+				return new Set(existingNames); // Create a new set to trigger reactivity
+			});
 		} catch (error: any) {
 			console.error('Error importing Python code:', error);
 			importStatus = {
@@ -588,7 +605,7 @@ Analyze the following information and provide a response.`,
 			bind:this={fileInputRef}
 			accept=".py,text/x-python"
 			style="display: none;"
-			on:change={handleFileSelect}
+			onchange={handleFileSelect}
 		/>
 
 		<!-- Display Connection and Export/Import Status -->
@@ -596,7 +613,7 @@ Analyze the following information and provide a response.`,
 			<!-- Import Button -->
 			<button
 				class="flex items-center rounded bg-blue-500 px-2 py-1 text-white hover:bg-blue-600 disabled:opacity-50"
-				on:click={triggerImport}
+				onclick={triggerImport}
 				disabled={importStatus.type === 'loading'}
 				title="Import Task definitions from Python file"
 			>

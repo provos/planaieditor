@@ -2,13 +2,17 @@
 	import { Handle, Position, NodeResizer } from '@xyflow/svelte';
 	import { isValidPythonClassName, isValidPythonIdentifier } from '$lib/utils/validation';
 	import { allClassNames } from '$lib/stores/classNameStore';
+	import { taskClassNamesStore } from '$lib/stores/taskClassNamesStore';
 	import { getColorForType } from '$lib/utils/colorUtils';
 	import Plus from 'phosphor-svelte/lib/Plus';
 	import Trash from 'phosphor-svelte/lib/Trash';
 	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
+	import { onDestroy } from 'svelte';
 
-	type BaseFieldType = 'string' | 'integer' | 'float';
-	type FieldType = BaseFieldType;
+	// Define basic field types
+	type BaseFieldType = 'string' | 'integer' | 'float' | 'boolean';
+	// Enhanced field type can be a basic type or a custom Task name
+	type FieldType = string;
 
 	interface Field {
 		name: string;
@@ -40,7 +44,7 @@
 	let classNameError = $state('');
 	let editingFieldIndex = $state<number | null>(null);
 	let editingFieldName = $state('');
-	let editingFieldType = $state<BaseFieldType>('string');
+	let editingFieldType = $state<FieldType>('string');
 	let editingFieldIsList = $state(false);
 	let editingFieldRequired = $state(true);
 	let editingFieldDescription = $state<string | undefined>(undefined);
@@ -51,11 +55,46 @@
 	let currentFields = $state<Field[]>([...data.fields]);
 
 	// Field type options
-	const BASE_TYPE_LABELS = {
+	const BASE_TYPE_LABELS: Record<BaseFieldType, string> = {
 		string: 'str',
 		integer: 'int',
-		float: 'float'
+		float: 'float',
+		boolean: 'bool'
 	};
+
+	// Available custom task types
+	let availableTaskTypes = $state<string[]>([]);
+
+	// Subscribe to task types store to get updates
+	const unsubTaskTypes = taskClassNamesStore.subscribe((taskTypes) => {
+		availableTaskTypes = Array.from(taskTypes);
+	});
+
+	// Computed field type options for dropdowns
+	let fieldTypeOptions = $state<Array<{ value: string; label: string }>>([]);
+
+	// Update options whenever availableTaskTypes changes
+	$effect(() => {
+		// Base primitive types
+		const primitiveOptions = Object.entries(BASE_TYPE_LABELS).map(([value, label]) => ({
+			value,
+			label
+		}));
+
+		// Custom Task class types
+		const customOptions = availableTaskTypes
+			.filter((name) => name !== data.className) // Prevent self-references
+			.map((name) => ({
+				value: name,
+				label: name
+			}));
+
+		// Combine and sort (primitives first, then custom types alphabetically)
+		fieldTypeOptions = [
+			...primitiveOptions,
+			...customOptions.sort((a, b) => a.label.localeCompare(b.label))
+		];
+	});
 
 	function startEditingClassName() {
 		tempClassName = data.className;
@@ -110,7 +149,7 @@
 		editingFieldIndex = index;
 		editingFieldName = field.name;
 		editingFieldIsList = field.isList;
-		editingFieldType = field.type as BaseFieldType;
+		editingFieldType = field.type;
 		editingFieldDescription = field.description;
 		editingFieldRequired = field.required;
 		fieldNameError = '';
@@ -207,15 +246,28 @@
 
 	// Format field type for display
 	function formatFieldType(field: Field): string {
-		if (field.isList) {
-			return `List[${BASE_TYPE_LABELS[field.type as BaseFieldType]}]`;
+		let baseLabel = field.type;
+
+		// Check if it's a primitive type
+		if (Object.prototype.hasOwnProperty.call(BASE_TYPE_LABELS, field.type)) {
+			baseLabel = BASE_TYPE_LABELS[field.type as BaseFieldType];
 		}
-		return BASE_TYPE_LABELS[field.type as BaseFieldType];
+		// Otherwise, use the custom type name directly
+
+		if (field.isList) {
+			return `List[${baseLabel}]`;
+		}
+		return baseLabel;
 	}
 
 	// Update local fields when data.fields changes
 	$effect(() => {
 		currentFields = [...data.fields];
+	});
+
+	// Clean up subscriptions
+	onDestroy(() => {
+		unsubTaskTypes();
 	});
 </script>
 
@@ -286,10 +338,10 @@
 
 							<select
 								bind:value={editingFieldType}
-								class="text-2xs w-14 rounded border border-gray-200 px-1 py-0.5"
+								class="text-2xs w-auto min-w-[4rem] max-w-xs rounded border border-gray-200 px-1 py-0.5"
 							>
-								{#each Object.entries(BASE_TYPE_LABELS) as [value, label]}
-									<option {value}>{label}</option>
+								{#each fieldTypeOptions as option}
+									<option value={option.value}>{option.label}</option>
 								{/each}
 							</select>
 
@@ -412,10 +464,10 @@
 
 						<select
 							bind:value={editingFieldType}
-							class="text-2xs w-14 rounded border border-gray-200 px-1 py-0.5"
+							class="text-2xs w-auto min-w-[4rem] max-w-xs rounded border border-gray-200 px-1 py-0.5"
 						>
-							{#each Object.entries(BASE_TYPE_LABELS) as [value, label]}
-								<option {value}>{label}</option>
+							{#each fieldTypeOptions as option}
+								<option value={option.value}>{option.label}</option>
 							{/each}
 						</select>
 

@@ -65,27 +65,57 @@ def generate_python_module(graph_data):
                 # code.append("    model_config = ConfigDict(arbitrary_types_allowed=True)")
                 for field in fields:
                     field_name = field.get("name", "unnamed_field")
-                    field_type = field.get("type", "Any")  # Default to Any
+                    field_type_frontend = field.get(
+                        "type", "Any"
+                    )  # Type from frontend/import
                     description = field.get("description", "No description")
-                    # Basic type mapping (can be expanded)
-                    match field_type.lower():
-                        case "string":
-                            py_type = "str"
-                        case "integer":
-                            py_type = "int"
-                        case "float":
-                            py_type = "float"
-                        case "boolean":
-                            py_type = "bool"
-                        case _:
+                    is_list = field.get("isList", False)
+
+                    # Map frontend primitive types to Python types
+                    primitive_type_mapping = {
+                        "string": "str",
+                        "integer": "int",
+                        "float": "float",
+                        "boolean": "bool",
+                    }
+
+                    # Check if it's a primitive type
+                    if field_type_frontend.lower() in primitive_type_mapping:
+                        py_type = primitive_type_mapping[field_type_frontend.lower()]
+                    else:
+                        # Assume it's a custom Task type (or Any/other complex type)
+                        # Use the name directly, ensure it's a valid identifier if possible
+                        # Basic validation: if it contains invalid chars, default to Any
+                        if is_valid_python_class_name(field_type_frontend):
+                            py_type = field_type_frontend
+                        else:
+                            print(
+                                f"Warning: Invalid field type '{field_type_frontend}' encountered, defaulting to Any."
+                            )
                             py_type = "Any"
 
-                    if field.get("isList", False):
+                    # Handle List type
+                    if is_list:
                         py_type = f"List[{py_type}]"
 
+                    # Handle Optional fields (basic check: !required)
+                    # TODO: Enhance based on how optionality is represented in frontend/import
+                    if not field.get("required", True):
+                        py_type = f"Optional[{py_type}]"
+                        default_value = " = None"
+                    else:
+                        default_value = " = Field(...) # Required field"
+
+                    # Include description in Field
+                    # Escape quotes within description if necessary
+                    escaped_description = description.replace('"', '\\"')
+                    field_args = f'description="{escaped_description}"'
+
+                    # Assemble the field definition line
                     tasks.append(
-                        f'    {field_name}: {py_type} = Field(..., description="{description}")'
-                    )
+                        f"    {field_name}: {py_type}{default_value}"
+                    )  # Use Field(...) syntax
+                    # Previous version used Field directly: f'    {field_name}: {py_type} = Field({field_args})')
 
     # Helper to map frontend type names (like 'TaskA') to generated Task class names
     def get_task_class_name(type_name: str) -> str:
