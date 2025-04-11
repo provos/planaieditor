@@ -8,6 +8,7 @@ import traceback
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
+from app.patch import get_task_definitions_from_file
 from app.python import generate_python_module
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -378,6 +379,60 @@ def handle_export_graph(data):
 
     # Emit the entire result structure (which includes success status and error details if any)
     emit("export_result", validation_result, room=request.sid)
+
+
+# --- New Endpoint for Python Import ---
+@app.route("/api/import-python", methods=["POST"])
+def import_python_module():
+    """Receives Python code content, parses it for Task definitions, and returns them."""
+    if not request.is_json:
+        return jsonify({"success": False, "error": "Request must be JSON"}), 400
+
+    data = request.get_json()
+    python_code = data.get("python_code")
+
+    if not python_code:
+        return (
+            jsonify(
+                {"success": False, "error": "Missing 'python_code' in request body"}
+            ),
+            400,
+        )
+
+    # We need a temporary file to pass to the existing patch function
+    # Alternatively, modify patch.py to accept code as a string directly
+    # For now, using a temporary file is simpler to integrate.
+    tmp_file = None
+    try:
+        # Create a named temporary file to store the code
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".py", delete=False, encoding="utf-8"
+        ) as tmp_file:
+            tmp_file.write(python_code)
+            temp_filename = tmp_file.name
+
+        # Call the function from patch.py using the temporary file path
+        task_definitions = get_task_definitions_from_file(temp_filename)
+
+        # TODO: Add parsing for Worker definitions and graph structure later
+
+        return jsonify({"success": True, "tasks": task_definitions})
+
+    except Exception as e:
+        tb_str = traceback.format_exc()
+        print(f"Error during Python import processing: {e}\n{tb_str}")
+        # Return a generic error to the client
+        return (
+            jsonify({"success": False, "error": f"Failed to parse Python code: {e}"}),
+            500,
+        )
+    finally:
+        # Clean up the temporary file
+        if tmp_file and os.path.exists(tmp_file.name):
+            try:
+                os.remove(tmp_file.name)
+            except OSError as e:
+                print(f"Error removing temporary file {tmp_file.name}: {e}")
 
 
 if __name__ == "__main__":

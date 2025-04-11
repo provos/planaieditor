@@ -17,12 +17,28 @@
 	import { io, Socket } from 'socket.io-client';
 	import { onMount } from 'svelte';
 	import PythonInterpreterSelector from '$lib/components/PythonInterpreterSelector.svelte';
+	import UploadSimple from 'phosphor-svelte/lib/UploadSimple'; // Icon for import
 
 	// Type for the structured error from the backend
 	interface BackendError {
 		message: string;
 		nodeName: string | null; // The name of the class/worker identified in the traceback
 		fullTraceback?: string;
+	}
+
+	// Type for the field data coming from the import endpoint
+	interface ImportedField {
+		name: string;
+		type: 'string' | 'integer' | 'float' | 'boolean'; // Sync with backend types
+		isList: boolean;
+		required: boolean;
+		description?: string;
+	}
+
+	// Type for the task data coming from the import endpoint
+	interface ImportedTask {
+		className: string;
+		fields: ImportedField[];
 	}
 
 	// Define node types and pass stores as props
@@ -34,7 +50,7 @@
 	};
 
 	// Use SvelteFlow hook
-	const { screenToFlowPosition } = useSvelteFlow();
+	const { screenToFlowPosition, getNodes } = useSvelteFlow();
 
 	// Use Svelte stores for nodes and edges
 	const nodes = writable<Node[]>([]);
@@ -44,9 +60,18 @@
 	let socket: Socket | null = null;
 	let isConnected = $state(false);
 	let exportStatus = $state<{ type: 'idle' | 'loading' | 'success' | 'error'; message: string }>({
+		// Export status
 		type: 'idle',
 		message: ''
 	});
+	let importStatus = $state<{ type: 'idle' | 'loading' | 'success' | 'error'; message: string }>({
+		// Import status
+		type: 'idle',
+		message: ''
+	});
+
+	// Ref for the hidden file input
+	let fileInputRef: HTMLInputElement;
 
 	onMount(() => {
 		// Connect to the backend Socket.IO server
@@ -250,7 +275,7 @@ Analyze the following information and provide a response.`,
 					outputTypes: [],
 					consumeWork: `def consume_work(self, task):
     # Process the input task and produce output
-    
+
     pass`,
 					joinMethod: 'merge',
 					nodeId: id
@@ -398,6 +423,129 @@ Analyze the following information and provide a response.`,
 		socket.emit('export_graph', graphData);
 	}
 
+	// --- Python Import Functions ---
+
+	// Trigger the hidden file input
+	function triggerImport() {
+		fileInputRef?.click();
+	}
+
+	// Handle file selection
+	function handleFileSelect(event: Event) {
+		const input = event.target as HTMLInputElement;
+		if (!input.files || input.files.length === 0) {
+			return;
+		}
+		const file = input.files[0];
+
+		if (file.type !== 'text/x-python' && !file.name.endsWith('.py')) {
+			importStatus = { type: 'error', message: 'Please select a Python (.py) file.' };
+			return;
+		}
+
+		const reader = new FileReader();
+		reader.onload = (e) => {
+			const pythonCode = e.target?.result as string;
+			if (pythonCode) {
+				importPythonCode(pythonCode);
+			} else {
+				importStatus = { type: 'error', message: 'Could not read file content.' };
+			}
+		};
+		reader.onerror = () => {
+			importStatus = { type: 'error', message: 'Error reading file.' };
+		};
+		reader.readAsText(file);
+
+		// Reset the input value so the same file can be selected again
+		input.value = '';
+	}
+
+	// Send code to backend and create nodes
+	async function importPythonCode(pythonCode: string) {
+		importStatus = { type: 'loading', message: 'Importing Python code...' };
+
+		try {
+			const response = await fetch('http://localhost:5001/api/import-python', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ python_code: pythonCode })
+			});
+
+			const result = await response.json();
+
+			if (!response.ok || !result.success) {
+				throw new Error(result.error || 'Import failed on the backend.');
+			}
+
+			const importedTasks: ImportedTask[] = result.tasks || [];
+
+			if (importedTasks.length === 0) {
+				importStatus = { type: 'success', message: 'No Task classes found in the file.' };
+				return;
+			}
+
+			// Create new nodes from the imported task data
+			const newNodes: Node[] = [];
+			const existingNodes = getNodes(); // Get current nodes for positioning
+			let nextY = existingNodes.reduce(
+				(maxY, node) => Math.max(maxY, node.position.y + (node.height || 150)),
+				50
+			); // Start below existing nodes
+			const startX = 50;
+
+			importedTasks.forEach((task) => {
+				const id = `imported-task-${task.className}-${Date.now()}`;
+				const nodeData = {
+					className: task.className, // Use the imported class name
+					fields: task.fields.map((f) => ({
+						// Map imported fields
+						name: f.name,
+						type: f.type, // Assuming TaskNode accepts these directly
+						isList: f.isList,
+						required: f.required,
+						description: f.description
+					})),
+					nodeId: id // Crucial: Pass the generated node ID
+				};
+
+				const newNode: Node = {
+					id,
+					type: 'task', // It's a TaskNode
+					position: { x: startX, y: nextY },
+					draggable: true,
+					selectable: true,
+					deletable: true,
+					selected: false,
+					dragging: false,
+					zIndex: 0,
+					data: nodeData,
+					origin: [0, 0]
+				};
+				newNodes.push(newNode);
+				nextY += 180; // Basic vertical spacing
+			});
+
+			// Add the new nodes to the store
+			nodes.update((currentNodes) => [...currentNodes, ...newNodes]);
+
+			importStatus = {
+				type: 'success',
+				message: `Successfully imported ${newNodes.length} Task node(s).`
+			};
+		} catch (error: any) {
+			console.error('Error importing Python code:', error);
+			importStatus = {
+				type: 'error',
+				message: `Import failed: ${error.message || 'Unknown error'}`
+			};
+		}
+	}
+
+	// ------------------------------
+
 	function isValidConnection(connection: Connection | Edge): boolean {
 		let currentNodes: Node[] = [];
 		const unsubNodes = nodes.subscribe((value) => (currentNodes = value));
@@ -433,12 +581,48 @@ Analyze the following information and provide a response.`,
 <div class="flex h-screen w-screen flex-col">
 	<div class="w-full border-b border-gray-300 bg-gray-100 p-4">
 		<ToolShelf onExport={handleExport} />
-		<!-- Display Connection and Export Status -->
+
+		<!-- File input (hidden) -->
+		<input
+			type="file"
+			bind:this={fileInputRef}
+			accept=".py,text/x-python"
+			style="display: none;"
+			on:change={handleFileSelect}
+		/>
+
+		<!-- Display Connection and Export/Import Status -->
 		<div class="mt-2 flex items-center justify-end space-x-2 text-xs">
+			<!-- Import Button -->
+			<button
+				class="flex items-center rounded bg-blue-500 px-2 py-1 text-white hover:bg-blue-600 disabled:opacity-50"
+				on:click={triggerImport}
+				disabled={importStatus.type === 'loading'}
+				title="Import Task definitions from Python file"
+			>
+				<UploadSimple size={12} weight="bold" class="mr-1" />
+				Import Python
+			</button>
+
 			<PythonInterpreterSelector />
+
 			{#if !isConnected}
 				<span class="rounded bg-red-100 px-1.5 py-0.5 text-red-700">Disconnected</span>
 			{/if}
+
+			<!-- Import Status Message -->
+			{#if importStatus.type === 'loading'}
+				<span class="rounded bg-yellow-100 px-1.5 py-0.5 text-yellow-700"
+					>{importStatus.message}</span
+				>
+			{:else if importStatus.type === 'success'}
+				<span class="rounded bg-green-100 px-1.5 py-0.5 text-green-700">{importStatus.message}</span
+				>
+			{:else if importStatus.type === 'error'}
+				<span class="rounded bg-red-100 px-1.5 py-0.5 text-red-700">{importStatus.message}</span>
+			{/if}
+
+			<!-- Export Status Message -->
 			{#if exportStatus.type === 'loading'}
 				<span class="rounded bg-yellow-100 px-1.5 py-0.5 text-yellow-700"
 					>{exportStatus.message}</span
