@@ -1,5 +1,6 @@
 import ast
 import inspect
+import re
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 # Define the base class name we are looking for
@@ -64,19 +65,57 @@ def filter_derived_classes(
 
 def _parse_annotation(
     annotation: ast.expr, known_task_types: Set[str]
-) -> Tuple[str, bool]:
-    """Parses a type annotation AST node into a type string and list status.
+) -> Tuple[str, bool, Optional[List[str]]]:
+    """Parses a type annotation AST node into a type string, list status, and literal values.
 
-    Recognizes basic types, List[...], and known custom Task types.
+    Recognizes basic types, List[...], known custom Task types, and Literal types.
     """
     is_list = False
     base_type_str = "Any"  # Default type string
+    literal_values = None  # For Literal["val1", "val2", ...]
 
     if isinstance(annotation, ast.Name):
         base_type_str = annotation.id
     elif isinstance(annotation, ast.Subscript):
+        # Check if it's a Literal type
+        if isinstance(annotation.value, ast.Name) and annotation.value.id == "Literal":
+            # It's a Literal type, extract the values
+            base_type_str = "literal"  # Special frontend type for literals
+            literal_values = []
+
+            # Handle different Python versions and AST structures
+            if isinstance(annotation.slice, ast.Tuple):
+                # Python 3.8: Literal["val1", "val2"]
+                for elt in annotation.slice.elts:
+                    if isinstance(elt, ast.Constant):
+                        literal_values.append(str(elt.value))
+                    elif isinstance(elt, ast.Str):  # Python 3.7 and earlier
+                        literal_values.append(elt.s)
+            elif isinstance(annotation.slice, ast.Constant):
+                # Python 3.9+: Literal["val1"]
+                literal_values.append(str(annotation.slice.value))
+            elif hasattr(annotation.slice, "elts"):
+                # Fallback for other versions
+                for elt in annotation.slice.elts:
+                    if hasattr(elt, "value"):
+                        literal_values.append(str(elt.value))
+                    elif hasattr(elt, "s"):
+                        literal_values.append(elt.s)
+            else:
+                # Fallback for complex cases - use string parsing
+                slice_str = ast.unparse(annotation.slice)
+                # Use regex to extract string literals
+                string_literals = re.findall(r'"([^"]*)"', slice_str)
+                if string_literals:
+                    literal_values = string_literals
+                else:
+                    # Try for numeric literals too
+                    numeric_literals = re.findall(r"\b(\d+)\b", slice_str)
+                    if numeric_literals:
+                        literal_values = numeric_literals
+
         # Check for List[...] or list[...]
-        if isinstance(annotation.value, ast.Name) and annotation.value.id in (
+        elif isinstance(annotation.value, ast.Name) and annotation.value.id in (
             "List",
             "list",
         ):
@@ -103,54 +142,33 @@ def _parse_annotation(
     else:  # Fallback for more complex annotations
         base_type_str = ast.unparse(annotation)
 
-    # Check if the resolved base type is a known custom Task type
-    if base_type_str in known_task_types:
-        frontend_type = base_type_str  # Return the custom task name directly
+    # Map to frontend types only if not a Literal type (which we already handled)
+    if base_type_str != "literal":
+        # Check if the resolved base type is a known custom Task type
+        if base_type_str in known_task_types:
+            frontend_type = base_type_str  # Return the custom task name directly
+        else:
+            # Map to frontend primitive types (simple mapping for now)
+            type_mapping = {
+                "str": "string",
+                "int": "integer",
+                "float": "float",
+                "bool": "boolean",
+                # Add other mappings if needed
+            }
+            # Default to the original base_type_str if not a primitive, could be Any or complex
+            frontend_type = type_mapping.get(base_type_str, base_type_str)
     else:
-        # Map to frontend primitive types (simple mapping for now)
-        type_mapping = {
-            "str": "string",
-            "int": "integer",
-            "float": "float",
-            "bool": "boolean",
-            # Add other mappings if needed
-        }
-        # Default to the original base_type_str if not a primitive, could be Any or complex
-        frontend_type = type_mapping.get(base_type_str, base_type_str)
+        frontend_type = "literal"  # Keep our special type
 
-    return frontend_type, is_list
+    return frontend_type, is_list, literal_values
 
 
-def _get_field_description(
-    node: ast.AnnAssign, source_lines: List[str]
-) -> Optional[str]:
-    """Extracts a comment description immediately following the field definition."""
-    # Check for inline comment on the same line
-    line_content = source_lines[node.lineno - 1]
-    parts = line_content.split("#", 1)
-    if len(parts) > 1:
-        comment = parts[1].strip()
-        # Check if the comment is associated with this specific assignment
-        # This is a heuristic: assumes comment after target/annotation relates to the field
-        target_end_col = (
-            node.target.end_col_offset
-            if hasattr(node.target, "end_col_offset")
-            else len(ast.unparse(node.target))
-        )
-        annotation_end_col = (
-            node.annotation.end_col_offset
-            if hasattr(node.annotation, "end_col_offset")
-            else target_end_col + len(ast.unparse(node.annotation)) + 1
-        )  # Approximate
-        comment_start_col = line_content.find("#")
-
-        # Only take comment if it starts reasonably close after annotation/value
-        # Adjust threshold as needed
-        if (
-            comment_start_col
-            > (node.value.end_col_offset if node.value else annotation_end_col) + 1
-        ):
-            return comment
+def _get_field_description(node: ast.AnnAssign) -> Optional[str]:
+    keywords = node.value.keywords
+    for keyword in keywords:
+        if keyword.arg == "description":
+            return keyword.value.s
 
     # Could also check for comments on the line above, but that's more complex.
     return None
@@ -169,24 +187,30 @@ def extract_task_fields(
             if not field_name:
                 continue  # Skip complex targets for now
 
-            field_type, is_list = _parse_annotation(node.annotation, known_task_types)
+            field_type, is_list, literal_values = _parse_annotation(
+                node.annotation, known_task_types
+            )
 
             # Determine if required (simple check: no default value implies required)
             # A more robust check could look for Optional[...] or Union[..., None]
             # TODO: Improve required check (consider Optional, Union[..., None], = None)
             is_required = node.value is None
 
-            description = _get_field_description(node, source_lines)
+            description = _get_field_description(node)
 
-            fields.append(
-                {
-                    "name": field_name,
-                    "type": field_type,  # This will now contain primitives or custom Task names
-                    "isList": is_list,
-                    "required": is_required,
-                    "description": description,
-                }
-            )
+            field_data = {
+                "name": field_name,
+                "type": field_type,  # This will now contain primitives, custom Task names, or "literal"
+                "isList": is_list,
+                "required": is_required,
+                "description": description,
+            }
+
+            # Add literal values if present
+            if literal_values:
+                field_data["literalValues"] = literal_values
+
+            fields.append(field_data)
         # TODO: Could potentially parse fields from __init__ as well, but AnnAssign is preferred
     return fields
 

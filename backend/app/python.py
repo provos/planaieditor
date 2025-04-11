@@ -70,29 +70,52 @@ def generate_python_module(graph_data):
                     )  # Type from frontend/import
                     description = field.get("description", "No description")
                     is_list = field.get("isList", False)
+                    literal_values = field.get("literalValues", None)
 
-                    # Map frontend primitive types to Python types
-                    primitive_type_mapping = {
-                        "string": "str",
-                        "integer": "int",
-                        "float": "float",
-                        "boolean": "bool",
-                    }
+                    # Handle Literal types
+                    if field_type_frontend == "literal" and literal_values:
+                        # Join the literal values with commas, properly quoted for strings
+                        # Format properly: Literal["value1", "value2"] or Literal[1, 2, 3]
+                        literal_items = []
+                        for val in literal_values:
+                            # Check if it's numeric by attempting to convert
+                            try:
+                                float(val)  # If this works, it's numeric
+                                # Add numeric value without quotes
+                                literal_items.append(val)
+                            except ValueError:
+                                # Add string value with quotes
+                                literal_items.append(f'"{val}"')
 
-                    # Check if it's a primitive type
-                    if field_type_frontend.lower() in primitive_type_mapping:
-                        py_type = primitive_type_mapping[field_type_frontend.lower()]
+                        # Create the Literal type expression
+                        py_type = f"Literal[{', '.join(literal_items)}]"
+                        # Make sure we add the import for Literal if not already present
+                        # We'll handle this at the top of the code generation
                     else:
-                        # Assume it's a custom Task type (or Any/other complex type)
-                        # Use the name directly, ensure it's a valid identifier if possible
-                        # Basic validation: if it contains invalid chars, default to Any
-                        if is_valid_python_class_name(field_type_frontend):
-                            py_type = field_type_frontend
+                        # Map frontend primitive types to Python types
+                        primitive_type_mapping = {
+                            "string": "str",
+                            "integer": "int",
+                            "float": "float",
+                            "boolean": "bool",
+                        }
+
+                        # Check if it's a primitive type
+                        if field_type_frontend.lower() in primitive_type_mapping:
+                            py_type = primitive_type_mapping[
+                                field_type_frontend.lower()
+                            ]
                         else:
-                            print(
-                                f"Warning: Invalid field type '{field_type_frontend}' encountered, defaulting to Any."
-                            )
-                            py_type = "Any"
+                            # Assume it's a custom Task type (or Any/other complex type)
+                            # Use the name directly, ensure it's a valid identifier if possible
+                            # Basic validation: if it contains invalid chars, default to Any
+                            if is_valid_python_class_name(field_type_frontend):
+                                py_type = field_type_frontend
+                            else:
+                                print(
+                                    f"Warning: Invalid field type '{field_type_frontend}' encountered, defaulting to Any."
+                                )
+                                py_type = "Any"
 
                     # Handle List type
                     if is_list:
@@ -102,20 +125,23 @@ def generate_python_module(graph_data):
                     # TODO: Enhance based on how optionality is represented in frontend/import
                     if not field.get("required", True):
                         py_type = f"Optional[{py_type}]"
-                        default_value = " = None"
+                        default_value = "None"
                     else:
-                        default_value = " = Field(...) # Required field"
+                        default_value = "..."
 
                     # Include description in Field
                     # Escape quotes within description if necessary
-                    escaped_description = description.replace('"', '\\"')
-                    field_args = f'description="{escaped_description}"'
+
+                    if description:
+                        escaped_description = description.replace('"', '\\"')
+                        field_args = f'description="{escaped_description}"'
+                    else:
+                        field_args = ""
 
                     # Assemble the field definition line
                     tasks.append(
-                        f"    {field_name}: {py_type}{default_value}"
-                    )  # Use Field(...) syntax
-                    # Previous version used Field directly: f'    {field_name}: {py_type} = Field({field_args})')
+                        f"    {field_name}: {py_type} = Field({default_value}, {field_args})"
+                    )
 
     # Helper to map frontend type names (like 'TaskA') to generated Task class names
     def get_task_class_name(type_name: str) -> str:

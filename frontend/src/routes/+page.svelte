@@ -35,6 +35,7 @@
 		isList: boolean;
 		required: boolean;
 		description?: string;
+		literalValues?: string[];
 	}
 
 	// Type for the task data coming from the import endpoint
@@ -516,7 +517,8 @@ Analyze the following information and provide a response.`,
 						type: f.type, // Assuming TaskNode accepts these directly
 						isList: f.isList,
 						required: f.required,
-						description: f.description
+						description: f.description,
+						literalValues: f.literalValues
 					})),
 					nodeId: id // Crucial: Pass the generated node ID
 				};

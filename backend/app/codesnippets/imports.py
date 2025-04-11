@@ -39,7 +39,7 @@ def create_graph(
     instance_to_node_id: Dict[str, str] = {{}}
 
     {worker_instantiation}
-    
+
     # Add graph workers *after* instantiation block
     all_worker_instances = list(workers_dict.values())
     if all_worker_instances:  # Only add if any were successful
@@ -50,6 +50,7 @@ def create_graph(
     {dependency_setup}
 
     return graph, workers_dict
+
 
 def setup_graph(
     notify: Optional[Callable[Dict[str, Any], None]] = None,
@@ -69,14 +70,18 @@ def setup_graph(
     except (
         Exception
     ) as e:  # Catch errors during create_graph itself (e.g., invalid class name, edge setup)
-        error_info_dict = {{
-            "success": False,
-            "error": {{
-                "message": f"Error during graph creation/setup: {{repr(str(e))}}",
-                "nodeName": None,
-                "fullTraceback": traceback.format_exc(),
-            }},
-        }}
+        error_info_dict = {
+            {
+                "success": False,
+                "error": {
+                    {
+                        "message": f"Error during graph creation/setup: {{repr(str(e))}}",
+                        "nodeName": None,
+                        "fullTraceback": traceback.format_exc(),
+                    }
+                },
+            }
+        }
         print("##ERROR_JSON_START##", flush=True)
         print(json.dumps(error_info_dict), flush=True)
         print("##ERROR_JSON_END##", flush=True)
@@ -90,20 +95,25 @@ def setup_graph(
     if graph is None:
         # Handle case where create_graph failed internally and exited
         # This path might not be strictly necessary if create_graph always sys.exits
-        error_info_dict = {{
-            "success": False,
-            "error": {{
-                "message": "Graph creation failed internally.",
-                "nodeName": None,
-                "fullTraceback": "",
-            }},
-        }}
+        error_info_dict = {
+            {
+                "success": False,
+                "error": {
+                    {
+                        "message": "Graph creation failed internally.",
+                        "nodeName": None,
+                        "fullTraceback": "",
+                    }
+                },
+            }
+        }
         print("##ERROR_JSON_START##", flush=True)
         print(json.dumps(error_info_dict), flush=True)
         print("##ERROR_JSON_END##", flush=True)
         sys.exit(1)
 
     return graph, workers
+
 
 if __name__ == "__main__":
     print("Setting up and running the generated PlanAI graph...")
@@ -127,14 +137,18 @@ if __name__ == "__main__":
         print("Exiting due to error during setup.", file=sys.stderr)
         pass  # Allow the script to terminate
     except Exception as e:  # Catch unexpected errors during the setup_graph call itself
-        error_info_dict = {{
-            "success": False,
-            "error": {{
-                "message": f"Unexpected error in main execution block: {{repr(str(e))}}",
-                "nodeName": None,
-                "fullTraceback": traceback.format_exc(),
-            }},
-        }}
+        error_info_dict = {
+            {
+                "success": False,
+                "error": {
+                    {
+                        "message": f"Unexpected error in main execution block: {{repr(str(e))}}",
+                        "nodeName": None,
+                        "fullTraceback": traceback.format_exc(),
+                    }
+                },
+            }
+        }
         print("##ERROR_JSON_START##", flush=True)
         print(json.dumps(error_info_dict), flush=True)
         print("##ERROR_JSON_END##", flush=True)

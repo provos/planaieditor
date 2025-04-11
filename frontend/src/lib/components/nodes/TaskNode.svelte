@@ -10,7 +10,7 @@
 	import { onDestroy } from 'svelte';
 
 	// Define basic field types
-	type BaseFieldType = 'string' | 'integer' | 'float' | 'boolean';
+	type BaseFieldType = 'string' | 'integer' | 'float' | 'boolean' | 'literal';
 	// Enhanced field type can be a basic type or a custom Task name
 	type FieldType = string;
 
@@ -20,9 +20,11 @@
 		isList: boolean;
 		required: boolean;
 		description?: string;
+		literalValues?: string[]; // Add support for Literal types with predefined values
 	}
 
-	interface NodeData {
+	// Export this interface to be used by other components
+	export interface NodeData {
 		className: string;
 		fields: Field[];
 		nodeId: string; // The node's ID for validation
@@ -59,11 +61,16 @@
 		string: 'str',
 		integer: 'int',
 		float: 'float',
-		boolean: 'bool'
+		boolean: 'bool',
+		literal: 'Literal'
 	};
 
 	// Available custom task types
 	let availableTaskTypes = $state<string[]>([]);
+
+	// For editing literal values
+	let literalValueInput = $state('');
+	let editingLiteralValues = $state<string[]>([]);
 
 	// Subscribe to task types store to get updates
 	const unsubTaskTypes = taskClassNamesStore.subscribe((taskTypes) => {
@@ -152,6 +159,7 @@
 		editingFieldType = field.type;
 		editingFieldDescription = field.description;
 		editingFieldRequired = field.required;
+		editingLiteralValues = field.literalValues ? [...field.literalValues] : [];
 		fieldNameError = '';
 	}
 
@@ -163,6 +171,7 @@
 		editingFieldRequired = true;
 		fieldNameError = '';
 		editingFieldDescription = undefined;
+		editingLiteralValues = [];
 	}
 
 	function validateFieldName(name: string, currentIndex: number): boolean {
@@ -189,13 +198,18 @@
 	function saveField() {
 		if (!validateFieldName(editingFieldName, editingFieldIndex!)) return;
 
-		const newField = {
+		const newField: Field = {
 			name: editingFieldName,
 			type: editingFieldType,
 			isList: editingFieldIsList,
 			required: editingFieldRequired,
 			description: editingFieldDescription || undefined
 		};
+
+		// Add literal values if it's a literal type
+		if (editingFieldType === 'literal' && editingLiteralValues.length > 0) {
+			newField.literalValues = [...editingLiteralValues];
+		}
 
 		if (editingFieldIndex === -1) {
 			// Add new field
@@ -219,6 +233,8 @@
 		editingFieldName = '';
 		fieldNameError = '';
 		editingFieldDescription = undefined;
+		editingLiteralValues = [];
+		literalValueInput = '';
 	}
 
 	function deleteField(index: number) {
@@ -254,7 +270,12 @@
 		}
 		// Otherwise, use the custom type name directly
 
-		if (field.isList) {
+		if (field.type === 'literal' && field.literalValues?.length) {
+			// For Literal types, show some of the values
+			const displayValues = field.literalValues.slice(0, 3);
+			const moreIndicator = field.literalValues.length > 3 ? ', ...' : '';
+			return `Literal[${displayValues.map((v) => `"${v}"`).join(', ')}${moreIndicator}]`;
+		} else if (field.isList) {
 			return `List[${baseLabel}]`;
 		}
 		return baseLabel;
@@ -264,6 +285,30 @@
 	$effect(() => {
 		currentFields = [...data.fields];
 	});
+
+	// Add a new literal value to the current field being edited
+	function addLiteralValue() {
+		if (!literalValueInput.trim()) return;
+
+		// Add the value if it's not already in the list
+		if (!editingLiteralValues.includes(literalValueInput.trim())) {
+			editingLiteralValues = [...editingLiteralValues, literalValueInput.trim()];
+		}
+		literalValueInput = ''; // Clear the input
+	}
+
+	// Remove a literal value
+	function removeLiteralValue(index: number) {
+		editingLiteralValues = editingLiteralValues.filter((_, i) => i !== index);
+	}
+
+	// Handle keydown for literal value input
+	function handleLiteralKeydown(event: KeyboardEvent) {
+		if (event.key === 'Enter') {
+			event.preventDefault(); // Prevent form submission
+			addLiteralValue();
+		}
+	}
 
 	// Clean up subscriptions
 	onDestroy(() => {
@@ -369,6 +414,49 @@
 								onkeydown={handleFieldKeydown}
 							/>
 						</div>
+
+						<!-- Literal Values Editor (only shown when type is 'literal') -->
+						{#if editingFieldType === 'literal'}
+							<div class="mb-2 border-t border-gray-100 pt-1">
+								<div class="text-2xs mb-0.5 font-medium">Literal Values:</div>
+								<div class="mb-1 flex gap-1">
+									<input
+										type="text"
+										bind:value={literalValueInput}
+										placeholder="Add value..."
+										class="text-2xs flex-1 rounded border border-gray-200 px-1 py-0.5"
+										onkeydown={handleLiteralKeydown}
+									/>
+									<button
+										class="text-2xs rounded bg-blue-100 px-1 py-0.5 text-blue-700 hover:bg-blue-200"
+										onclick={addLiteralValue}
+									>
+										Add
+									</button>
+								</div>
+
+								{#if editingLiteralValues.length === 0}
+									<div class="text-2xs italic text-gray-400">No values added yet</div>
+								{:else}
+									<div class="flex flex-wrap gap-1">
+										{#each editingLiteralValues as value, idx}
+											<div
+												class="text-2xs inline-flex items-center rounded bg-gray-100 px-1 py-0.5"
+											>
+												<span class="mr-1">{value}</span>
+												<button
+													class="text-gray-500 hover:text-red-500"
+													onclick={() => removeLiteralValue(idx)}
+													title="Remove value"
+												>
+													×
+												</button>
+											</div>
+										{/each}
+									</div>
+								{/if}
+							</div>
+						{/if}
 
 						<div class="flex items-center justify-between">
 							<div class="text-2xs flex items-center">
@@ -495,6 +583,47 @@
 							onkeydown={handleFieldKeydown}
 						/>
 					</div>
+
+					<!-- Literal Values Editor (only shown when type is 'literal') -->
+					{#if editingFieldType === 'literal'}
+						<div class="mb-2 border-t border-gray-100 pt-1">
+							<div class="text-2xs mb-0.5 font-medium">Literal Values:</div>
+							<div class="mb-1 flex gap-1">
+								<input
+									type="text"
+									bind:value={literalValueInput}
+									placeholder="Add value..."
+									class="text-2xs flex-1 rounded border border-gray-200 px-1 py-0.5"
+									onkeydown={handleLiteralKeydown}
+								/>
+								<button
+									class="text-2xs rounded bg-blue-100 px-1 py-0.5 text-blue-700 hover:bg-blue-200"
+									onclick={addLiteralValue}
+								>
+									Add
+								</button>
+							</div>
+
+							{#if editingLiteralValues.length === 0}
+								<div class="text-2xs italic text-gray-400">No values added yet</div>
+							{:else}
+								<div class="flex flex-wrap gap-1">
+									{#each editingLiteralValues as value, idx}
+										<div class="text-2xs inline-flex items-center rounded bg-gray-100 px-1 py-0.5">
+											<span class="mr-1">{value}</span>
+											<button
+												class="text-gray-500 hover:text-red-500"
+												onclick={() => removeLiteralValue(idx)}
+												title="Remove value"
+											>
+												×
+											</button>
+										</div>
+									{/each}
+								</div>
+							{/if}
+						</div>
+					{/if}
 
 					<div class="flex items-center justify-between">
 						<div class="text-2xs flex items-center">
