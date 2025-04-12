@@ -21,28 +21,19 @@
 	import PythonInterpreterSelector from '$lib/components/PythonInterpreterSelector.svelte';
 	import UploadSimple from 'phosphor-svelte/lib/UploadSimple'; // Icon for import
 
-	// Type for the structured error from the backend
-	interface BackendError {
-		message: string;
-		nodeName: string | null; // The name of the class/worker identified in the traceback
-		fullTraceback?: string;
-	}
-
-	// Type for the field data coming from the import endpoint
-	interface ImportedField {
-		name: string;
-		type: string; // Can be primitive types or custom Task names
-		isList: boolean;
-		required: boolean;
-		description?: string;
-		literalValues?: string[];
-	}
-
-	// Type for the task data coming from the import endpoint
-	interface ImportedTask {
-		className: string;
-		fields: ImportedField[];
-	}
+	// Import the Python import/export utility modules
+	import {
+		isPythonFile,
+		readFileAsText,
+		importPythonCode,
+		type ImportResult,
+		type BackendError
+	} from '$lib/utils/pythonImport';
+	import {
+		exportPythonCode,
+		processExportResult,
+		type ExportStatus
+	} from '$lib/utils/pythonExport';
 
 	// Define node types and pass stores as props
 	const nodeTypes: any = {
@@ -62,12 +53,12 @@
 	// Socket.IO connection state
 	let socket: Socket | null = null;
 	let isConnected = $state(false);
-	let exportStatus = $state<{ type: 'idle' | 'loading' | 'success' | 'error'; message: string }>({
+	let exportStatus = $state<ExportStatus>({
 		// Export status
 		type: 'idle',
 		message: ''
 	});
-	let importStatus = $state<{ type: 'idle' | 'loading' | 'success' | 'error'; message: string }>({
+	let importStatus = $state<ExportStatus>({
 		// Import status
 		type: 'idle',
 		message: ''
@@ -101,52 +92,18 @@
 		socket.on(
 			'export_result',
 			(data: { success: boolean; message?: string; error?: BackendError }) => {
-				const currentNodes = get(nodes); // Get current nodes state
-				clearNodeErrors(); // Clear any previous errors
+				// Get current nodes
+				const currentNodes = get(nodes);
 
-				if (data.success) {
-					exportStatus = { type: 'success', message: data.message || 'Export successful!' };
-					console.log('Export successful:', data.message);
-				} else {
-					const errorInfo = data.error;
-					if (!errorInfo) {
-						exportStatus = { type: 'error', message: 'Unknown export error occurred.' };
-						console.error('Export failed with no error details.');
-						return;
-					}
+				// Process the export result
+				const result = processExportResult(data, currentNodes);
 
-					console.error(`Export failed: ${errorInfo.message}`, errorInfo.fullTraceback);
+				// Update the export status
+				exportStatus = result.status;
 
-					if (errorInfo.nodeName) {
-						// Find the node by the name identified in the backend
-						const targetNode = currentNodes.find(
-							(n) =>
-								n.data?.className === errorInfo.nodeName ||
-								n.data?.workerName === errorInfo.nodeName
-						);
-
-						if (targetNode) {
-							// Assign the core message to the specific node's data
-							nodes.update((nds) =>
-								nds.map((n) =>
-									n.id === targetNode.id
-										? { ...n, data: { ...n.data, error: errorInfo.message } }
-										: n
-								)
-							);
-							exportStatus = {
-								type: 'error',
-								message: `Error in node ${errorInfo.nodeName}: ${errorInfo.message}`
-							};
-						} else {
-							// Couldn't find node for the name, show generic message with details
-							console.warn(`Could not find node with name: ${errorInfo.nodeName}`);
-							exportStatus = { type: 'error', message: `Error (unlinked): ${errorInfo.message}` };
-						}
-					} else {
-						// Show generic error message if backend couldn't identify a node name
-						exportStatus = { type: 'error', message: errorInfo.message };
-					}
+				// If there are updated nodes (with errors), update the store
+				if (result.updatedNodes) {
+					nodes.set(result.updatedNodes);
 				}
 			}
 		);
@@ -183,7 +140,8 @@
 				}
 				// Specifically add Task node class names to the task set
 				if (node.type === 'task' && node.data?.className) {
-					const nodeData = node.data as NodeData;
+					// Cast to any first to avoid TypeScript error
+					const nodeData = node.data as any as NodeData;
 					taskNameSet.add(nodeData.className);
 				}
 			});
@@ -408,14 +366,10 @@ Analyze the following information and provide a response.`,
 		}
 	}
 
+	// --- Python Export Function ---
+
 	// Function to handle the export button click
 	function handleExport() {
-		if (!socket || !isConnected) {
-			console.error('Socket not connected. Cannot export.');
-			exportStatus = { type: 'error', message: 'Not connected to backend.' };
-			return;
-		}
-
 		// Get current nodes and edges from the stores
 		let currentNodes: Node[] = [];
 		let currentEdges: Edge[] = [];
@@ -424,14 +378,8 @@ Analyze the following information and provide a response.`,
 		unsubNodes();
 		unsubEdges();
 
-		const graphData = {
-			nodes: currentNodes,
-			edges: currentEdges
-		};
-
-		console.log('Exporting graph:', graphData);
-		exportStatus = { type: 'loading', message: 'Exporting...' };
-		socket.emit('export_graph', graphData);
+		// Call the export utility function
+		exportStatus = exportPythonCode(socket, currentNodes, currentEdges);
 	}
 
 	// --- Python Import Functions ---
@@ -442,129 +390,55 @@ Analyze the following information and provide a response.`,
 	}
 
 	// Handle file selection
-	function handleFileSelect(event: Event) {
+	async function handleFileSelect(event: Event) {
 		const input = event.target as HTMLInputElement;
 		if (!input.files || input.files.length === 0) {
 			return;
 		}
 		const file = input.files[0];
 
-		if (file.type !== 'text/x-python' && !file.name.endsWith('.py')) {
+		// Reset the input value so the same file can be selected again
+		input.value = '';
+
+		if (!isPythonFile(file)) {
 			importStatus = { type: 'error', message: 'Please select a Python (.py) file.' };
 			return;
 		}
 
-		const reader = new FileReader();
-		reader.onload = (e) => {
-			const pythonCode = e.target?.result as string;
-			if (pythonCode) {
-				importPythonCode(pythonCode);
-			} else {
-				importStatus = { type: 'error', message: 'Could not read file content.' };
-			}
-		};
-		reader.onerror = () => {
-			importStatus = { type: 'error', message: 'Error reading file.' };
-		};
-		reader.readAsText(file);
-
-		// Reset the input value so the same file can be selected again
-		input.value = '';
-	}
-
-	// Send code to backend and create nodes
-	async function importPythonCode(pythonCode: string) {
-		importStatus = { type: 'loading', message: 'Importing Python code...' };
+		importStatus = { type: 'loading', message: 'Reading file...' };
 
 		try {
-			const response = await fetch('http://localhost:5001/api/import-python', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({ python_code: pythonCode })
-			});
+			// Read the selected file as text
+			const pythonCode = await readFileAsText(file);
 
-			const result = await response.json();
-
-			if (!response.ok || !result.success) {
-				throw new Error(result.error || 'Import failed on the backend.');
-			}
-
-			const importedTasks: ImportedTask[] = result.tasks || [];
-
-			if (importedTasks.length === 0) {
-				importStatus = { type: 'success', message: 'No Task classes found in the file.' };
-				return;
-			}
-
-			// Create new nodes from the imported task data
-			const newNodes: Node[] = [];
-			const existingNodes = getNodes(); // Get current nodes for positioning
-			let nextY = existingNodes.reduce(
-				(maxY, node) => Math.max(maxY, node.position.y + (node.height || 150)),
-				50
-			); // Start below existing nodes
-			const startX = 50;
-
-			importedTasks.forEach((task) => {
-				const id = `imported-task-${task.className}-${Date.now()}`;
-				const nodeData = {
-					className: task.className, // Use the imported class name
-					fields: task.fields.map((f) => ({
-						// Map imported fields
-						name: f.name,
-						type: f.type, // Assuming TaskNode accepts these directly
-						isList: f.isList,
-						required: f.required,
-						description: f.description,
-						literalValues: f.literalValues
-					})),
-					nodeId: id // Crucial: Pass the generated node ID
-				};
-
-				const newNode: Node = {
-					id,
-					type: 'task', // It's a TaskNode
-					position: { x: startX, y: nextY },
-					draggable: true,
-					selectable: true,
-					deletable: true,
-					selected: false,
-					dragging: false,
-					zIndex: 0,
-					data: nodeData,
-					origin: [0, 0]
-				};
-				newNodes.push(newNode);
-				nextY += 180; // Basic vertical spacing
-			});
-
-			// Add the new nodes to the store
-			nodes.update((currentNodes) => [...currentNodes, ...newNodes]);
-
-			importStatus = {
-				type: 'success',
-				message: `Successfully imported ${newNodes.length} Task node(s).`
-			};
-
-			// Also update the taskClassNamesStore with the newly imported names
-			const importedTaskNames = new Set(importedTasks.map((task) => task.className));
-			taskClassNamesStore.update((existingNames) => {
-				importedTaskNames.forEach((name) => existingNames.add(name));
-				return new Set(existingNames); // Create a new set to trigger reactivity
-			});
+			// Process the file content
+			await handlePythonImport(pythonCode);
 		} catch (error: any) {
-			console.error('Error importing Python code:', error);
-			importStatus = {
-				type: 'error',
-				message: `Import failed: ${error.message || 'Unknown error'}`
-			};
+			importStatus = { type: 'error', message: error.message || 'Error reading file.' };
 		}
 	}
 
-	// ------------------------------
+	// Process the Python code and update the graph
+	async function handlePythonImport(pythonCode: string) {
+		importStatus = { type: 'loading', message: 'Importing Python code...' };
 
+		// Call the import utility function
+		const result = await importPythonCode(pythonCode, getNodes);
+
+		// Update the import status
+		importStatus = {
+			type: result.success ? 'success' : 'error',
+			message: result.message
+		};
+
+		// If successful and we have new nodes, add them to the graph
+		if (result.success && result.nodes && result.nodes.length > 0) {
+			const newNodes = result.nodes; // Assign to variable to satisfy type system
+			nodes.update((currentNodes) => [...currentNodes, ...newNodes]);
+		}
+	}
+
+	// Function to check if a connection is valid
 	function isValidConnection(connection: Connection | Edge): boolean {
 		let currentNodes: Node[] = [];
 		const unsubNodes = nodes.subscribe((value) => (currentNodes = value));
@@ -580,20 +454,6 @@ Analyze the following information and provide a response.`,
 			return false;
 		}
 		return true;
-	}
-
-	// Helper function to clear errors from all node data
-	function clearNodeErrors() {
-		nodes.update((currentNodes) =>
-			currentNodes.map((node) => {
-				if (node.data?.error) {
-					const { error, ...restData } = node.data; // Destructure to remove error
-					return { ...node, data: restData };
-				} else {
-					return node; // No error property to remove
-				}
-			})
-		);
 	}
 </script>
 
