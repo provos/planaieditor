@@ -1,0 +1,77 @@
+---
+description: 
+globs: *.py
+alwaysApply: false
+---
+# Python Backend Best Practices: Flask & Flask-SocketIO
+
+## Project Structure
+1. Organize code using a layered architecture (controllers → services → data layer)
+2. Separate your app into Blueprints for logical groupings of endpoints
+3. Implement the application factory pattern to create the Flask app with different configurations
+
+## Flask Configuration
+1. Store configurations in separate files for different environments (dev, test, prod)
+2. Never hardcode sensitive values - use environment variables
+3. Disable debug mode in production environments
+
+## Pydantic Integration
+1. Create Pydantic models for all API request/response schemas
+2. Validate incoming request data before processing:
+   ```python
+   data = UserModel.model_validate(request.json)
+   ```
+3. Use Pydantic for configuration management where appropriate
+4. Leverage Pydantic's Field constraints to enforce validation rules (min_length, regex, etc.)
+
+## RESTful API Design
+1. Use appropriate HTTP methods (GET, POST, PUT, DELETE)
+2. Return proper HTTP status codes (200, 201, 400, 404, 500, etc.)
+3. Design consistent URL patterns following REST principles
+
+## Flask-SocketIO Implementation
+1. Organize WebSocket events using namespaces
+2. Validate all incoming socket data with Pydantic models
+3. Implement proper error handling for socket events
+4. Use background tasks for long-running operations to avoid blocking the event loop
+5. Set appropriate ping/pong intervals to maintain connections
+
+## Error Handling
+1. Create centralized error handlers for consistent error responses
+2. Log errors with sufficient context for debugging
+3. Return user-friendly error messages without exposing internal details
+
+## Database Practices
+1. Use SQLAlchemy for database interactions
+2. Implement database migrations with Alembic
+3. Create database connection pools for better performance
+
+## Security
+1. Use Flask-Bcrypt for password hashing
+2. Implement JWT-based authentication
+3. Add rate limiting to prevent abuse
+4. Sanitize all user inputs
+5. Set secure cookie options with HTTPOnly, Secure, and SameSite attributes
+
+## Testing
+1. Write unit tests for individual functions and classes
+2. Create integration tests for API endpoints
+3. Use pytest and its fixtures for test organization
+4. Mock external services during testing
+
+## Performance
+1. Implement caching strategies using Flask-Caching
+2. Set up proper WSGI server (Gunicorn) with appropriate worker configuration
+3. Consider asynchronous processing for CPU-intensive tasks
+
+## Documentation
+1. Document API endpoints using OpenAPI/Swagger
+2. Include docstrings for all functions, classes, and methods
+3. Create a README with setup and running instructions
+
+## Logging
+1. Configure structured logging with timestamps and log levels
+2. Include request IDs in logs for traceability
+3. Set up appropriate log rotation
+
+Follow these guidelines to create a maintainable, secure, and efficient Flask application with WebSocket support.

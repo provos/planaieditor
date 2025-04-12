@@ -1,0 +1,51 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Purpose of the application
+The application provides a graphical user interface (GUI) application that simplifies the creation of AI agents using PlanAI. The browser UI provides a node-based interface for configuring AI workflows, e.g. creating new Task Objects, various PlanAI TaskWorkers and connecting them with each other. The application uses Svelte 5 with SvelteKit for the frontend and integrate svelte-flow for the node-based graph interface, with a Python backend using flask and flask-socketio for executing PlanAI workflows.
+
+The main entry point for the python backend is @app.py. The main entry point for the svelte 5 frontend is [+page.svelte](mdc:frontend/src/routes/+page.svelte)
+
+# Main User Journeys
+1. Create a new PlanAI graph in the UI and export it to Python for validation and further native code development.
+2. Import an existing Python module that implements a PlanAI graph into the frontend where the user can modify and extend it
+3. Export an imported Python module back to the Python backend. We apply the changes using the python ast module.
+
+
+# Background on PlanAI
+PlanAI is a Python framework developed by Niels Provos for automating complex tasks by integrating traditional computations with Large Language Models (LLMs). It utilizes a graph-based, data-flow architecture.
+
+## Core Python Concepts
+
+*   **Graph-Based Architecture:** Workflows are constructed as a `Graph` object. This graph consists of interconnected nodes called `TaskWorker`s. The execution is parallel, constrained only by the data dependencies defined in the graph.
+*   **TaskWorkers:** These are Python classes that inherit from `planai.TaskWorker`. They represent individual processing steps in the workflow.
+    *   **Custom Logic:** Developers implement the core logic within the `consume_work` method of a custom `TaskWorker` subclass. This method receives an input `Task`.
+    *   **Output:** Processed results are published as new `Task` objects using the `publish_work` method.
+    *   **LLM Integration:** The `planai.LLMTaskWorker` subclass simplifies integrating LLMs. It requires defining a `prompt`, the expected input `Task` type (`llm_input_type`), and the output `Task` types (`output_types`). It can connect to various LLM providers (like OpenAI, Ollama) using `planai.llm_from_config`.
+    *   **Specialized Workers:** Advanced workers like `CachedTaskWorker` (for result caching) and `JoinedTaskWorker` (for synchronizing and combining results from multiple upstream workers) are available.
+*   **Tasks:** Data flows through the graph encapsulated in `Task` objects. These are typically Pydantic models, ensuring type safety.
+*   **Type Safety with Pydantic:** PlanAI leverages Pydantic for defining the structure and types of data within `Task` objects. `TaskWorker` classes declare their expected input and output types (`output_types`, `llm_input_type`), ensuring data integrity and enabling type-aware routing between workers.
+*   **Defining Workflows:**
+    1.  Instantiate a `planai.Graph`.
+    2.  Create instances of `TaskWorker` subclasses.
+    3.  Add these workers to the graph using `graph.add_workers()`.
+    4.  Define the data flow dependencies between workers using `graph.set_dependency(upstream_worker, downstream_worker)`.
+    5.  Initiate the workflow execution by calling `graph.run(initial_tasks=[(worker, initial_task_data)])`, providing the starting tasks and the workers they should be sent to.
+*   **Input Provenance Tracking:** A key feature is the automatic tracking of the lineage or history of each `Task` as it progresses through the graph. This allows any `TaskWorker` to access the history of tasks that led to its current input, facilitating complex coordination and debugging without needing redundant data structures.
+*   **Monitoring:** A built-in web dashboard can be enabled (`run_dashboard=True`) during development to monitor graph execution in real-time.
+
+PlanAI requires Python 3.10+ and can be installed via pip. It is designed to simplify building applications like generative search engines or complex data processing pipelines involving multiple steps and AI components.
+
+
+## Frontend concepts
+The PlanAI Task concept is implemented in [TaskNode.svelte](mdc:frontend/src/lib/components/nodes/TaskNode.svelte). The basic TaskWorker abstraction is implemented in [BaseWorkerNode.svelte](mdc:frontend/src/lib/components/nodes/BaseWorkerNode.svelte). Here are the mappings:
+ - TaskWorker is implemented in [TaskWorkerNode.svelte](mdc:frontend/src/lib/components/nodes/TaskWorkerNode.svelte)
+ - LLMTaskWorker is implemented in [LLMTaskWorkerNode.svelte](mdc:frontend/src/lib/components/nodes/LLMTaskWorkerNode.svelte)
+ - JoinedTaskWOrker is implemented in [JoinedTaskWorkerNode.svelte](mdc:frontend/src/lib/components/nodes/JoinedTaskWorkerNode.svelte)
+
+
+
+
