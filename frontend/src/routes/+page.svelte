@@ -269,7 +269,8 @@ Analyze the following information and provide a response.`,
 			dragging: false,
 			zIndex: 0,
 			data: nodeData,
-			origin: [0, 0] // Set origin to top-left
+			origin: [0, 0], // Set origin to top-left
+			dragHandle: '.custom-drag-handle' // Add custom drag handle class
 		};
 
 		// Update our nodes store
@@ -663,5 +664,10 @@ Analyze the following information and provide a response.`,
 
 	:global(.svelte-flow .svelte-flow__edge path, .svelte-flow__connectionline path) {
 		stroke-width: 2;
+	}
+
+	/* Ensure the custom drag handle appears above other elements */
+	:global(.custom-drag-handle) {
+		z-index: 1;
 	}
 </style>

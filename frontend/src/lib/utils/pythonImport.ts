@@ -127,7 +127,8 @@ export async function importPythonCode(
                 dragging: false,
                 zIndex: 0,
                 data: nodeData,
-                origin: [0, 0]
+                origin: [0, 0],
+                dragHandle: '.custom-drag-handle' // Use the custom drag handle
             };
             newNodes.push(newNode);
             nextY += 180; // Basic vertical spacing

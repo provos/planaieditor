@@ -8,6 +8,7 @@
 	import Trash from 'phosphor-svelte/lib/Trash';
 	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
 	import { onDestroy } from 'svelte';
+	import NodeDragHandle from './NodeDragHandle.svelte';
 
 	// Define basic field types
 	type BaseFieldType = 'string' | 'integer' | 'float' | 'boolean' | 'literal';
@@ -319,6 +320,9 @@
 <div class="task-node flex h-full flex-col rounded-md border border-gray-300 bg-white shadow-md">
 	<!-- Node Resizer -->
 	<NodeResizer minWidth={200} minHeight={150} />
+
+	<!-- Drag Handle at the top -->
+	<NodeDragHandle />
 
 	<!-- Node handles -->
 	<Handle
