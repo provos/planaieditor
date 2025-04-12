@@ -1,13 +1,17 @@
 <script lang="ts">
 	import BaseWorkerNode from '$lib/components/nodes/BaseWorkerNode.svelte';
 	import EditableCodeSection from '$lib/components/EditableCodeSection.svelte';
-	import type { BaseWorkerData as WorkerData } from '$lib/components/nodes/BaseWorkerNode.svelte'; // Correct import
+	import type { BaseWorkerData } from '$lib/components/nodes/BaseWorkerNode.svelte'; // Correct import
 	import { useStore } from '@xyflow/svelte'; // Import useStore
 	import type { Node, Edge } from '@xyflow/svelte';
 
+	export interface TaskWorkerData extends BaseWorkerData {
+		consumeWork: string;
+	}
+
 	let { id, data } = $props<{
 		id: string;
-		data: WorkerData;
+		data: TaskWorkerData;
 	}>();
 
 	const store = useStore(); // Access the store

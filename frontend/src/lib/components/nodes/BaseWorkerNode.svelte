@@ -14,7 +14,6 @@
 		nodeId: string;
 		inputTypes: string[];
 		outputTypes: string[];
-		consumeWork?: string;
 		// Derived components can extend this
 		[key: string]: any;
 	}
