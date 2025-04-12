@@ -55,7 +55,7 @@
 				onclick={() => handleItemClick(item)}
 			>
 				{#if item.iconComponent}
-					<svelte:component this={item.iconComponent} class="mr-2 h-4 w-4" />
+					<item.iconComponent class="mr-2 h-4 w-4" />
 				{/if}
 				{item.label}
 			</button>
