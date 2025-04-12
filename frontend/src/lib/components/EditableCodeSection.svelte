@@ -57,20 +57,20 @@
 </script>
 
 <div class="flex h-full min-h-0 flex-col">
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<div
-		class="mb-1 flex flex-none cursor-pointer items-center"
-		onclick={toggleCollapse}
-		role="button"
-		tabindex="0"
-	>
-		{#if collapsed}
-			<ChevronRight size={12} class="mr-1 text-gray-500" />
-		{:else}
-			<ChevronDown size={12} class="mr-1 text-gray-500" />
-		{/if}
-		<h3 class="text-2xs font-semibold text-gray-600">{title}</h3>
-	</div>
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<div
+			class="mb-1 flex flex-none cursor-pointer items-center"
+			onclick={toggleCollapse}
+			role="button"
+			tabindex="0"
+		>
+			{#if collapsed}
+				<ChevronRight size={12} class="mr-1 text-gray-500" />
+			{:else}
+				<ChevronDown size={12} class="mr-1 text-gray-500" />
+			{/if}
+			<h3 class="text-2xs font-semibold text-gray-600">{title}</h3>
+		</div>
 
 	{#if !collapsed}
 		<div class="min-h-0 flex-grow overflow-hidden">

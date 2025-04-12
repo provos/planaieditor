@@ -20,6 +20,7 @@
 	import { onMount } from 'svelte';
 	import PythonInterpreterSelector from '$lib/components/PythonInterpreterSelector.svelte';
 	import UploadSimple from 'phosphor-svelte/lib/UploadSimple'; // Icon for import
+	import Code from 'phosphor-svelte/lib/Code';
 
 	// Import the Python import/export utility modules
 	import {
@@ -338,7 +339,7 @@ Analyze the following information and provide a response.`,
 	// Context menu items - now dynamic with Phosphor icons
 	const getContextMenuItems = (): ContextMenuItem[] => {
 		if (contextMenuNode) {
-			return [
+			const baseItems = [
 				{
 					label: 'Delete Node',
 					iconComponent: Trash,
@@ -346,6 +347,100 @@ Analyze the following information and provide a response.`,
 					danger: true
 				}
 			];
+
+			// Add LLMTaskWorker specific items if the selected node is of that type
+			if (contextMenuNode.type === 'llmtaskworker') {
+				return [
+					{
+						label: 'Edit extra_validation()',
+						iconComponent: Code,
+						action: () => {
+							// Update the node data directly
+							nodes.update((currentNodes) => {
+								return currentNodes.map((node) => {
+									if (node.id === contextMenuNode!.id) {
+										return {
+											...node,
+											data: {
+												...node.data,
+												editingFunction: 'extraValidation'
+											}
+										};
+									}
+									return node;
+								});
+							});
+							closeContextMenu();
+						}
+					},
+					{
+						label: 'Edit format_prompt()',
+						iconComponent: Code,
+						action: () => {
+							nodes.update((currentNodes) => {
+								return currentNodes.map((node) => {
+									if (node.id === contextMenuNode!.id) {
+										return {
+											...node,
+											data: {
+												...node.data,
+												editingFunction: 'formatPrompt'
+											}
+										};
+									}
+									return node;
+								});
+							});
+							closeContextMenu();
+						}
+					},
+					{
+						label: 'Edit pre_process()',
+						iconComponent: Code,
+						action: () => {
+							nodes.update((currentNodes) => {
+								return currentNodes.map((node) => {
+									if (node.id === contextMenuNode!.id) {
+										return {
+											...node,
+											data: {
+												...node.data,
+												editingFunction: 'preProcess'
+											}
+										};
+									}
+									return node;
+								});
+							});
+							closeContextMenu();
+						}
+					},
+					{
+						label: 'Edit post_process()',
+						iconComponent: Code,
+						action: () => {
+							nodes.update((currentNodes) => {
+								return currentNodes.map((node) => {
+									if (node.id === contextMenuNode!.id) {
+										return {
+											...node,
+											data: {
+												...node.data,
+												editingFunction: 'postProcess'
+											}
+										};
+									}
+									return node;
+								});
+							});
+							closeContextMenu();
+						}
+					},
+					...baseItems
+				];
+			}
+
+			return baseItems;
 		} else if (contextMenuEdge) {
 			return [
 				{
