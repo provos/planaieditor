@@ -207,6 +207,8 @@ export async function importPythonCode(
             // Type-specific mappings
             switch (worker.workerType) {
                 case 'taskworker':
+                case 'cachedtaskworker':
+                    nodeData.consumeWork = worker.methods?.consume_work || '# No consume_work method found';
                     nodeData.consumeWork = worker.methods?.consume_work || '# No consume_work method found';
                     // TODO: Parse inputTypes from consume_work signature if possible/needed?
                     break;
@@ -223,8 +225,7 @@ export async function importPythonCode(
                     // TODO: Map enabledFunctions based on method existence?
                     break;
                 case 'joinedtaskworker':
-                case 'cachedtaskworker': // Requires specific handling if we add fields
-                    // For now, just basic import
+                    console.log('joinedtaskworker', worker);
                     break;
                 // Add other worker types if needed
             }
