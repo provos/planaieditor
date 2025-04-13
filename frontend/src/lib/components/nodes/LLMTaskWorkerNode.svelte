@@ -83,18 +83,20 @@
 	$effect(() => {
 		const unsubClassNames = taskClassNamesStore.subscribe((taskClasses) => {
 			availableTaskClasses = Array.from(taskClasses);
-			if (currentOutputType && !availableTaskClasses.includes(currentOutputType)) {
-				currentOutputType = '';
-				data.llm_output_type = '';
-			}
 		});
 
 		return unsubClassNames;
 	});
 
+	$effect(() => {
+		if (currentOutputType && !availableTaskClasses.includes(currentOutputType)) {
+			currentOutputType = '';
+			data.llm_output_type = '';
+		}
+	});
+
 	// Sync local state with data object
 	$effect(() => {
-		console.log('effect to sync local state with data object');
 		enabledExtraValidation = data.enabledFunctions.extraValidation;
 		enabledFormatPrompt = data.enabledFunctions.formatPrompt;
 		enabledPreProcess = data.enabledFunctions.preProcess;
@@ -198,7 +200,13 @@
 	}
 </script>
 
-<BaseWorkerNode {id} {data} defaultName="LLMTaskWorker" minHeight={400}>
+<BaseWorkerNode
+	{id}
+	{data}
+	additionalOutputType={currentOutputType}
+	defaultName="LLMTaskWorker"
+	minHeight={400}
+>
 	<!-- LLM Output Type Section -->
 	<div class="mb-2 flex-none">
 		<h3 class="text-2xs mb-1 font-semibold text-gray-600">LLM Output Type</h3>

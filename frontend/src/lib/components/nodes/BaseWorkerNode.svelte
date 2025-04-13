@@ -23,6 +23,7 @@
 		id,
 		data,
 		children,
+		additionalOutputType,
 		minWidth = 250,
 		minHeight = 200,
 		defaultName = 'BaseWorker'
@@ -30,6 +31,7 @@
 		id: string;
 		data: BaseWorkerData;
 		children?: Snippet;
+		additionalOutputType?: string;
 		minWidth?: number;
 		minHeight?: number;
 		defaultName?: string;
@@ -49,6 +51,10 @@
 	let inferredInputTypes = $state<string[]>([]);
 	let currentOutputTypes = $state<string[]>([...(data.outputTypes || [])]);
 	let nodeRef: HTMLElement | null = $state(null);
+
+	let combinedOutputTypes = $derived(
+		currentOutputTypes.length > 0 ? currentOutputTypes : (additionalOutputType ? [additionalOutputType] : [])
+	);
 
 	// --- Effects for Reactivity ---
 	$effect(() => {
@@ -220,12 +226,12 @@
 	/>
 
 	<!-- Output Handles (Dynamically created) -->
-	{#each currentOutputTypes as type, index (type)}
+	{#each combinedOutputTypes as type, index (type)}
 		{@const handleId = `output-${type}`}
 		{@const color = getColorForType(type)}
 		{@const topPos = calculateHandlePosition(
 			index,
-			currentOutputTypes.length,
+			combinedOutputTypes.length,
 			nodeRef?.clientHeight ?? minHeight
 		)}
 		<Handle
