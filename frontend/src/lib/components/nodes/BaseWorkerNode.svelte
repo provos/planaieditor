@@ -2,7 +2,7 @@
 	import { Handle, Position, NodeResizer, useStore, useUpdateNodeInternals } from '@xyflow/svelte';
 	import { isValidPythonClassName } from '$lib/utils/validation';
 	import { getColorForType, calculateHandlePosition } from '$lib/utils/colorUtils';
-	import { allClassNames } from '$lib/stores/classNameStore';
+	import { taskClassNamesStore } from '$lib/stores/taskClassNamesStore';
 	import Trash from 'phosphor-svelte/lib/Trash';
 	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
 	import type { Node, Edge } from '@xyflow/svelte';
@@ -68,10 +68,10 @@
 			updateInferredTypes(currentNodes, currentEdges);
 		});
 
-		// Subscribe to the allClassNames store for output type selection
-		const unsubClassNames = allClassNames.subscribe((classMap) => {
-			const taskNodeClasses = Array.from(classMap.values());
-			availableTaskClasses = taskNodeClasses.filter((cn) => cn !== data.workerName);
+		// Subscribe to the taskClassNamesStore for output type selection
+		const unsubClassNames = taskClassNamesStore.subscribe((taskClasses) => {
+			// This now contains only Task classes, not worker classes
+			availableTaskClasses = Array.from(taskClasses);
 		});
 
 		// Initial update in case stores already have values
