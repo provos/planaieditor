@@ -46,6 +46,16 @@ The PlanAI Task concept is implemented in [TaskNode.svelte](mdc:frontend/src/lib
  - LLMTaskWorker is implemented in [LLMTaskWorkerNode.svelte](mdc:frontend/src/lib/components/nodes/LLMTaskWorkerNode.svelte)
  - JoinedTaskWOrker is implemented in [JoinedTaskWorkerNode.svelte](mdc:frontend/src/lib/components/nodes/JoinedTaskWorkerNode.svelte)
 
+We store all defined class names in [classNameStore.ts](mdc:frontend/src/lib/stores/classNameStore.ts) and all defined Task names in [taskClassNamesStore.ts](mdc:frontend/src/lib/stores/taskClassNamesStore.ts). The taskClassNamesStore is used to allow the UI to select potnential input and output task class names.
+
+The main svelte-flow UI is set up in [+page.svelte](mdc:frontend/src/routes/+page.svelte) which is also responsible for the context menu and for creating new nodes in svelte-flow via drag actions.
+
+Python import and export in the frontend happens via the following utility functions
+ - import: [pythonImport.ts](mdc:frontend/src/lib/utils/pythonImport.ts)
+ - export: [pythonExport.ts](mdc:frontend/src/lib/utils/pythonExport.ts)
+
+## Backend concepts
+The backend currently parses a PlanAI python file via [patch.py](mdc:backend/app/patch.py) which uses the ast module. We use [python.py](mdc:backend/app/python.py) to convert the JSON from the fronend into a python module.
 
 
 
