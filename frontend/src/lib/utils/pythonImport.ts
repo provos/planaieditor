@@ -1,5 +1,7 @@
 import type { Node } from '@xyflow/svelte';
 import { taskClassNamesStore } from '$lib/stores/taskClassNamesStore';
+import { allClassNames } from '$lib/stores/classNameStore';
+import { get } from 'svelte/store';
 
 // Type for the structured error from the backend
 export interface BackendError {
@@ -22,6 +24,33 @@ export interface ImportedField {
 export interface ImportedTask {
     className: string;
     fields: ImportedField[];
+}
+
+// --- New Interfaces for Workers ---
+export interface ImportedClassVar {
+    name: string;
+    value: any; // Can be string, number, boolean, list of strings, or a special Field object
+    isField?: boolean;
+    type?: string; // Type from annotation if Field()
+    description?: string; // Description if Field()
+}
+
+export interface ImportedMethod {
+    name: string;
+    source: string; // The unparsed source code of the method
+}
+
+export interface ImportedOtherMember {
+    name: string;
+    source: string; // Unparsed source of assignments or unknown methods
+}
+
+export interface ImportedWorker {
+    className: string;
+    workerType: string; // e.g., "taskworker", "llmtaskworker"
+    classVars: Record<string, any>; // Dictionary of known parsed class vars
+    methods: Record<string, string>; // Dictionary of known method sources
+    otherMembers: Record<string, string>; // Dictionary of other member sources
 }
 
 // Result type for the Python import operation
@@ -76,22 +105,35 @@ export async function importPythonCode(
             body: JSON.stringify({ python_code: pythonCode })
         });
 
+        // Check if the response is JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const textError = await response.text();
+            throw new Error(`Unexpected response format: ${response.status} ${response.statusText}. Response: ${textError}`);
+        }
+
         const result = await response.json();
 
         if (!response.ok || !result.success) {
-            throw new Error(result.error || 'Import failed on the backend.');
+            const errorMsg = result.error
+                ? typeof result.error === 'string'
+                    ? result.error
+                    : JSON.stringify(result.error)
+                : 'Import failed on the backend with no specific error message.';
+            throw new Error(errorMsg);
         }
 
         const importedTasks: ImportedTask[] = result.tasks || [];
+        const importedWorkers: ImportedWorker[] = result.workers || [];
 
-        if (importedTasks.length === 0) {
+        if (importedTasks.length === 0 && importedWorkers.length === 0) {
             return {
                 success: true,
-                message: 'No Task classes found in the file.'
+                message: 'No Task or Worker classes found.'
             };
         }
 
-        // Create new nodes from the imported task data
+        // --- Create Task Nodes ---
         const newNodes: Node[] = [];
         const existingNodes = getNodes(); // Get current nodes for positioning
         let nextY = existingNodes.reduce(
@@ -134,6 +176,76 @@ export async function importPythonCode(
             nextY += 180; // Basic vertical spacing
         });
 
+        // --- Create Worker Nodes ---
+
+        // Get existing names to avoid conflicts
+        const existingNames = new Set(Object.values(get(allClassNames)));
+
+        importedWorkers.forEach((worker) => {
+            // Basic check for name collision (though backend should ideally handle this)
+            if (existingNames.has(worker.className)) {
+                console.warn(`Worker class name "${worker.className}" already exists. Skipping import for this worker.`);
+                return; // Skip this worker
+            }
+
+            const id = `imported-${worker.workerType}-${worker.className}-${Date.now()}`;
+
+            // Map backend data to frontend node data structure
+            const nodeData: any = {
+                workerName: worker.className, // Use className as workerName
+                nodeId: id,
+                // Initialize common fields, specific nodes might override
+                inputTypes: [],
+                outputTypes: worker.classVars.output_types || [], // Map output_types
+                // Store unparsed methods and members for potential display/editing later
+                methods: worker.methods,
+                otherMembers: worker.otherMembers,
+                classVars: worker.classVars // Store the rest of class vars for now
+            };
+
+            // Type-specific mappings
+            switch (worker.workerType) {
+                case 'taskworker':
+                    nodeData.consumeWork = worker.methods?.consume_work || '# No consume_work method found';
+                    // TODO: Parse inputTypes from consume_work signature if possible/needed?
+                    break;
+                case 'llmtaskworker':
+                case 'cachedllmtaskworker': // Treat similarly for basic import
+                    nodeData.inputTypes = worker.classVars.llm_input_type ? [worker.classVars.llm_input_type] : [];
+                    nodeData.prompt = worker.classVars.prompt || '# No prompt found';
+                    nodeData.systemPrompt = worker.classVars.system_prompt || worker.classVars.system || '';
+                    // Include methods if they exist
+                    if (worker.methods?.format_prompt) nodeData.formatPrompt = worker.methods.format_prompt;
+                    if (worker.methods?.pre_process) nodeData.preProcess = worker.methods.pre_process;
+                    if (worker.methods?.post_process) nodeData.postProcess = worker.methods.post_process;
+                    if (worker.methods?.extra_validation) nodeData.extraValidation = worker.methods.extra_validation;
+                    // TODO: Map enabledFunctions based on method existence?
+                    break;
+                case 'joinedtaskworker':
+                case 'cachedtaskworker': // Requires specific handling if we add fields
+                    // For now, just basic import
+                    break;
+                // Add other worker types if needed
+            }
+
+            const newNode: Node = {
+                id,
+                type: worker.workerType, // Use the identified worker type
+                position: { x: startX + 300, y: nextY }, // Offset workers horizontally
+                draggable: true,
+                selectable: true,
+                deletable: true,
+                selected: false,
+                dragging: false,
+                zIndex: 0,
+                data: nodeData,
+                origin: [0, 0],
+                dragHandle: '.custom-drag-handle'
+            };
+            newNodes.push(newNode);
+            nextY += 180; // Basic vertical spacing (adjust as needed)
+        });
+
         // Update the taskClassNamesStore with the newly imported names
         const importedTaskNames = new Set(importedTasks.map((task) => task.className));
         taskClassNamesStore.update((existingNames) => {
@@ -143,7 +255,7 @@ export async function importPythonCode(
 
         return {
             success: true,
-            message: `Successfully imported ${newNodes.length} Task node(s).`,
+            message: `Imported ${importedTasks.length} Task(s) and ${importedWorkers.length} Worker(s).`,
             nodes: newNodes
         };
     } catch (error: any) {
