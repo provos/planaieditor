@@ -716,5 +716,33 @@ Analyze the following information and provide a response.`,
 	/* Ensure the custom drag handle appears above other elements */
 	:global(.custom-drag-handle) {
 		z-index: 1;
+		cursor: move !important; /* Always show move cursor for drag handle */
+	}
+
+	/* Override node cursor styles */
+	:global(.svelte-flow .svelte-flow__node) {
+		cursor: default !important; /* Default cursor for general node body */
+	}
+
+	/* Restore appropriate cursors for interactive elements */
+	:global(.svelte-flow .svelte-flow__node input) {
+		cursor: text !important;
+	}
+
+	:global(.svelte-flow .svelte-flow__node button) {
+		cursor: pointer !important;
+	}
+
+	:global(.svelte-flow .svelte-flow__node select) {
+		cursor: pointer !important;
+	}
+
+	/* Ensure code editor sections have text cursor */
+	:global(.svelte-flow .svelte-flow__node .cm-editor) {
+		cursor: text !important;
+	}
+
+	:global(.svelte-flow .svelte-flow__node .cm-content) {
+		cursor: text !important;
 	}
 </style>

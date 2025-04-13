@@ -50,13 +50,15 @@
 			minHeight: '3rem' // Ensure at least 3 lines height
 		},
 		'.cm-content': {
-			fontFamily: 'monospace'
+			fontFamily: 'monospace',
+			cursor: 'text' // Ensure text cursor in editor content
 		},
 		'.cm-scroller': {
 			overflow: 'auto'
 		},
 		'.cm-editor': {
-			height: '100%'
+			height: '100%',
+			cursor: 'text' // Ensure text cursor in editor
 		}
 	};
 </script>
