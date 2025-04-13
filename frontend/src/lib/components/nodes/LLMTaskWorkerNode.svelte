@@ -2,7 +2,6 @@
 	import BaseWorkerNode from '$lib/components/nodes/BaseWorkerNode.svelte';
 	import EditableCodeSection from '$lib/components/EditableCodeSection.svelte';
 	import type { BaseWorkerData } from '$lib/components/nodes/BaseWorkerNode.svelte';
-	import Trash from 'phosphor-svelte/lib/Trash';
 
 	// Extend the base data interface
 	export interface LLMWorkerData extends BaseWorkerData {
