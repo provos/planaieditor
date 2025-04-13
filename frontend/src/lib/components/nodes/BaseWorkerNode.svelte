@@ -213,6 +213,11 @@
 			select.value = ''; // Reset select
 		}
 	}
+
+	// Handler for code updates
+	function handleOtherMembersSourceUpdate(newCode: string) {
+		data.otherMembersSource = newCode;
+	}
 </script>
 
 <div
@@ -251,7 +256,7 @@
 
 	<!-- Header -->
 	<div class="flex-none border-b border-gray-200 bg-gray-50 p-1">
-		{#if data.isCached}
+		{#if isCached}
 			<span
 				class="text-2xs absolute -right-1 -top-1 z-10 rounded bg-yellow-400 px-1 py-0.5 font-bold text-yellow-900 shadow-sm"
 				>CACHED</span
@@ -395,7 +400,7 @@
 					title="Custom Code"
 					code={data.otherMembersSource}
 					language="python"
-					onUpdate={() => {}}
+					onUpdate={handleOtherMembersSourceUpdate}
 				/>
 			</div>
 		{/if}
