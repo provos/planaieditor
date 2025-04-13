@@ -50,7 +50,7 @@ export interface ImportedWorker {
     workerType: string; // e.g., "taskworker", "llmtaskworker"
     classVars: Record<string, any>; // Dictionary of known parsed class vars
     methods: Record<string, string>; // Dictionary of known method sources
-    otherMembers: Record<string, string>; // Dictionary of other member sources
+    otherMembersSource: string; // Consolidated source code of other members
 }
 
 // Result type for the Python import operation
@@ -200,7 +200,7 @@ export async function importPythonCode(
                 outputTypes: worker.classVars.output_types || [], // Map output_types
                 // Store unparsed methods and members for potential display/editing later
                 methods: worker.methods,
-                otherMembers: worker.otherMembers,
+                otherMembersSource: worker.otherMembersSource, // Store consolidated source
                 classVars: worker.classVars // Store the rest of class vars for now
             };
 

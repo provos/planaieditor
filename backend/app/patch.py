@@ -379,7 +379,7 @@ def extract_worker_details(
         "workerType": worker_type,
         "classVars": {},
         "methods": {},
-        "otherMembers": {},
+        "otherMembersSource": "",  # Consolidated source for other members
     }
     known_method_names = {
         "consume_work",
@@ -480,25 +480,32 @@ def extract_worker_details(
                 var_name
             ):  # It's an assignment, but not a known class var - treat as other member
                 try:
-                    details["otherMembers"][var_name] = ast.unparse(node)
+                    details["otherMembersSource"] += ast.unparse(node) + "\n"
                 except Exception:
-                    details["otherMembers"][
-                        var_name
-                    ] = f"<Error unparsing other member {var_name}>"
+                    details[
+                        "otherMembersSource"
+                    ] += f"<Error unparsing other member {var_name}>"
 
         elif isinstance(node, ast.FunctionDef):
             method_name = node.name
             try:
-                method_source = ast.unparse(node)
+                # Extract source code from the original source text using line numbers
+                start_lineno = node.lineno - 1  # AST lineno is 1-based
+                end_lineno = node.end_lineno  # AST end_lineno is 1-based and inclusive
+                # Split source into lines and get the relevant slice
+                source_lines = source_code.splitlines()
+                method_source = "\n".join(source_lines[start_lineno:end_lineno])
             except Exception:
                 method_source = f"<Error unparsing method {method_name}>"
 
             if method_name in known_method_names:
                 details["methods"][method_name] = method_source
-            else:  # Not a specifically handled method
-                details["otherMembers"][method_name] = method_source
+            else:  # Not a specifically handled method, add to consolidated source
+                details["otherMembersSource"] += method_source + "\n"
         # Could add handling for other node types like Import, If, etc. if needed
 
+    # Clean up trailing newlines from the consolidated source
+    details["otherMembersSource"] = details["otherMembersSource"].strip()
     return details
 
 

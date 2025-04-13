@@ -3,6 +3,7 @@
 	import { isValidPythonClassName } from '$lib/utils/validation';
 	import { getColorForType, calculateHandlePosition } from '$lib/utils/colorUtils';
 	import { taskClassNamesStore } from '$lib/stores/taskClassNamesStore';
+	import EditableCodeSection from '../EditableCodeSection.svelte';
 	import Trash from 'phosphor-svelte/lib/Trash';
 	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
 	import type { Node, Edge } from '@xyflow/svelte';
@@ -252,7 +253,7 @@
 	<div class="flex-none border-b border-gray-200 bg-gray-50 p-1">
 		{#if data.isCached}
 			<span
-				class="text-2xs absolute -right-1 -top-1 rounded bg-yellow-400 px-1 py-0.5 font-bold text-yellow-900 shadow-sm z-10"
+				class="text-2xs absolute -right-1 -top-1 z-10 rounded bg-yellow-400 px-1 py-0.5 font-bold text-yellow-900 shadow-sm"
 				>CACHED</span
 			>
 		{/if}
@@ -385,6 +386,19 @@
 		<div class="min-h-0 flex-grow">
 			{@render children?.()}
 		</div>
+
+		<!-- Other Members Section -->
+		{#if data.otherMembersSource}
+			<div class="mt-3 flex-none border-t border-gray-200 p-1.5">
+				<h3 class="text-2xs mb-1 font-semibold text-gray-600">Other Class Members</h3>
+				<EditableCodeSection
+					title="Custom Code"
+					code={data.otherMembersSource}
+					language="python"
+					onUpdate={() => {}}
+				/>
+			</div>
+		{/if}
 
 		<!-- Error Display Area -->
 		{#if data.error}
