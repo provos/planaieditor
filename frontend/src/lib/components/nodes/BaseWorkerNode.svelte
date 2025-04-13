@@ -380,7 +380,7 @@
 
 <style>
 	/* Styles for this component */
-	.text-2xs {
+	:global(.text-2xs) {
 		font-size: 0.65rem;
 		line-height: 1rem;
 	}
