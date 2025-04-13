@@ -192,6 +192,7 @@ export async function importPythonCode(
 
             // Map backend data to frontend node data structure
             const nodeData: any = {
+                isCached: worker.workerType.startsWith('cached'), // Set flag based on type
                 workerName: worker.className, // Use className as workerName
                 nodeId: id,
                 // Initialize common fields, specific nodes might override

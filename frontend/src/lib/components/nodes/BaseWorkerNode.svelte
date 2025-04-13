@@ -26,7 +26,8 @@
 		additionalOutputType,
 		minWidth = 250,
 		minHeight = 200,
-		defaultName = 'BaseWorker'
+		defaultName = 'BaseWorker',
+		isCached
 	} = $props<{
 		id: string;
 		data: BaseWorkerData;
@@ -35,6 +36,7 @@
 		minWidth?: number;
 		minHeight?: number;
 		defaultName?: string;
+		isCached?: boolean;
 	}>();
 
 	// Access the SvelteFlow store and internals update hook
@@ -53,7 +55,11 @@
 	let nodeRef: HTMLElement | null = $state(null);
 
 	let combinedOutputTypes = $derived(
-		currentOutputTypes.length > 0 ? currentOutputTypes : (additionalOutputType ? [additionalOutputType] : [])
+		currentOutputTypes.length > 0
+			? currentOutputTypes
+			: additionalOutputType
+				? [additionalOutputType]
+				: []
 	);
 
 	// --- Effects for Reactivity ---
@@ -244,6 +250,12 @@
 
 	<!-- Header -->
 	<div class="flex-none border-b border-gray-200 bg-gray-50 p-1">
+		{#if data.isCached}
+			<span
+				class="text-2xs absolute -right-1 -top-1 rounded bg-yellow-400 px-1 py-0.5 font-bold text-yellow-900 shadow-sm z-10"
+				>CACHED</span
+			>
+		{/if}
 		{#if editingWorkerName}
 			<!-- Worker Name Edit Input -->
 			<div class="flex flex-col">

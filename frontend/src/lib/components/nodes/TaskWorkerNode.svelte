@@ -7,11 +7,13 @@
 
 	export interface TaskWorkerData extends BaseWorkerData {
 		consumeWork: string;
+		isCached?: boolean;
 	}
 
 	let { id, data } = $props<{
 		id: string;
 		data: TaskWorkerData;
+		isCached?: boolean;
 	}>();
 
 	const store = useStore(); // Access the store
@@ -100,7 +102,7 @@
 	}
 </script>
 
-<BaseWorkerNode {id} {data} defaultName="TaskWorker">
+<BaseWorkerNode {id} {data} isCached={data.isCached} defaultName="TaskWorker">
 	<div class="flex min-h-0 flex-grow flex-col overflow-hidden p-1">
 		<EditableCodeSection
 			title={reactiveTitle}

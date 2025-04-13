@@ -23,11 +23,13 @@
 			preProcess: boolean;
 			postProcess: boolean;
 		};
+		isCached?: boolean;
 	}
 
-	let { id, data } = $props<{
+	let { id, data, isCached } = $props<{
 		id: string;
 		data: LLMWorkerData;
+		isCached?: boolean;
 	}>();
 
 	// Create local state variables for reactivity
@@ -203,6 +205,7 @@
 <BaseWorkerNode
 	{id}
 	{data}
+	isCached={data.isCached}
 	additionalOutputType={currentOutputType}
 	defaultName="LLMTaskWorker"
 	minHeight={400}

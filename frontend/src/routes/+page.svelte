@@ -40,7 +40,9 @@
 	const nodeTypes: any = {
 		task: TaskNode,
 		taskworker: TaskWorkerNode,
+		cachedtaskworker: TaskWorkerNode,
 		llmtaskworker: LLMTaskWorkerNode,
+		cachedllmtaskworker: LLMTaskWorkerNode,
 		joinedtaskworker: JoinedTaskWorkerNode
 	};
 
@@ -232,10 +234,10 @@ pass`,
 					prompt: `# Process the task using an LLM
 Analyze the following information and provide a response.`,
 					systemPrompt: `You are a helpful task processing assistant.`,
-					extraValidation: "return None",
-					formatPrompt: "return self.prompt",
-					preProcess: "return task",
-					postProcess: "return task",
+					extraValidation: 'return None',
+					formatPrompt: 'return self.prompt',
+					preProcess: 'return task',
+					postProcess: 'return task',
 					enabledFunctions: {
 						extraValidation: false,
 						formatPrompt: false,
