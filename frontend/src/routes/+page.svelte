@@ -232,6 +232,53 @@ pass`,
 					prompt: `# Process the task using an LLM
 Analyze the following information and provide a response.`,
 					systemPrompt: `You are a helpful task processing assistant.`,
+					extraValidation: `def extra_validation(self, response: Task, input_task: Task) -> Optional[str]:
+    """
+    Validates the response from the LLM.
+    Override this method to do additional validation.
+
+    Returns:
+        Optional[str]: An error message if invalid, None otherwise.
+    """
+    return None`,
+					formatPrompt: `def format_prompt(self, task: Task) -> str:
+    """
+    Formats the prompt for the LLM based on the input task.
+
+    Returns:
+        str: The formatted prompt.
+    """
+    return self.prompt`,
+					preProcess: `def pre_process(self, task: Task) -> Optional[Task]:
+    """
+    Pre-processes the input task before sending to the LLM.
+
+    Returns:
+        Task: The pre-processed task or None.
+    """
+    return task`,
+					postProcess: `def post_process(self, response: Optional[Task], input_task: Task):
+    """
+    Post-processes the response and publishes the work.
+
+    Args:
+        response (Optional[Task]): The response from LLM.
+        input_task (Task): The input task.
+    """
+    if response is not None:
+        self.publish_work(task=response, input_task=input_task)
+    else:
+        logging.error(
+            "LLM did not return a valid response for task %s with provenance %s",
+            input_task.name,
+            input_task._provenance,
+        )`,
+					enabledFunctions: {
+						extraValidation: false,
+						formatPrompt: false,
+						preProcess: false,
+						postProcess: false
+					},
 					nodeId: id
 				};
 				break;

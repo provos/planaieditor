@@ -4,20 +4,25 @@
 	import { markdown } from '@codemirror/lang-markdown';
 	import ChevronDown from 'phosphor-svelte/lib/ArrowDown';
 	import ChevronRight from 'phosphor-svelte/lib/ArrowRight';
+	import Trash from 'phosphor-svelte/lib/Trash';
 	import type { LanguageSupport } from '@codemirror/language';
 
 	let {
-		title,
+		title = '',
 		code,
 		language = 'python',
 		initialCollapsed = false,
-		onUpdate
+		onUpdate,
+		onReset = undefined,
+		showReset = false
 	} = $props<{
-		title: string;
+		title?: string;
 		code: string;
 		language?: 'python' | 'markdown';
 		initialCollapsed?: boolean;
 		onUpdate: (newCode: string) => void;
+		onReset?: () => void;
+		showReset?: boolean;
 	}>();
 
 	let collapsed = $state(initialCollapsed);
@@ -57,9 +62,11 @@
 </script>
 
 <div class="flex h-full min-h-0 flex-col">
+	<!-- Title section with possible reset button -->
+	<div class="mb-1 flex flex-none items-center justify-between">
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<div
-			class="mb-1 flex flex-none cursor-pointer items-center"
+			class="flex cursor-pointer items-center"
 			onclick={toggleCollapse}
 			role="button"
 			tabindex="0"
@@ -71,6 +78,17 @@
 			{/if}
 			<h3 class="text-2xs font-semibold text-gray-600">{title}</h3>
 		</div>
+
+		{#if showReset && onReset}
+			<button
+				class="text-2xs flex items-center rounded border border-gray-200 bg-gray-50 px-1 py-0.5 text-gray-500 opacity-70 hover:bg-gray-100 hover:text-red-500 hover:opacity-100"
+				onclick={onReset}
+			>
+				<Trash size={10} weight="bold" class="mr-1" />
+				Reset
+			</button>
+		{/if}
+	</div>
 
 	{#if !collapsed}
 		<div class="min-h-0 flex-grow overflow-hidden">

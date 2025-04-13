@@ -16,9 +16,23 @@
 
 	const store = useStore(); // Access the store
 
-	// Use $state for the title and $effect for reactivity based on store changes
+	// Use $state for the title and code content to ensure reactivity
 	const defaultTitle = 'def consume_work(self, task):';
 	let reactiveTitle = $state(defaultTitle);
+
+	// Add local state variable for code content
+	let consumeWorkCode = $state(data.consumeWork || '');
+
+	// Default code for consume_work
+	const defaultConsumeWork = `    # Process the input task and produce output
+    # self.publish_work(output_task, input_task=task)
+    pass`;
+
+	// Initialize if not already set
+	if (!data.consumeWork) {
+		data.consumeWork = defaultConsumeWork;
+		consumeWorkCode = defaultConsumeWork;
+	}
 
 	$effect(() => {
 		let currentNodes: Node[] = [];
@@ -75,17 +89,26 @@
 
 	// Handler for code updates
 	function handleCodeUpdate(newCode: string) {
+		consumeWorkCode = newCode;
 		data.consumeWork = newCode;
+	}
+
+	// Reset function
+	function resetConsumeWork() {
+		consumeWorkCode = defaultConsumeWork;
+		data.consumeWork = defaultConsumeWork;
 	}
 </script>
 
 <BaseWorkerNode {id} {data} defaultName="TaskWorker">
-	<div class="flex min-h-0 flex-grow flex-col overflow-hidden">
+	<div class="flex min-h-0 flex-grow flex-col overflow-hidden p-1">
 		<EditableCodeSection
 			title={reactiveTitle}
-			code={data.consumeWork}
+			code={consumeWorkCode}
 			language="python"
 			onUpdate={handleCodeUpdate}
+			showReset={true}
+			onReset={resetConsumeWork}
 		/>
 	</div>
 </BaseWorkerNode>

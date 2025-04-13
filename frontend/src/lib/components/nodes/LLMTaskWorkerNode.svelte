@@ -221,21 +221,13 @@
 			<!-- Extra Validation Function -->
 			{#if enabledExtraValidation}
 				<div class="rounded-md border border-gray-200 p-2">
-					<div class="mb-1 flex items-center justify-between">
-						<h3 class="text-xs font-semibold">extra_validation()</h3>
-						<button
-							class="text-2xs flex items-center rounded bg-red-100 px-1 py-0.5 text-red-600 hover:bg-red-200"
-							onclick={() => resetFunction('extraValidation')}
-						>
-							<Trash size={10} weight="bold" class="mr-1" />
-							Reset
-						</button>
-					</div>
 					<EditableCodeSection
 						title="def extra_validation(self, response: Task, input_task: Task) -> Optional[str]:"
 						code={data.extraValidation}
 						language="python"
 						onUpdate={handleExtraValidationUpdate}
+						showReset={true}
+						onReset={() => resetFunction('extraValidation')}
 					/>
 				</div>
 			{/if}
@@ -243,21 +235,13 @@
 			<!-- Format Prompt Function -->
 			{#if enabledFormatPrompt}
 				<div class="rounded-md border border-gray-200 p-2">
-					<div class="mb-1 flex items-center justify-between">
-						<h3 class="text-xs font-semibold">format_prompt()</h3>
-						<button
-							class="text-2xs flex items-center rounded bg-red-100 px-1 py-0.5 text-red-600 hover:bg-red-200"
-							onclick={() => resetFunction('formatPrompt')}
-						>
-							<Trash size={10} weight="bold" class="mr-1" />
-							Reset
-						</button>
-					</div>
 					<EditableCodeSection
 						title="def format_prompt(self, task: Task) -> str:"
 						code={data.formatPrompt}
 						language="python"
 						onUpdate={handleFormatPromptUpdate}
+						showReset={true}
+						onReset={() => resetFunction('formatPrompt')}
 					/>
 				</div>
 			{/if}
@@ -265,21 +249,13 @@
 			<!-- Pre Process Function -->
 			{#if enabledPreProcess}
 				<div class="rounded-md border border-gray-200 p-2">
-					<div class="mb-1 flex items-center justify-between">
-						<h3 class="text-xs font-semibold">pre_process()</h3>
-						<button
-							class="text-2xs flex items-center rounded bg-red-100 px-1 py-0.5 text-red-600 hover:bg-red-200"
-							onclick={() => resetFunction('preProcess')}
-						>
-							<Trash size={10} weight="bold" class="mr-1" />
-							Reset
-						</button>
-					</div>
 					<EditableCodeSection
 						title="def pre_process(self, task: Task) -> Optional[Task]:"
 						code={data.preProcess}
 						language="python"
 						onUpdate={handlePreProcessUpdate}
+						showReset={true}
+						onReset={() => resetFunction('preProcess')}
 					/>
 				</div>
 			{/if}
@@ -287,21 +263,13 @@
 			<!-- Post Process Function -->
 			{#if enabledPostProcess}
 				<div class="rounded-md border border-gray-200 p-2">
-					<div class="mb-1 flex items-center justify-between">
-						<h3 class="text-xs font-semibold">post_process()</h3>
-						<button
-							class="text-2xs flex items-center rounded bg-red-100 px-1 py-0.5 text-red-600 hover:bg-red-200"
-							onclick={() => resetFunction('postProcess')}
-						>
-							<Trash size={10} weight="bold" class="mr-1" />
-							Reset
-						</button>
-					</div>
 					<EditableCodeSection
 						title="def post_process(self, response: Optional[Task], input_task: Task):"
 						code={data.postProcess}
 						language="python"
 						onUpdate={handlePostProcessUpdate}
+						showReset={true}
+						onReset={() => resetFunction('postProcess')}
 					/>
 				</div>
 			{/if}
