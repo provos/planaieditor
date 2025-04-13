@@ -37,7 +37,6 @@
 
 	// Access the SvelteFlow store and internals update hook
 	const store = useStore();
-	const updateNodeInternals = useUpdateNodeInternals();
 
 	// --- State Variables ---
 	let editingWorkerName = $state(false);
