@@ -8,7 +8,7 @@ import traceback
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
-from app.patch import get_task_definitions_from_file
+from app.patch import get_definitions_from_file
 from app.python import generate_python_module
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -415,11 +415,12 @@ def import_python_module():
             temp_filename = tmp_file.name
 
         # Call the function from patch.py using the temporary file path
-        task_definitions = get_task_definitions_from_file(temp_filename)
+        definitions = get_definitions_from_file(temp_filename)
 
         # TODO: Add parsing for Worker definitions and graph structure later
 
-        return jsonify({"success": True, "tasks": task_definitions})
+        # Return the full dictionary with tasks and workers
+        return jsonify({"success": True, **definitions})
 
     except Exception as e:
         tb_str = traceback.format_exc()
