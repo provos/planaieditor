@@ -370,7 +370,10 @@ def _parse_type_annotation_name(annotation: Optional[ast.expr]) -> Optional[str]
 def extract_worker_details(
     class_def: ast.ClassDef, worker_type: str, source_code: str
 ) -> Dict[str, Any]:
-    """Extracts details from a Worker class AST node."""
+    """Extracts details from a Worker class AST node.
+
+    Handles special cases like dedent("...").strip() for prompts.
+    """
     details = {
         "className": class_def.name,
         "workerType": worker_type,
@@ -397,6 +400,61 @@ def extract_worker_details(
         "use_xml",
     }
 
+    # Helper function to parse potentially complex value assignments
+    def parse_value(value_node: Optional[ast.expr], var_name: str) -> Any:
+        if not value_node:
+            return None
+
+        # Handle dedent("...").strip() for prompts/system_prompts
+        if (
+            var_name in ("prompt", "system_prompt")
+            and isinstance(value_node, ast.Call)
+            and isinstance(value_node.func, ast.Attribute)
+            and value_node.func.attr == "strip"
+            and isinstance(value_node.func.value, ast.Call)
+            and isinstance(value_node.func.value.func, ast.Name)
+            and value_node.func.value.func.id == "dedent"
+            and value_node.func.value.args
+            and isinstance(value_node.func.value.args[0], ast.Constant)
+        ):
+            # Extract the raw string from inside dedent()
+            return value_node.func.value.args[0].value
+
+        # Standard Constant (str, int, bool, etc.)
+        if isinstance(value_node, ast.Constant):
+            return value_node.value
+        # List of types (e.g., output_types)
+        if isinstance(value_node, ast.List) and var_name == "output_types":
+            return _parse_list_of_types(value_node)
+        # Simple type name (e.g., llm_input_type)
+        if isinstance(value_node, ast.Name) and var_name in (
+            "llm_input_type",
+            "llm_output_type",
+        ):
+            return value_node.id
+        # String annotation for type name
+        if isinstance(value_node, ast.Constant) and var_name in (
+            "llm_input_type",
+            "llm_output_type",
+        ):
+            return value_node.value
+        # Pydantic Field
+        if (
+            isinstance(value_node, ast.Call)
+            and isinstance(value_node.func, ast.Name)
+            and value_node.func.id == "Field"
+        ):
+            field_info = {"isField": True, "description": _get_field_description(node)}
+            if isinstance(node, ast.AnnAssign):
+                field_info["type"] = _parse_type_annotation_name(node.annotation)
+            # Could add default value parsing here if needed
+            return field_info
+        # Fallback: unparse the node
+        try:
+            return ast.unparse(value_node)
+        except Exception:
+            return f"<Error unparsing value for {var_name}>"
+
     for node in class_def.body:
         if isinstance(node, ast.Assign) or isinstance(node, ast.AnnAssign):
             var_name = None
@@ -415,50 +473,7 @@ def extract_worker_details(
                 value_repr = None
                 value_node = node.value
                 if value_node:
-                    if isinstance(value_node, ast.Constant):
-                        value_repr = (
-                            value_node.value
-                        )  # Direct value for str, int, bool, etc.
-                    elif (
-                        isinstance(value_node, ast.List) and var_name == "output_types"
-                    ):
-                        value_repr = _parse_list_of_types(value_node)
-                    elif isinstance(value_node, ast.Name) and var_name in (
-                        "llm_input_type",
-                        "llm_output_type",
-                    ):
-                        value_repr = value_node.id
-                    elif isinstance(value_node, ast.Constant) and var_name in (
-                        "llm_input_type",
-                        "llm_output_type",
-                    ):  # String annotation like 'MyTask'
-                        value_repr = value_node.value
-                    elif (
-                        isinstance(value_node, ast.Call)
-                        and isinstance(value_node.func, ast.Name)
-                        and value_node.func.id == "Field"
-                    ):
-                        # Handle Pydantic Field for custom worker attributes
-                        field_info = {
-                            "isField": True,
-                            "description": _get_field_description(node),
-                        }
-                        # Try to get type from annotation if AnnAssign
-                        if isinstance(node, ast.AnnAssign):
-                            field_info["type"] = _parse_type_annotation_name(
-                                node.annotation
-                            )
-                        # Check for default value (e.g., Field(..., description="..."))
-                        if node.value.args:
-                            # Might contain default value or description - complex to parse robustly here
-                            pass  # Keep it simple for now
-                        value_repr = field_info
-                    else:
-                        # Fallback: unparse the value node
-                        try:
-                            value_repr = ast.unparse(value_node)
-                        except Exception:
-                            value_repr = f"<Error unparsing value for {var_name}>"
+                    value_repr = parse_value(value_node, var_name)
                 details["classVars"][var_name] = value_repr
 
             elif (
