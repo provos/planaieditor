@@ -42,50 +42,10 @@
 	}
 
 	// Initialize default function code
-	const defaultExtraValidation = `def extra_validation(self, response: Task, input_task: Task) -> Optional[str]:
-    """
-    Validates the response from the LLM.
-    Override this method to do additional validation.
-
-    Returns:
-        Optional[str]: An error message if invalid, None otherwise.
-    """
-    return None`;
-
-	const defaultFormatPrompt = `def format_prompt(self, task: Task) -> str:
-    """
-    Formats the prompt for the LLM based on the input task.
-
-    Returns:
-        str: The formatted prompt.
-    """
-    return self.prompt`;
-
-	const defaultPreProcess = `def pre_process(self, task: Task) -> Optional[Task]:
-    """
-    Pre-processes the input task before sending to the LLM.
-
-    Returns:
-        Task: The pre-processed task or None.
-    """
-    return task`;
-
-	const defaultPostProcess = `def post_process(self, response: Optional[Task], input_task: Task):
-    """
-    Post-processes the response and publishes the work.
-
-    Args:
-        response (Optional[Task]): The response from LLM.
-        input_task (Task): The input task.
-    """
-    if response is not None:
-        self.publish_work(task=response, input_task=input_task)
-    else:
-        logging.error(
-            "LLM did not return a valid response for task %s with provenance %s",
-            input_task.name,
-            input_task._provenance,
-        )`;
+	const defaultExtraValidation = `return None`;
+	const defaultFormatPrompt = `return self.prompt`;
+	const defaultPreProcess = `return task`;
+	const defaultPostProcess = `return super().post_process(response, input_task)`;
 
 	// Initialize function code
 	if (!data.extraValidation) {
@@ -220,66 +180,51 @@
 		<div class="mt-3 space-y-3">
 			<!-- Extra Validation Function -->
 			{#if enabledExtraValidation}
-				<div class="rounded-md border border-gray-200 p-2">
-					<EditableCodeSection
-						title="def extra_validation(self, response: Task, input_task: Task) -> Optional[str]:"
-						code={data.extraValidation}
-						language="python"
-						onUpdate={handleExtraValidationUpdate}
-						showReset={true}
-						onReset={() => resetFunction('extraValidation')}
-					/>
-				</div>
+				<EditableCodeSection
+					title="def extra_validation(self, response: Task, input_task: Task) -> Optional[str]:"
+					code={data.extraValidation}
+					language="python"
+					onUpdate={handleExtraValidationUpdate}
+					showReset={true}
+					onReset={() => resetFunction('extraValidation')}
+				/>
 			{/if}
 
 			<!-- Format Prompt Function -->
 			{#if enabledFormatPrompt}
-				<div class="rounded-md border border-gray-200 p-2">
-					<EditableCodeSection
-						title="def format_prompt(self, task: Task) -> str:"
-						code={data.formatPrompt}
-						language="python"
-						onUpdate={handleFormatPromptUpdate}
-						showReset={true}
-						onReset={() => resetFunction('formatPrompt')}
-					/>
-				</div>
+				<EditableCodeSection
+					title="def format_prompt(self, task: Task) -> str:"
+					code={data.formatPrompt}
+					language="python"
+					onUpdate={handleFormatPromptUpdate}
+					showReset={true}
+					onReset={() => resetFunction('formatPrompt')}
+				/>
 			{/if}
 
 			<!-- Pre Process Function -->
 			{#if enabledPreProcess}
-				<div class="rounded-md border border-gray-200 p-2">
-					<EditableCodeSection
-						title="def pre_process(self, task: Task) -> Optional[Task]:"
-						code={data.preProcess}
-						language="python"
-						onUpdate={handlePreProcessUpdate}
-						showReset={true}
-						onReset={() => resetFunction('preProcess')}
-					/>
-				</div>
+				<EditableCodeSection
+					title="def pre_process(self, task: Task) -> Optional[Task]:"
+					code={data.preProcess}
+					language="python"
+					onUpdate={handlePreProcessUpdate}
+					showReset={true}
+					onReset={() => resetFunction('preProcess')}
+				/>
 			{/if}
 
 			<!-- Post Process Function -->
 			{#if enabledPostProcess}
-				<div class="rounded-md border border-gray-200 p-2">
-					<EditableCodeSection
-						title="def post_process(self, response: Optional[Task], input_task: Task):"
-						code={data.postProcess}
-						language="python"
-						onUpdate={handlePostProcessUpdate}
-						showReset={true}
-						onReset={() => resetFunction('postProcess')}
-					/>
-				</div>
+				<EditableCodeSection
+					title="def post_process(self, response: Optional[Task], input_task: Task):"
+					code={data.postProcess}
+					language="python"
+					onUpdate={handlePostProcessUpdate}
+					showReset={true}
+					onReset={() => resetFunction('postProcess')}
+				/>
 			{/if}
 		</div>
 	</div>
 </BaseWorkerNode>
-
-<style>
-	.text-2xs {
-		font-size: 0.65rem;
-		line-height: 1rem;
-	}
-</style>
