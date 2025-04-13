@@ -4,6 +4,7 @@
 	import type { BaseWorkerData } from '$lib/components/nodes/BaseWorkerNode.svelte';
 	import { taskClassNamesStore } from '$lib/stores/taskClassNamesStore';
 	import { getColorForType } from '$lib/utils/colorUtils';
+	import Trash from 'phosphor-svelte/lib/Trash';
 
 	// Extend the base data interface
 	export interface LLMWorkerData extends BaseWorkerData {
@@ -82,6 +83,10 @@
 	$effect(() => {
 		const unsubClassNames = taskClassNamesStore.subscribe((taskClasses) => {
 			availableTaskClasses = Array.from(taskClasses);
+			if (currentOutputType && !availableTaskClasses.includes(currentOutputType)) {
+				currentOutputType = '';
+				data.llm_output_type = '';
+			}
 		});
 
 		return unsubClassNames;
@@ -89,10 +94,12 @@
 
 	// Sync local state with data object
 	$effect(() => {
+		console.log('effect to sync local state with data object');
 		enabledExtraValidation = data.enabledFunctions.extraValidation;
 		enabledFormatPrompt = data.enabledFunctions.formatPrompt;
 		enabledPreProcess = data.enabledFunctions.preProcess;
 		enabledPostProcess = data.enabledFunctions.postProcess;
+		currentOutputType = data.llm_output_type || '';
 	});
 
 	// Sync data object with local state
@@ -184,6 +191,11 @@
 		currentOutputType = typeName;
 		showLLMOutputTypeDropdown = false;
 	}
+
+	function deleteLLMOutputType() {
+		data.llm_output_type = '';
+		currentOutputType = '';
+	}
 </script>
 
 <BaseWorkerNode {id} {data} defaultName="LLMTaskWorker" minHeight={400}>
@@ -192,27 +204,43 @@
 		<h3 class="text-2xs mb-1 font-semibold text-gray-600">LLM Output Type</h3>
 
 		<div class="relative">
-			{#if data.llm_output_type}
-				{@const color = getColorForType(data.llm_output_type)}
-				<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
-				<div
-					class="text-2xs group flex cursor-pointer items-center justify-between rounded px-1 py-0.5"
-					style={`background-color: ${color}20; border-left: 3px solid ${color};`}
-					onclick={toggleLLMOutputTypeDropdown}
-					role="button"
-					tabindex="0"
-				>
-					<span class="font-mono">{currentOutputType}</span>
-				</div>
+			{#if availableTaskClasses.length > 0}
+				{#if currentOutputType}
+					{@const color = getColorForType(currentOutputType)}
+					<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
+					<div
+						class="text-2xs group flex cursor-pointer items-center justify-between rounded px-1 py-0.5"
+						style={`background-color: ${color}20; border-left: 3px solid ${color};`}
+						onclick={toggleLLMOutputTypeDropdown}
+						role="button"
+						tabindex="0"
+					>
+						<span class="font-mono">{currentOutputType}</span>
+						<button
+							class="ml-1 flex h-3 w-3 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
+							onclick={(e) => {
+								e.stopPropagation();
+								deleteLLMOutputType();
+							}}
+							title="Remove type"
+						>
+							<Trash size={8} weight="bold" />
+						</button>
+					</div>
+				{:else}
+					<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
+					<div
+						class="text-2xs cursor-pointer py-0.5 italic text-gray-400"
+						onclick={toggleLLMOutputTypeDropdown}
+						role="button"
+						tabindex="0"
+					>
+						Select LLM output type
+					</div>
+				{/if}
 			{:else}
-				<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
-				<div
-					class="text-2xs cursor-pointer py-0.5 italic text-gray-400"
-					onclick={toggleLLMOutputTypeDropdown}
-					role="button"
-					tabindex="0"
-				>
-					Select LLM output type
+				<div class="text-2xs cursor-pointer py-0.5 italic text-gray-400">
+					No output types defined
 				</div>
 			{/if}
 
@@ -221,8 +249,7 @@
 					{#each availableTaskClasses as className}
 						<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
 						<div
-							class="text-2xs cursor-pointer p-1 hover:bg-gray-100 {data.llm_output_type ===
-							className
+							class="text-2xs cursor-pointer p-1 hover:bg-gray-100 {currentOutputType === className
 								? 'bg-gray-100'
 								: ''}"
 							onclick={() => selectLLMOutputType(className)}
