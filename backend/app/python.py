@@ -2,6 +2,7 @@
 import os
 from pathlib import Path
 from textwrap import dedent, indent
+from typing import Optional, Tuple
 
 import black
 from app.utils import is_valid_python_class_name
@@ -17,7 +18,7 @@ def return_code_snippet(name):
         return f.read() + "\n\n"
 
 
-def generate_python_module(graph_data):
+def generate_python_module(graph_data: dict) -> Tuple[Optional[str], Optional[str], Optional[dict]]:
     """
     Converts the graph data (nodes, edges) into executable PlanAI Python code,
     including internal error handling that outputs structured JSON.
@@ -26,8 +27,8 @@ def generate_python_module(graph_data):
         graph_data (dict): Dictionary containing 'nodes' and 'edges'.
 
     Returns:
-        tuple: (python_code_string, suggested_module_name)
-               Returns (None, None) if conversion fails.
+        tuple: (python_code_string, suggested_module_name, error_json)
+               Returns (None, None, error_json) if conversion fails.
     """
     print("Generating PlanAI Python module from graph data...")
     module_name = "generated_plan"
@@ -197,7 +198,17 @@ def generate_python_module(graph_data):
             workers.append(f"    output_types: List[Type[Task]] = [{output_types_str}]")
 
             # LLM Specifics
-            input_type = get_task_class_name(data.get("inputTypes", ["Task"])[0])
+            if not data.get("inputTypes", []):
+                return None, None, {
+                    "success": False,
+                    "error": {
+                        "message": f"No input types defined for {worker_name}. Please add at least one input type.",
+                        "nodeName": worker_name,
+                        "fullTraceback": None,
+                    },
+                }
+            input_type = get_task_class_name(data.get("inputTypes")[0])
+            input_type = get_task_class_name(data.get("inputTypes")[0])
             if node_type == "llmtaskworker":
                 workers.append(f"    llm_input_type: Type[Task] = {input_type}")
                 system_prompt = data.get("systemPrompt", "You are a helpful assistant.")

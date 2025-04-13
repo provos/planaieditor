@@ -357,7 +357,10 @@ def handle_export_graph(data):
     print(f"Received export_graph event from {request.sid}")
     # You might want to add validation for the 'data' structure here
 
-    python_code, module_name = generate_python_module(data)
+    python_code, module_name, error_json = generate_python_module(data)
+    if error_json:
+        emit("export_result", error_json, room=request.sid)
+        return
 
     if python_code is None or module_name is None:
         emit(
