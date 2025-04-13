@@ -208,24 +208,18 @@ export async function importPythonCode(
             switch (worker.workerType) {
                 case 'taskworker':
                 case 'cachedtaskworker':
-                    nodeData.consumeWork = worker.methods?.consume_work || '# No consume_work method found';
-                    nodeData.consumeWork = worker.methods?.consume_work || '# No consume_work method found';
-                    // TODO: Parse inputTypes from consume_work signature if possible/needed?
                     break;
                 case 'llmtaskworker':
                 case 'cachedllmtaskworker': // Treat similarly for basic import
-                    nodeData.inputTypes = worker.classVars.llm_input_type ? [worker.classVars.llm_input_type] : [];
+                    nodeData.inputTypes = worker.classVars.llm_input_type
+                        ? [worker.classVars.llm_input_type]
+                        : [];
                     nodeData.prompt = worker.classVars.prompt || '# No prompt found';
-                    nodeData.systemPrompt = worker.classVars.system_prompt || worker.classVars.system || '';
-                    // Include methods if they exist
-                    if (worker.methods?.format_prompt) nodeData.formatPrompt = worker.methods.format_prompt;
-                    if (worker.methods?.pre_process) nodeData.preProcess = worker.methods.pre_process;
-                    if (worker.methods?.post_process) nodeData.postProcess = worker.methods.post_process;
-                    if (worker.methods?.extra_validation) nodeData.extraValidation = worker.methods.extra_validation;
-                    // TODO: Map enabledFunctions based on method existence?
+                    nodeData.systemPrompt =
+                        worker.classVars.system_prompt || worker.classVars.system || '';
                     break;
                 case 'joinedtaskworker':
-                    console.log('joinedtaskworker', worker);
+                    // Add specific data mapping for JoinedTaskWorker if needed in the future
                     break;
                 // Add other worker types if needed
             }

@@ -7,13 +7,11 @@
 
 	export interface TaskWorkerData extends BaseWorkerData {
 		consumeWork: string;
-		isCached?: boolean;
 	}
 
 	let { id, data } = $props<{
 		id: string;
 		data: TaskWorkerData;
-		isCached?: boolean;
 	}>();
 
 	const store = useStore(); // Access the store
@@ -21,9 +19,6 @@
 	// Use $state for the title and code content to ensure reactivity
 	const defaultTitle = 'def consume_work(self, task):';
 	let reactiveTitle = $state(defaultTitle);
-
-	// Add local state variable for code content
-	let consumeWorkCode = $state(data.consumeWork || '');
 
 	// Default code for consume_work
 	const defaultConsumeWork = `    # Process the input task and produce output
@@ -33,7 +28,6 @@
 	// Initialize if not already set
 	if (!data.consumeWork) {
 		data.consumeWork = defaultConsumeWork;
-		consumeWorkCode = defaultConsumeWork;
 	}
 
 	$effect(() => {
@@ -88,29 +82,18 @@
 			? `def consume_work(self, task: ${sourceClassNames[0]}):`
 			: defaultTitle;
 	}
-
-	// Handler for code updates
-	function handleCodeUpdate(newCode: string) {
-		consumeWorkCode = newCode;
-		data.consumeWork = newCode;
-	}
-
-	// Reset function
-	function resetConsumeWork() {
-		consumeWorkCode = defaultConsumeWork;
-		data.consumeWork = defaultConsumeWork;
-	}
 </script>
 
-<BaseWorkerNode {id} {data} isCached={data.isCached} defaultName="TaskWorker">
+<BaseWorkerNode {id} {data} defaultName="TaskWorker">
 	<div class="flex min-h-0 flex-grow flex-col overflow-hidden p-1">
-		<EditableCodeSection
-			title={reactiveTitle}
-			code={consumeWorkCode}
-			language="python"
-			onUpdate={handleCodeUpdate}
-			showReset={true}
-			onReset={resetConsumeWork}
-		/>
+		{#if data.methods?.consume_work}
+			<EditableCodeSection
+				title={reactiveTitle}
+				code={data.methods.consume_work}
+				language="python"
+				onUpdate={(newCode) => (data.methods.consume_work = newCode)}
+				showReset={true}
+			/>
+		{/if}
 	</div>
 </BaseWorkerNode>

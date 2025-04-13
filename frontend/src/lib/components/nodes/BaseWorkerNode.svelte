@@ -9,6 +9,7 @@
 	import type { Node, Edge } from '@xyflow/svelte';
 	import type { Snippet } from 'svelte';
 	import NodeDragHandle from './NodeDragHandle.svelte';
+	import { get } from 'svelte/store';
 
 	// Base interface for worker node data
 	export interface BaseWorkerData {
@@ -218,6 +219,18 @@
 	function handleOtherMembersSourceUpdate(newCode: string) {
 		data.otherMembersSource = newCode;
 	}
+
+	function handleMethodUpdate(methodName: string, newCode: string) {
+		if (!data.methods) {
+			data.methods = {};
+		}
+		data.methods[methodName] = newCode;
+	}
+
+	// Define core methods that might have special display logic
+	const coreMethods = ['consume_work', 'prompt', 'system_prompt'];
+	let availableMethods = $derived(Object.keys(data.methods || {}));
+	let customMethods = $derived(availableMethods.filter((m) => !coreMethods.includes(m)));
 </script>
 
 <div
@@ -403,6 +416,19 @@
 					onUpdate={handleOtherMembersSourceUpdate}
 				/>
 			</div>
+			{#if customMethods.length > 0}
+				<div class="mt-3 border-t border-gray-200 pt-1.5">
+					<h4 class="text-2xs mb-1 font-medium text-gray-500">Custom Methods</h4>
+					{#each customMethods as methodName (methodName)}
+						<EditableCodeSection
+							title={methodName}
+							code={data.methods[methodName]}
+							language="python"
+							onUpdate={(newCode) => handleMethodUpdate(methodName, newCode)}
+						/>
+					{/each}
+				</div>
+			{/if}
 		{/if}
 
 		<!-- Error Display Area -->

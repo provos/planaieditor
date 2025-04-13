@@ -26,17 +26,12 @@
 		isCached?: boolean;
 	}
 
-	let { id, data, isCached } = $props<{
+	let { id, data } = $props<{
 		id: string;
 		data: LLMWorkerData;
-		isCached?: boolean;
 	}>();
 
 	// Create local state variables for reactivity
-	let enabledExtraValidation = $state(false);
-	let enabledFormatPrompt = $state(false);
-	let enabledPreProcess = $state(false);
-	let enabledPostProcess = $state(false);
 	let availableTaskClasses = $state<string[]>([]);
 	let showLLMOutputTypeDropdown = $state(false);
 	let currentOutputType = $state(data.llm_output_type || '');
@@ -99,21 +94,7 @@
 
 	// Sync local state with data object
 	$effect(() => {
-		enabledExtraValidation = data.enabledFunctions.extraValidation;
-		enabledFormatPrompt = data.enabledFunctions.formatPrompt;
-		enabledPreProcess = data.enabledFunctions.preProcess;
-		enabledPostProcess = data.enabledFunctions.postProcess;
 		currentOutputType = data.llm_output_type || '';
-	});
-
-	// Sync data object with local state
-	$effect(() => {
-		data.enabledFunctions = {
-			extraValidation: enabledExtraValidation,
-			formatPrompt: enabledFormatPrompt,
-			preProcess: enabledPreProcess,
-			postProcess: enabledPostProcess
-		};
 	});
 
 	// Handle code updates
@@ -141,50 +122,6 @@
 		data.postProcess = newCode;
 	}
 
-	// When a function is chosen from the context menu, enable it
-	$effect(() => {
-		if (data.editingFunction) {
-			switch (data.editingFunction) {
-				case 'extraValidation':
-					enabledExtraValidation = true;
-					break;
-				case 'formatPrompt':
-					enabledFormatPrompt = true;
-					break;
-				case 'preProcess':
-					enabledPreProcess = true;
-					break;
-				case 'postProcess':
-					enabledPostProcess = true;
-					break;
-			}
-			data.editingFunction = null; // Clear it after enabling
-		}
-	});
-
-	// Reset function to default implementation
-	function resetFunction(functionName: string) {
-		// Update local state
-		switch (functionName) {
-			case 'extraValidation':
-				enabledExtraValidation = false;
-				data.extraValidation = defaultExtraValidation;
-				break;
-			case 'formatPrompt':
-				enabledFormatPrompt = false;
-				data.formatPrompt = defaultFormatPrompt;
-				break;
-			case 'preProcess':
-				enabledPreProcess = false;
-				data.preProcess = defaultPreProcess;
-				break;
-			case 'postProcess':
-				enabledPostProcess = false;
-				data.postProcess = defaultPostProcess;
-				break;
-		}
-	}
-
 	// LLM Output Type functions
 	function toggleLLMOutputTypeDropdown() {
 		showLLMOutputTypeDropdown = !showLLMOutputTypeDropdown;
@@ -205,7 +142,6 @@
 <BaseWorkerNode
 	{id}
 	{data}
-	isCached={data.isCached}
 	additionalOutputType={currentOutputType}
 	defaultName="LLMTaskWorker"
 	minHeight={400}
@@ -292,54 +228,6 @@
 		/>
 
 		<!-- Customizable functions -->
-		<div class="mt-3 space-y-3">
-			<!-- Extra Validation Function -->
-			{#if enabledExtraValidation}
-				<EditableCodeSection
-					title="def extra_validation(self, response: Task, input_task: Task) -> Optional[str]:"
-					code={data.extraValidation}
-					language="python"
-					onUpdate={handleExtraValidationUpdate}
-					showReset={true}
-					onReset={() => resetFunction('extraValidation')}
-				/>
-			{/if}
-
-			<!-- Format Prompt Function -->
-			{#if enabledFormatPrompt}
-				<EditableCodeSection
-					title="def format_prompt(self, task: Task) -> str:"
-					code={data.formatPrompt}
-					language="python"
-					onUpdate={handleFormatPromptUpdate}
-					showReset={true}
-					onReset={() => resetFunction('formatPrompt')}
-				/>
-			{/if}
-
-			<!-- Pre Process Function -->
-			{#if enabledPreProcess}
-				<EditableCodeSection
-					title="def pre_process(self, task: Task) -> Optional[Task]:"
-					code={data.preProcess}
-					language="python"
-					onUpdate={handlePreProcessUpdate}
-					showReset={true}
-					onReset={() => resetFunction('preProcess')}
-				/>
-			{/if}
-
-			<!-- Post Process Function -->
-			{#if enabledPostProcess}
-				<EditableCodeSection
-					title="def post_process(self, response: Optional[Task], input_task: Task):"
-					code={data.postProcess}
-					language="python"
-					onUpdate={handlePostProcessUpdate}
-					showReset={true}
-					onReset={() => resetFunction('postProcess')}
-				/>
-			{/if}
-		</div>
+		<!-- Custom method rendering is now handled by BaseWorkerNode -->
 	</div>
 </BaseWorkerNode>

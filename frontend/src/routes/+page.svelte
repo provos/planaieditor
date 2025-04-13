@@ -22,6 +22,9 @@
 	import UploadSimple from 'phosphor-svelte/lib/UploadSimple'; // Icon for import
 	import Code from 'phosphor-svelte/lib/Code';
 
+	// Import utility for default method bodies
+	import { getDefaultMethodBody } from '$lib/utils/defaults';
+
 	// Import the Python import/export utility modules
 	import {
 		isPythonFile,
@@ -217,9 +220,9 @@
 					workerName: uniqueName, // Assign the unique name
 					inputTypes: [],
 					outputTypes: [],
-					consumeWork: `# Process the input task and produce output
-# self.publish_work(output_task, input_task=task)
-pass`,
+					methods: {
+						consume_work: `# Process the input task and produce output\n# self.publish_work(output_task, input_task=task)\npass`
+					},
 					nodeId: id
 				};
 				break;
@@ -348,7 +351,7 @@ Analyze the following information and provide a response.`,
 	// Context menu items - now dynamic with Phosphor icons
 	const getContextMenuItems = (): ContextMenuItem[] => {
 		if (contextMenuNode) {
-			const baseItems = [
+			const baseNodeItems = [
 				{
 					label: 'Delete Node',
 					iconComponent: Trash,
@@ -357,99 +360,63 @@ Analyze the following information and provide a response.`,
 				}
 			];
 
-			// Add LLMTaskWorker specific items if the selected node is of that type
-			if (contextMenuNode.type === 'llmtaskworker') {
-				return [
-					{
-						label: 'Edit extra_validation()',
-						iconComponent: Code,
-						action: () => {
-							// Update the node data directly
-							nodes.update((currentNodes) => {
-								return currentNodes.map((node) => {
-									if (node.id === contextMenuNode!.id) {
-										return {
-											...node,
-											data: {
-												...node.data,
-												editingFunction: 'extraValidation'
-											}
-										};
-									}
-									return node;
-								});
-							});
-							closeContextMenu();
-						}
-					},
-					{
-						label: 'Edit format_prompt()',
-						iconComponent: Code,
-						action: () => {
-							nodes.update((currentNodes) => {
-								return currentNodes.map((node) => {
-									if (node.id === contextMenuNode!.id) {
-										return {
-											...node,
-											data: {
-												...node.data,
-												editingFunction: 'formatPrompt'
-											}
-										};
-									}
-									return node;
-								});
-							});
-							closeContextMenu();
-						}
-					},
-					{
-						label: 'Edit pre_process()',
-						iconComponent: Code,
-						action: () => {
-							nodes.update((currentNodes) => {
-								return currentNodes.map((node) => {
-									if (node.id === contextMenuNode!.id) {
-										return {
-											...node,
-											data: {
-												...node.data,
-												editingFunction: 'preProcess'
-											}
-										};
-									}
-									return node;
-								});
-							});
-							closeContextMenu();
-						}
-					},
-					{
-						label: 'Edit post_process()',
-						iconComponent: Code,
-						action: () => {
-							nodes.update((currentNodes) => {
-								return currentNodes.map((node) => {
-									if (node.id === contextMenuNode!.id) {
-										return {
-											...node,
-											data: {
-												...node.data,
-												editingFunction: 'postProcess'
-											}
-										};
-									}
-									return node;
-								});
-							});
-							closeContextMenu();
-						}
-					},
-					...baseItems
-				];
-			}
+			// Define optional methods per worker type
+			const OPTIONAL_METHODS: Record<string, string[]> = {
+				taskworker: ['pre_consume_work', 'post_consume_work'],
+				cachedtaskworker: ['pre_consume_work', 'post_consume_work', 'extra_cache_key'],
+				llmtaskworker: [
+					'pre_consume_work',
+					'post_consume_work',
+					'extra_validation',
+					'format_prompt',
+					'pre_process',
+					'post_process'
+				],
+				cachedllmtaskworker: [
+					'pre_consume_work',
+					'post_consume_work',
+					'extra_validation',
+					'format_prompt',
+					'pre_process',
+					'post_process',
+					'extra_cache_key'
+				]
+				// Add other worker types if they have optional methods
+			};
 
-			return baseItems;
+			const nodeType = contextMenuNode.type || '';
+			const availableOptionalMethods = OPTIONAL_METHODS[nodeType] || [];
+			const existingMethods = new Set(Object.keys(contextMenuNode.data?.methods || {}));
+
+			const addMethodItems = availableOptionalMethods
+				.filter((methodName) => !existingMethods.has(methodName))
+				.map((methodName) => ({
+					label: `Add ${methodName}()`,
+					iconComponent: Code,
+					action: () => {
+						nodes.update((currentNodes) => {
+							return currentNodes.map((node) => {
+								if (node.id === contextMenuNode!.id) {
+									const updatedMethods = {
+										...(node.data.methods || {}),
+										[methodName]: getDefaultMethodBody(methodName)
+									};
+									return {
+										...node,
+										data: {
+											...node.data,
+											methods: updatedMethods
+										}
+									};
+								}
+								return node;
+							});
+						});
+						closeContextMenu();
+					}
+				}));
+
+			return [...addMethodItems, ...baseNodeItems]; // Combine add method items and base items
 		} else if (contextMenuEdge) {
 			return [
 				{
