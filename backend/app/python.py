@@ -1,5 +1,6 @@
 # Updated function to generate PlanAI Python code from graph data
 import os
+import re
 from pathlib import Path
 from textwrap import dedent, indent
 from typing import Optional, Tuple
@@ -10,6 +11,28 @@ from app.utils import is_valid_python_class_name
 CODE_SNIPPETS_DIR = os.path.join(os.path.dirname(__file__), "codesnippets")
 
 
+def custom_format(template: str, **kwargs) -> str:
+    """
+    Custom format function that only replaces patterns matching '# {format_key}'.
+
+    Args:
+        template: The template string containing format specifiers.
+        **kwargs: The format specifiers to replace.
+
+    Returns:
+        The formatted string.
+    """
+
+    def replace_match(match):
+        key = match.group(1)
+        if key in kwargs:
+            return kwargs[key]
+        return match.group(0)  # If key not found, return the original match
+
+    pattern = r"# \{(\w+)\}"
+    return re.sub(pattern, replace_match, template)
+
+
 def return_code_snippet(name):
     """
     Returns a code snippet from the codesnippets directory.
@@ -18,7 +41,41 @@ def return_code_snippet(name):
         return f.read() + "\n\n"
 
 
-def generate_python_module(graph_data: dict) -> Tuple[Optional[str], Optional[str], Optional[dict]]:
+def create_llm_worker_code(data: dict, input_type: str) -> str:
+    """
+    Creates the code for an LLM worker based on the provided data.
+    """
+    workers = []
+    output_types = data.get("outputTypes", [])
+    workers.append(f"    output_types: List[Type[Task]] = [{', '.join(output_types)}]")
+    workers.append(f"    llm_input_type: Type[Task] = {input_type}")
+    system_prompt = data.get("systemPrompt", "You are a helpful assistant.")
+    prompt = data.get("prompt", "# Define your prompt here")
+    workers.append(f'    system_prompt: str = """{dedent(system_prompt)}"""')
+    workers.append(f'    prompt: str = """{dedent(prompt)}"""')
+
+    enabled_functions_definitions = {
+        "extraValidation": "def extra_validation(self, task: Task) -> Optional[str]:",
+        "formatPrompt": "def format_prompt(self, task: Task) -> str:",
+        "preProcess": "def pre_process(self, task: Task) -> Task:",
+        "postProcess": "def post_process(self, task: Task):",
+    }
+
+    enabled_functions = data.get("enabledFunctions", {})
+    for key, value in enabled_functions.items():
+        if not value:
+            continue
+        workers.append(f"    {enabled_functions_definitions[key]}")
+        body = data.get(key, "")
+        workers.append(indent(dedent(body), " " * 8))
+        workers.append("\n")
+
+    return "\n".join(workers)
+
+
+def generate_python_module(
+    graph_data: dict,
+) -> Tuple[Optional[str], Optional[str], Optional[dict]]:
     """
     Converts the graph data (nodes, edges) into executable PlanAI Python code,
     including internal error handling that outputs structured JSON.
@@ -199,29 +256,21 @@ def generate_python_module(graph_data: dict) -> Tuple[Optional[str], Optional[st
 
             # LLM Specifics
             if not data.get("inputTypes", []):
-                return None, None, {
-                    "success": False,
-                    "error": {
-                        "message": f"No input types defined for {worker_name}. Please add at least one input type.",
-                        "nodeName": worker_name,
-                        "fullTraceback": None,
+                return (
+                    None,
+                    None,
+                    {
+                        "success": False,
+                        "error": {
+                            "message": f"No input types defined for {worker_name}. Please add at least one input type.",
+                            "nodeName": worker_name,
+                            "fullTraceback": None,
+                        },
                     },
-                }
-            input_type = get_task_class_name(data.get("inputTypes")[0])
+                )
             input_type = get_task_class_name(data.get("inputTypes")[0])
             if node_type == "llmtaskworker":
-                workers.append(f"    llm_input_type: Type[Task] = {input_type}")
-                system_prompt = data.get("systemPrompt", "You are a helpful assistant.")
-                prompt = data.get("prompt", "# Define your prompt here")
-                workers.append(
-                    f'    system_prompt: str = """{dedent(system_prompt)}"""'
-                )
-                workers.append(f'    prompt: str = """{dedent(prompt)}"""')
-                # TODO: Add llm_input_type/llm_output_type mapping
-                # llm_input = data.get('llmInputType')
-                # llm_output = data.get('llmOutputType')
-                # if llm_input: code.append(f"    llm_input_type: Type[Task] = {get_task_class_name(llm_input)}")
-                # if llm_output: code.append(f"    llm_output_type: Type[Task] = {get_task_class_name(llm_output)}")
+                workers.append(create_llm_worker_code(data, input_type))
 
             # Consume Work Method
             consume_work_code = data.get("consumeWork", None)
@@ -317,7 +366,8 @@ def generate_python_module(graph_data: dict) -> Tuple[Optional[str], Optional[st
                 f'  print(f"Warning: Skipping edge {source_node_id} -> {target_node_id} due to failed worker instantiation.")'
             )
 
-    final_code = code_to_format.format(
+    final_code = custom_format(
+        code_to_format,
         task_definitions="\n".join(tasks),
         worker_definitions="\n".join(workers),
         worker_instantiation=indent(dedent("\n".join(worker_setup)), "    ")[4:],
@@ -331,10 +381,21 @@ def generate_python_module(graph_data: dict) -> Tuple[Optional[str], Optional[st
         print("--- Generated Code ---")
         print(formatted_code)
         print("--- End Generated Code ---")
-        return formatted_code, module_name
+        return formatted_code, module_name, None
     except black.InvalidInput as e:
         print(f"Error formatting generated code with black: {e}")
         print("--- Generated Code (Unformatted) ---")
         print(final_code)
         print("--- End Generated Code (Unformatted) ---")
-        return None, None  # Indicate failure
+        return (
+            None,
+            None,
+            {
+                "success": False,
+                "error": {
+                    "message": f"Error formatting generated code with black: {e}",
+                    "nodeName": None,
+                    "fullTraceback": None,
+                },
+            },
+        )
