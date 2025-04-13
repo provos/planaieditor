@@ -71,13 +71,13 @@ def setup_graph(
         Exception
     ) as e:  # Catch errors during create_graph itself (e.g., invalid class name, edge setup)
         error_info_dict = {
-                "success": False,
-                "error": {
-                    "message": f"Error during graph creation/setup: {repr(str(e))}",
-                    "nodeName": None,
-                    "fullTraceback": traceback.format_exc(),
-                },
-            }
+            "success": False,
+            "error": {
+                "message": f"Error during graph creation/setup: {repr(str(e))}",
+                "nodeName": None,
+                "fullTraceback": traceback.format_exc(),
+            },
+        }
 
         print("##ERROR_JSON_START##", flush=True)
         print(json.dumps(error_info_dict), flush=True)
@@ -93,14 +93,13 @@ def setup_graph(
         # Handle case where create_graph failed internally and exited
         # This path might not be strictly necessary if create_graph always sys.exits
         error_info_dict = {
-                "success": False,
-                "error":
-                    {
-                        "message": "Graph creation failed internally.",
-                        "nodeName": None,
-                        "fullTraceback": "",
-                    }
-            }
+            "success": False,
+            "error": {
+                "message": "Graph creation failed internally.",
+                "nodeName": None,
+                "fullTraceback": "",
+            },
+        }
         print("##ERROR_JSON_START##", flush=True)
         print(json.dumps(error_info_dict), flush=True)
         print("##ERROR_JSON_END##", flush=True)
