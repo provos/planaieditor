@@ -106,22 +106,6 @@
 		data.systemPrompt = newCode;
 	}
 
-	function handleExtraValidationUpdate(newCode: string) {
-		data.extraValidation = newCode;
-	}
-
-	function handleFormatPromptUpdate(newCode: string) {
-		data.formatPrompt = newCode;
-	}
-
-	function handlePreProcessUpdate(newCode: string) {
-		data.preProcess = newCode;
-	}
-
-	function handlePostProcessUpdate(newCode: string) {
-		data.postProcess = newCode;
-	}
-
 	// LLM Output Type functions
 	function toggleLLMOutputTypeDropdown() {
 		showLLMOutputTypeDropdown = !showLLMOutputTypeDropdown;
