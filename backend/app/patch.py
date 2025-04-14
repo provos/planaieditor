@@ -519,6 +519,23 @@ def extract_worker_details(
 
     # Clean up trailing newlines from the consolidated source
     details["otherMembersSource"] = details["otherMembersSource"].strip()
+
+    # --- Prioritize llm_input_type for LLM workers ---
+    if worker_type in ("llmtaskworker", "cachedllmtaskworker"):
+        llm_input_type_val = details["classVars"].get("llm_input_type")
+        # Check if it's a simple string or a Field object with a type
+        if isinstance(llm_input_type_val, str) and llm_input_type_val:
+            details["inputTypes"] = [llm_input_type_val]  # Overwrite with explicit type
+        elif (
+            isinstance(llm_input_type_val, dict)
+            and llm_input_type_val.get("isField")
+            and llm_input_type_val.get("type")
+        ):
+            details["inputTypes"] = [
+                llm_input_type_val["type"]
+            ]  # Overwrite with type from Field
+        # If llm_input_type is not found or has no usable value, the inputTypes from consume_work (if any) remain.
+
     return details
 
 

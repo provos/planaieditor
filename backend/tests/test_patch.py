@@ -273,3 +273,40 @@ def consume_work(self):
     func_def_no_task_arg = tree_no_task_arg.body[0]
     assert isinstance(func_def_no_task_arg, ast.FunctionDef)
     assert _get_consume_work_input_type(func_def_no_task_arg) is None
+
+
+def test_extract_llm_worker_input_type_precedence(temp_python_file):
+    """Test that llm_input_type overrides consume_work hint for input type."""
+    code = """
+from planai import Task, LLMTaskWorker
+from typing import Type
+
+class ConsumeHintTask(Task):
+    data: str
+
+class LLMInputTypeTask(Task):
+    info: str
+
+class PrecedenceWorker(LLMTaskWorker):
+    llm_input_type: Type[LLMInputTypeTask] = LLMInputTypeTask
+
+    # This hint should be IGNORED because llm_input_type is set
+    def consume_work(self, task: ConsumeHintTask):
+        print(f"Task: {task}")
+
+    def post_process(self, response, input_task):
+        pass # Required for some workers
+"""
+    file_path = temp_python_file(code)
+    definitions = get_definitions_from_file(str(file_path))
+
+    assert len(definitions["workers"]) == 1
+    worker = definitions["workers"][0]
+
+    assert worker["className"] == "PrecedenceWorker"
+    assert worker["workerType"] == "llmtaskworker"
+    assert "inputTypes" in worker
+    # Verify it used llm_input_type, NOT ConsumeHintTask
+    assert worker["inputTypes"] == ["LLMInputTypeTask"]
+    # Also check that the classVar was parsed correctly
+    assert worker["classVars"].get("llm_input_type") == "LLMInputTypeTask"
