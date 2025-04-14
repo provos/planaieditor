@@ -270,7 +270,13 @@
 	bind:this={nodeRef}
 	class="base-worker-node relative flex h-full flex-col rounded-md border border-gray-300 bg-white shadow-md"
 >
-	<NodeResizer {minWidth} {minHeight} />
+
+	<NodeResizer
+		{minWidth}
+		{minHeight}
+		handleClass="resize-handle-custom"
+		lineClass="resize-line-custom"
+	/>
 
 	<!-- Drag Handle at the top -->
 	<NodeDragHandle />
@@ -535,5 +541,19 @@
 
 	:global(.svelte-flow .svelte-flow__handle-right) {
 		right: -5px; /* Center the smaller handle */
+	}
+
+	/* Custom classes for NodeResizer passed via props */
+	:global(.resize-handle-custom) {
+		width: 12px !important; /* Increased size */
+		height: 12px !important;
+		border-radius: 3px !important; /* Slightly more rounded */
+		border: 2px solid cornflowerblue !important; /* Thicker border */
+		background-color: rgba(100, 149, 237, 0.2) !important; /* Subtle background */
+	}
+
+	:global(.resize-line-custom) {
+		border-color: cornflowerblue !important; /* Match handle color */
+		border-width: 2px !important; /* Thicker line */
 	}
 </style>
