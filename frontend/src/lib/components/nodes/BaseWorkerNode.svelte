@@ -268,7 +268,7 @@
 
 <div
 	bind:this={nodeRef}
-	class="base-worker-node relative flex flex-col rounded-md border border-gray-300 bg-white shadow-md"
+	class="base-worker-node relative flex h-full flex-col rounded-md border border-gray-300 bg-white shadow-md"
 >
 	<NodeResizer {minWidth} {minHeight} />
 
@@ -486,6 +486,7 @@
 					{#each customMethods as methodName (methodName)}
 						<EditableCodeSection
 							title={methodName}
+							initialCollapsed={true}
 							code={data.methods[methodName]}
 							language="python"
 							onUpdate={(newCode) => handleMethodUpdate(methodName, newCode)}
