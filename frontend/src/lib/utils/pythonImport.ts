@@ -191,6 +191,7 @@ export async function importPythonCode(
         });
 
         // --- Create Worker Nodes ---
+        nextY = 0;
 
         // Get existing names to avoid conflicts
         const existingNames = new Set(Object.values(get(allClassNames)));
@@ -239,7 +240,7 @@ export async function importPythonCode(
             const newNode: Node = {
                 id,
                 type: worker.workerType, // Use the identified worker type
-                position: { x: startX + 300, y: nextY }, // Offset workers horizontally
+                position: { x: startX + 400, y: nextY }, // Offset workers horizontally
                 draggable: true,
                 selectable: true,
                 deletable: true,
