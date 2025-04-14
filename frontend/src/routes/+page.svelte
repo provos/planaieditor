@@ -659,6 +659,7 @@ Analyze the following information and provide a response.`,
 			{nodes}
 			{edges}
 			{nodeTypes}
+			minZoom={0.05}
 			ondrop={onDrop}
 			ondragover={onDragOver}
 			onclick={onPaneClick}
