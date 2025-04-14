@@ -130,8 +130,11 @@
 			})
 			.filter(Boolean) as string[];
 
-		inferredInputTypes = sourceClassNames;
-		data.inputTypes = sourceClassNames;
+		// make sourceClassNames unique
+		const uniqueSourceClassNames = [...new Set(sourceClassNames)];
+
+		inferredInputTypes = uniqueSourceClassNames;
+		data.inputTypes = uniqueSourceClassNames;
 	}
 
 	// --- Worker Name Editing Logic ---
@@ -354,7 +357,7 @@
 				{/if}
 			{/if}
 			<div class="mt-1 space-y-1">
-				{#each inferredInputTypes as type, index (type + '-' + index)}
+				{#each inferredInputTypes as type (type)}
 					{@const color = getColorForType(type)}
 					<div
 						class="text-2xs group flex items-center rounded px-1 py-0.5"
