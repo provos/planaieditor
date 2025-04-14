@@ -428,3 +428,42 @@ def build_my_graph():
                 found = True
                 break
         assert found, f"Expected edge {expected} not found in {edges}"
+
+
+def test_extract_entry_point(temp_python_file):
+    """Test extraction of the graph entry point edge."""
+    code = """
+from planai import Graph, TaskWorker, Task
+
+class EntryTask(Task):
+    data: str
+
+class EntryWorker(TaskWorker):
+    def consume_work(self, task: EntryTask):
+        pass
+
+class AnotherWorker(TaskWorker):
+    pass
+
+def build_graph_with_entry():
+    graph = Graph()
+    ent = EntryWorker()
+    aw = AnotherWorker()
+
+    graph.add_workers(ent, aw)
+    graph.set_dependency(ent, aw)
+    graph.set_entry(ent) # Set entry point
+
+    return graph
+"""
+    file_path = temp_python_file(code)
+    definitions = get_definitions_from_file(str(file_path))
+
+    assert "entryEdges" in definitions
+    entry_edges = definitions["entryEdges"]
+    print(f"Extracted Entry Edges: {entry_edges}")
+
+    assert len(entry_edges) == 1
+    expected_entry = {"sourceTask": "EntryTask", "targetWorker": "EntryWorker"}
+    assert entry_edges[0]["sourceTask"] == expected_entry["sourceTask"]
+    assert entry_edges[0]["targetWorker"] == expected_entry["targetWorker"]

@@ -729,6 +729,38 @@ def parse_edge_statement(
     return edges
 
 
+def parse_entry_point_statement(
+    stmt: ast.stmt,
+    worker_assignments: Dict[str, str],
+    worker_details_map: Dict[str, Dict[str, Any]],
+) -> Optional[Dict[str, str]]:
+    """Parses a graph.set_entry(worker) statement."""
+    if isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call):
+        call_node = stmt.value
+        # Check for graph.set_entry(worker_var)
+        if (
+            isinstance(call_node.func, ast.Attribute)
+            and call_node.func.attr == "set_entry"
+            and isinstance(call_node.func.value, ast.Name)
+            and call_node.func.value.id == "graph"
+            and len(call_node.args) == 1
+            and isinstance(call_node.args[0], ast.Name)
+        ):
+
+            entry_worker_var = call_node.args[0].id
+            entry_worker_class = worker_assignments.get(entry_worker_var)
+            if entry_worker_class:
+                worker_details = worker_details_map.get(entry_worker_class)
+                # Use the already determined input type for this worker
+                if worker_details and worker_details.get("inputTypes"):
+                    input_type = worker_details["inputTypes"][0]
+                    return {
+                        "sourceTask": input_type,
+                        "targetWorker": entry_worker_class,
+                    }
+    return None
+
+
 def get_definitions_from_file(filename: str) -> Dict[str, List[Dict[str, Any]]]:
     """
     Parses a Python file, extracts Task and Worker class definitions,
@@ -773,6 +805,7 @@ def get_definitions_from_file(filename: str) -> Dict[str, List[Dict[str, Any]]]:
 
     # --- Extract Edges --- #
     edges = []
+    entry_edges = []  # Initialize list for entry point edges
     graph_func_node = find_graph_builder_function(parsed_ast)
     if graph_func_node:
         print(f"Found graph builder function: {graph_func_node.name}")
@@ -789,11 +822,23 @@ def get_definitions_from_file(filename: str) -> Dict[str, List[Dict[str, Any]]]:
 
         for stmt in graph_func_node.body:
             edges.extend(parse_edge_statement(stmt, assignments, worker_details_map))
+            entry_edge = parse_entry_point_statement(
+                stmt, assignments, worker_details_map
+            )
+            if entry_edge:
+                entry_edges.append(entry_edge)
+
         print(f"Extracted edges: {edges}")
+        print(f"Extracted entry edges: {entry_edges}")
     else:
         print("Warning: Could not find a graph builder function.")
 
-    return {"tasks": task_results, "workers": worker_results, "edges": edges}
+    return {
+        "tasks": task_results,
+        "workers": worker_results,
+        "edges": edges,
+        "entryEdges": entry_edges,
+    }
 
 
 # Example usage (optional, can be removed or kept for testing)
