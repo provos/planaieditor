@@ -8,7 +8,6 @@
 	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
 	import type { Node, Edge } from '@xyflow/svelte';
 	import type { Snippet } from 'svelte';
-	import NodeDragHandle from './NodeDragHandle.svelte';
 	import { tick } from 'svelte';
 
 	// Base interface for worker node data
@@ -270,16 +269,12 @@
 	bind:this={nodeRef}
 	class="base-worker-node relative flex h-full flex-col rounded-md border border-gray-300 bg-white shadow-md"
 >
-
 	<NodeResizer
 		{minWidth}
 		{minHeight}
 		handleClass="resize-handle-custom"
 		lineClass="resize-line-custom"
 	/>
-
-	<!-- Drag Handle at the top -->
-	<NodeDragHandle />
 
 	<!-- Input Handle (Single for now) -->
 	<Handle

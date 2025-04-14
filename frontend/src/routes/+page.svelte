@@ -284,8 +284,7 @@ Analyze the following information and provide a response.`,
 			dragging: false,
 			zIndex: 0,
 			data: nodeData,
-			origin: [0, 0], // Set origin to top-left
-			dragHandle: '.custom-drag-handle' // Add custom drag handle class
+			origin: [0, 0] // Set origin to top-left
 		};
 
 		// Update our nodes store
@@ -711,17 +710,7 @@ Analyze the following information and provide a response.`,
 		stroke-width: 2;
 	}
 
-	/* Ensure the custom drag handle appears above other elements */
-	:global(.custom-drag-handle) {
-		z-index: 1;
-		cursor: move !important; /* Always show move cursor for drag handle */
-	}
-
-	/* Override node cursor styles */
-	:global(.svelte-flow .svelte-flow__node) {
-		cursor: default !important; /* Default cursor for general node body */
-	}
-
+	
 	/* Restore appropriate cursors for interactive elements */
 	:global(.svelte-flow .svelte-flow__node input) {
 		cursor: text !important;
