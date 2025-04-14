@@ -525,8 +525,6 @@ Analyze the following information and provide a response.`,
 			sourceNode.type === 'task'
 				? (sourceNode.data as unknown as NodeData).className
 				: "invalid-ignore-for-now"
-		console.log(sourceNode.type, targetNodeData.inputTypes);
-		console.log(connection);
 		if (
 			targetNode.type !== 'mergedtaskworker' &&
 			targetNodeData.inputTypes.length > 0 &&

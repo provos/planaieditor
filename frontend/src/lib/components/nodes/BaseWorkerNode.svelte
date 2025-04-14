@@ -219,6 +219,12 @@
 		}
 	}
 
+	function resetManualInputType() {
+		manuallySelectedInputType = '';
+		data.inputTypes = [];
+		inferredInputTypes = [];
+	}
+
 	function addOutputTypeFromSelect(event: Event) {
 		const select = event.target as HTMLSelectElement;
 		if (select && select.value) {
@@ -328,8 +334,6 @@
 		<div class="mb-2 flex-none">
 			<h3 class="text-2xs font-semibold text-gray-600">Input Types (Auto)</h3>
 			{#if inferredInputTypes.length === 0}
-				<div class="text-2xs py-0.5 italic text-gray-400">Connect Task nodes</div>
-
 				<!-- Input Type Select Dropdown (only shown when no edges are connected) -->
 				{#if availableTaskClasses.length > 0}
 					<div class="mb-1 mt-1">
@@ -337,22 +341,34 @@
 							class="text-2xs w-full rounded border border-gray-200 px-1 py-0.5"
 							onchange={setInputTypeManually}
 						>
-							<option value="">Set input type manually...</option>
+							<option value="">Connect Task nodes or set input type manually...</option>
 							{#each availableTaskClasses as className}
 								<option value={className}>{className}</option>
 							{/each}
 						</select>
 					</div>
+				{:else}
+					<div class="text-2xs py-0.5 italic text-gray-400">Create Task nodes</div>
 				{/if}
 			{/if}
 			<div class="mt-1 space-y-1">
 				{#each inferredInputTypes as type (type)}
 					{@const color = getColorForType(type)}
 					<div
-						class="text-2xs flex items-center rounded px-1 py-0.5"
+						class="text-2xs group flex items-center rounded px-1 py-0.5"
 						style={`background-color: ${color}20; border-left: 3px solid ${color};`}
 					>
 						<span class="font-mono">{type}</span>
+						{#if manuallySelectedInputType === type}
+							<!-- Delete button for manually selected input type -->
+							<button
+								class="ml-auto flex h-3 w-3 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity duration-150 ease-in-out group-hover:opacity-100"
+								onclick={resetManualInputType}
+								title="Remove manual input type"
+							>
+								<Trash size={8} weight="bold" />
+							</button>
+						{/if}
 					</div>
 				{/each}
 			</div>
