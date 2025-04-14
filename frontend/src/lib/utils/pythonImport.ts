@@ -62,6 +62,13 @@ export interface ImportResult {
     edges?: Edge[];
 }
 
+// --- Type for Edges from Backend --- //
+export interface ImportedEdge {
+    source: string; // Class name of source worker
+    target: string; // Class name of target worker
+    targetInputType?: string; // Optional: Input type name of the target worker
+}
+
 /**
  * Validates a file is a Python file based on type and extension
  */
@@ -127,7 +134,7 @@ export async function importPythonCode(
 
         const importedTasks: ImportedTask[] = result.tasks || [];
         const importedWorkers: ImportedWorker[] = result.workers || [];
-        const importedEdges: Array<{ source: string, target: string }> = result.edges || [];
+        const importedEdges: ImportedEdge[] = result.edges || [];
 
         if (importedTasks.length === 0 && importedWorkers.length === 0) {
             return {
@@ -253,12 +260,18 @@ export async function importPythonCode(
 
             if (sourceNodeId && targetNodeId) {
                 const edgeId = `imported-edge-${sourceNodeId}-${targetNodeId}`;
-                newEdges.push({
+                const svelteEdge: Edge = {
                     id: edgeId,
                     source: sourceNodeId,
                     target: targetNodeId,
-                    // animated: true, // Optional: makes edges animated
-                });
+                };
+                // If the target has a specific input type, connect to the corresponding source handle
+                if (edge.targetInputType) {
+                    svelteEdge.sourceHandle = `output-${edge.targetInputType}`;
+                }
+                // If targetInputType is not specified, sourceHandle remains undefined,
+                // connecting to the default source handle (if one exists).
+                newEdges.push(svelteEdge);
             } else {
                 console.warn(`Could not create edge for ${edge.source} -> ${edge.target}: Node ID not found.`);
             }
