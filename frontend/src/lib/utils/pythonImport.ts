@@ -2,6 +2,8 @@ import type { Node, Edge } from '@xyflow/svelte';
 import { taskClassNamesStore } from '$lib/stores/taskClassNamesStore';
 import { allClassNames } from '$lib/stores/classNameStore';
 import { get } from 'svelte/store';
+import ELK from 'elkjs/lib/elk.bundled.js';
+import { Position } from '@xyflow/svelte';
 
 // Type for the structured error from the backend
 export interface BackendError {
@@ -68,6 +70,68 @@ export interface ImportedEdge {
     source: string; // Class name of source worker
     target: string; // Class name of target worker
     targetInputType?: string; // Optional: Input type name of the target worker
+}
+
+// --- ELKjs Layout Function --- //
+const elk = new ELK();
+
+// Default ELK options
+const elkOptions = {
+    'elk.algorithm': 'layered',
+    'elk.layered.spacing.nodeNodeBetweenLayers': '120',
+    'elk.spacing.nodeNode': '100',
+    'elk.layered.cycleBreaking.strategy': 'GREEDY',
+    'elk.direction': 'DOWN'
+};
+
+// Minimal fallback dimensions if node size isn't available yet
+const MIN_NODE_WIDTH = 150;
+const MIN_NODE_HEIGHT = 50;
+
+export async function layoutGraph(nodesToLayout: Node[], edgesToLayout: Edge[], options = elkOptions): Promise<{ nodes: Node[], edges: Edge[] }> {
+    const graph = {
+        id: 'root',
+        layoutOptions: options,
+        children: nodesToLayout.map((node) => ({
+            ...node,
+            targetPosition: Position.Top,
+            sourcePosition: Position.Bottom,
+            width: node.measured?.width && node.measured.width > 0 ? node.measured.width : MIN_NODE_WIDTH,
+            height: node.measured?.height && node.measured.height > 0 ? node.measured.height : MIN_NODE_HEIGHT,
+        })),
+        // Map Svelte Flow edges to ELK edges
+        edges: edgesToLayout.map(edge => ({
+            ...edge,
+            id: edge.id,
+            sources: [edge.source],
+            targets: [edge.target]
+        })),
+    };
+
+    try {
+        const layoutedGraph = await elk.layout(graph);
+        return {
+            nodes: layoutedGraph.children?.map((node) => ({
+                ...node,
+                // Copy original data back
+                data: nodesToLayout.find(n => n.id === node.id)?.data || {},
+                // ELK returns x, y; Svelte Flow expects position {x, y}
+                position: { x: node.x ?? 0, y: node.y ?? 0 },
+            })) ?? [], // Handle cases where children might be undefined
+
+            // Map ELK edges back to Svelte Flow edges
+            edges: layoutedGraph.edges?.map(edge => ({
+                ...edge,
+                id: edge.id,
+                source: edge.sources[0],
+                target: edge.targets[0]
+            })) ?? [],
+        };
+    } catch (error) {
+        console.error('ELK layout failed:', error);
+        // Return original nodes/edges if layout fails
+        return { nodes: nodesToLayout, edges: edgesToLayout };
+    }
 }
 
 /**
@@ -298,6 +362,9 @@ export async function importPythonCode(
             }
         });
 
+        // --- Layout Graph using ELKjs --- //
+        // const { nodes: layoutedNodes, edges: layoutedEdges } = await layoutGraph(newNodes, newEdges);
+
         // Update the taskClassNamesStore with the newly imported names
         const importedTaskNames = new Set(importedTasks.map((task) => task.className));
         taskClassNamesStore.update((existingNames) => {
@@ -308,8 +375,8 @@ export async function importPythonCode(
         return {
             success: true,
             message: `Imported ${importedTasks.length} Task(s) and ${importedWorkers.length} Worker(s).`,
-            nodes: newNodes,
-            edges: newEdges
+            nodes: newNodes,      // Return original nodes (without layout positions yet)
+            edges: newEdges       // Return original edges
         };
     } catch (error: any) {
         console.error('Error importing Python code:', error);

@@ -21,6 +21,7 @@
 	import PythonInterpreterSelector from '$lib/components/PythonInterpreterSelector.svelte';
 	import UploadSimple from 'phosphor-svelte/lib/UploadSimple'; // Icon for import
 	import Code from 'phosphor-svelte/lib/Code';
+	import { tick } from 'svelte'; // Import tick for timing
 
 	// Import utility for default method bodies
 	import { getDefaultMethodBody } from '$lib/utils/defaults';
@@ -39,6 +40,9 @@
 		type ExportStatus
 	} from '$lib/utils/pythonExport';
 
+	// Import the ELKjs layout function
+	import { layoutGraph } from '$lib/utils/pythonImport';
+
 	// Define node types and pass stores as props
 	const nodeTypes: any = {
 		task: TaskNode,
@@ -50,7 +54,7 @@
 	};
 
 	// Use SvelteFlow hook
-	const { screenToFlowPosition, getNodes } = useSvelteFlow();
+	const { screenToFlowPosition, getNodes, fitView } = useSvelteFlow();
 
 	// Use Svelte stores for nodes and edges
 	const nodes = writable<Node[]>([]);
@@ -512,6 +516,54 @@ Analyze the following information and provide a response.`,
 				const newEdges = result.edges;
 				edges.update((currentEdges) => [...currentEdges, ...newEdges]);
 			}
+
+			// Schedule layout *after* nodes/edges are added and rendered
+			if (result.success && (result.nodes?.length || result.edges?.length)) {
+				// Use setTimeout to allow Svelte to render nodes first
+				setTimeout(runElkLayout, 100); // Increased initial delay
+			}
+		}
+	}
+
+	// Function to run ELK layout
+	async function runElkLayout() {
+		console.log('Running ELK layout...');
+		const currentNodes = get(nodes);
+		const currentEdges = get(edges);
+
+		// Basic check: Ensure nodes have dimensions before layout
+		const allNodesHaveDimensions = currentNodes.every(
+			(node) =>
+				node.measured?.width &&
+				node.measured.width > 0 &&
+				node.measured?.height &&
+				node.measured.height > 0
+		);
+
+		if (!allNodesHaveDimensions) {
+			console.warn('Node dimensions not available yet, retrying layout shortly...');
+			setTimeout(runElkLayout, 200); // Increased retry delay
+			return;
+		}
+
+		try {
+			const { nodes: layoutedNodes, edges: layoutedEdges } = await layoutGraph(
+				currentNodes,
+				currentEdges
+			);
+
+			nodes.set(layoutedNodes);
+			edges.set(layoutedEdges);
+
+			// Use requestAnimationFrame to fitView after the DOM updates
+			requestAnimationFrame(() => {
+				// Get fitView from the hook again within this scope
+				const { fitView } = useSvelteFlow();
+				fitView({ padding: 0.1 }); // Add padding
+			});
+			console.log('ELK layout applied.');
+		} catch (error) {
+			console.error('Error during ELK layout:', error);
 		}
 	}
 
