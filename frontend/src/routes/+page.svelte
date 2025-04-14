@@ -502,10 +502,16 @@ Analyze the following information and provide a response.`,
 			message: result.message
 		};
 
-		// If successful and we have new nodes, add them to the graph
-		if (result.success && result.nodes && result.nodes.length > 0) {
-			const newNodes = result.nodes; // Assign to variable to satisfy type system
-			nodes.update((currentNodes) => [...currentNodes, ...newNodes]);
+		// If successful and we have new nodes/edges, add them to the graph
+		if (result.success) {
+			if (result.nodes && result.nodes.length > 0) {
+				const newNodes = result.nodes;
+				nodes.update((currentNodes) => [...currentNodes, ...newNodes]);
+			}
+			if (result.edges && result.edges.length > 0) {
+				const newEdges = result.edges;
+				edges.update((currentEdges) => [...currentEdges, ...newEdges]);
+			}
 		}
 	}
 

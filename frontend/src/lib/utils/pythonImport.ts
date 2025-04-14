@@ -1,4 +1,4 @@
-import type { Node } from '@xyflow/svelte';
+import type { Node, Edge } from '@xyflow/svelte';
 import { taskClassNamesStore } from '$lib/stores/taskClassNamesStore';
 import { allClassNames } from '$lib/stores/classNameStore';
 import { get } from 'svelte/store';
@@ -59,6 +59,7 @@ export interface ImportResult {
     success: boolean;
     message: string;
     nodes?: Node[];
+    edges?: Edge[];
 }
 
 /**
@@ -126,6 +127,7 @@ export async function importPythonCode(
 
         const importedTasks: ImportedTask[] = result.tasks || [];
         const importedWorkers: ImportedWorker[] = result.workers || [];
+        const importedEdges: Array<{ source: string, target: string }> = result.edges || [];
 
         if (importedTasks.length === 0 && importedWorkers.length === 0) {
             return {
@@ -142,9 +144,11 @@ export async function importPythonCode(
             50
         ); // Start below existing nodes
         const startX = 50;
+        const classNameToNodeId: Record<string, string> = {}; // Map className to generated Node ID
 
         importedTasks.forEach((task) => {
             const id = `imported-task-${task.className}-${Date.now()}`;
+            classNameToNodeId[task.className] = id; // Store mapping
             const nodeData = {
                 className: task.className, // Use the imported class name
                 fields: task.fields.map((f) => ({
@@ -190,6 +194,7 @@ export async function importPythonCode(
             }
 
             const id = `imported-${worker.workerType}-${worker.className}-${Date.now()}`;
+            classNameToNodeId[worker.className] = id; // Store mapping
 
             // Map backend data to frontend node data structure
             const nodeData: any = {
@@ -240,6 +245,25 @@ export async function importPythonCode(
             nextY += 180; // Basic vertical spacing (adjust as needed)
         });
 
+        // --- Create Edges --- //
+        const newEdges: Edge[] = [];
+        importedEdges.forEach((edge) => {
+            const sourceNodeId = classNameToNodeId[edge.source];
+            const targetNodeId = classNameToNodeId[edge.target];
+
+            if (sourceNodeId && targetNodeId) {
+                const edgeId = `imported-edge-${sourceNodeId}-${targetNodeId}`;
+                newEdges.push({
+                    id: edgeId,
+                    source: sourceNodeId,
+                    target: targetNodeId,
+                    // animated: true, // Optional: makes edges animated
+                });
+            } else {
+                console.warn(`Could not create edge for ${edge.source} -> ${edge.target}: Node ID not found.`);
+            }
+        });
+
         // Update the taskClassNamesStore with the newly imported names
         const importedTaskNames = new Set(importedTasks.map((task) => task.className));
         taskClassNamesStore.update((existingNames) => {
@@ -250,7 +274,8 @@ export async function importPythonCode(
         return {
             success: true,
             message: `Imported ${importedTasks.length} Task(s) and ${importedWorkers.length} Worker(s).`,
-            nodes: newNodes
+            nodes: newNodes,
+            edges: newEdges
         };
     } catch (error: any) {
         console.error('Error importing Python code:', error);
