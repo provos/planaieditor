@@ -339,3 +339,86 @@ class MyJoinedWorker(JoinedTaskWorker):
     assert "inputTypes" in worker
     # Verify it used the inner type from List[SourceTask2]
     assert worker["inputTypes"] == ["SourceTask2"]
+
+
+def test_extract_edges(temp_python_file):
+    """Test extraction of graph edges from set_dependency and next calls."""
+    code = """
+from planai import Graph, TaskWorker, Task
+
+class TaskA(Task):
+    pass
+class TaskB(Task):
+    pass
+class TaskC(Task):
+    pass
+class TaskD(Task):
+    pass
+
+class Worker1(TaskWorker):
+    output_types = [TaskA]
+    def consume_work(self, task):
+        pass
+
+class Worker2(TaskWorker):
+    output_types = [TaskB]
+    def consume_work(self, task: TaskA):
+        pass
+
+class Worker3(TaskWorker):
+    output_types = [TaskC]
+    def consume_work(self, task: TaskB):
+        pass
+
+class Worker4(TaskWorker):
+    output_types = [TaskD]
+    def consume_work(self, task: TaskC):
+        pass
+
+class Worker5(TaskWorker):
+    def consume_work(self, task: TaskB):
+        pass
+
+def build_my_graph():
+    graph = Graph()
+    w1 = Worker1()
+    w2 = Worker2()
+    w3 = Worker3()
+    w4 = Worker4()
+    w5 = Worker5()
+
+    graph.add_workers(w1, w2, w3, w4, w5)
+
+    # Test simple set_dependency
+    graph.set_dependency(w1, w2)
+
+    # Test chained calls
+    graph.set_dependency(w2, w3).next(w4)
+
+    # Test simple next
+    w2.next(w5)
+
+    return graph
+"""
+    file_path = temp_python_file(code)
+    definitions = get_definitions_from_file(str(file_path))
+
+    assert "edges" in definitions
+    edges = definitions["edges"]
+    print(f"Extracted Edges: {edges}")
+
+    assert len(edges) == 4
+    # Check for specific edges (order might vary depending on statement order)
+    expected_edges = [
+        {"source": "Worker1", "target": "Worker2"},  # from graph.set_dependency(w1, w2)
+        {"source": "Worker2", "target": "Worker3"},  # from graph.set_dependency(w2, w3)
+        {"source": "Worker3", "target": "Worker4"},  # from .next(w4)
+        {"source": "Worker2", "target": "Worker5"},  # from w2.next(w5)
+    ]
+
+    # Check if all expected edges are present
+    for expected in expected_edges:
+        assert any(
+            e["source"] == expected["source"] and e["target"] == expected["target"]
+            for e in edges
+        ), f"Expected edge {expected} not found in {edges}"

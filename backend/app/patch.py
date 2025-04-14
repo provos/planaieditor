@@ -540,7 +540,10 @@ def extract_worker_details(
 
     return details
 
-def extract_input_type(class_def: ast.ClassDef, worker_type: str, details: Dict[str, Any]) -> Optional[str]:
+
+def extract_input_type(
+    class_def: ast.ClassDef, worker_type: str, details: Dict[str, Any]
+) -> Optional[str]:
     input_type_from_consume = None
     input_type_from_joined = None
     llm_input_type_val = None
@@ -594,11 +597,129 @@ def extract_input_type(class_def: ast.ClassDef, worker_type: str, details: Dict[
     return final_input_type
 
 
+# --- Edge Extraction Logic ---
+
+
+def find_graph_builder_function(parsed_ast: ast.Module) -> Optional[ast.FunctionDef]:
+    """Finds a function likely responsible for building the PlanAI graph."""
+    for node in ast.walk(parsed_ast):
+        if isinstance(node, ast.FunctionDef):
+            # Look for graph instantiation or specific method calls
+            for stmt in node.body:
+                if isinstance(stmt, ast.Assign):
+                    # Check for graph = Graph(...)
+                    if (
+                        isinstance(stmt.value, ast.Call)
+                        and isinstance(stmt.value.func, ast.Name)
+                        and stmt.value.func.id == "Graph"
+                        and len(stmt.targets) == 1
+                        and isinstance(stmt.targets[0], ast.Name)
+                        and stmt.targets[0].id == "graph"
+                    ):  # Common pattern
+                        return node
+                # Could add checks for graph.add_workers, graph.set_dependency etc.
+    return None  # Function not found
+
+
+def get_worker_assignments(
+    func_node: ast.FunctionDef, worker_classes: Set[str]
+) -> Dict[str, str]:
+    """Extracts variable assignments for worker instances within a function."""
+    assignments = {}
+    for stmt in func_node.body:
+        if (
+            isinstance(stmt, ast.Assign)
+            and len(stmt.targets) == 1
+            and isinstance(stmt.targets[0], ast.Name)
+        ):
+            var_name = stmt.targets[0].id
+            if isinstance(stmt.value, ast.Call) and isinstance(
+                stmt.value.func, ast.Name
+            ):
+                class_name = stmt.value.func.id
+                if class_name in worker_classes:
+                    assignments[var_name] = class_name
+    return assignments
+
+
+def parse_edge_statement(
+    stmt: ast.stmt, worker_assignments: Dict[str, str]
+) -> List[Dict[str, str]]:
+    """Parses a statement to extract PlanAI graph edges."""
+    edges = []
+    call_node = None
+
+    if isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call):
+        call_node = stmt.value
+    elif isinstance(stmt, ast.Assign) and isinstance(stmt.value, ast.Call):
+        # We care about the call on the right, assignment target is not directly needed for edges
+        call_node = stmt.value
+
+    if not call_node:
+        return edges
+
+    # Walk the chain of calls (e.g., graph.set_dependency(...).next(...))
+    chain = []
+    current = call_node
+    while isinstance(current, ast.Call) and isinstance(current.func, ast.Attribute):
+        method_name = current.func.attr
+        args = current.args
+        chain.append({"method": method_name, "args": args})
+        current = current.func.value  # Move left
+
+    # Check the start of the chain (should be graph or a worker variable)
+    if isinstance(current, ast.Name):
+        chain.append({"method": "start", "var_name": current.id})
+    else:
+        return edges  # Invalid chain start
+
+    chain.reverse()  # Process in execution order
+
+    last_node_var = None
+    for call_info in chain:
+        method = call_info["method"]
+        args = call_info.get("args", [])
+
+        if method == "start":
+            last_node_var = call_info.get("var_name")
+            continue
+
+        if (
+            method == "set_dependency"
+            and len(args) == 2
+            and isinstance(args[0], ast.Name)
+            and isinstance(args[1], ast.Name)
+        ):
+            source_var = args[0].id
+            target_var = args[1].id
+            source_class = worker_assignments.get(source_var)
+            target_class = worker_assignments.get(target_var)
+            if source_class and target_class:
+                edges.append({"source": source_class, "target": target_class})
+            last_node_var = target_var  # set_dependency result flows from target
+
+        elif method == "next" and len(args) == 1 and isinstance(args[0], ast.Name):
+            if last_node_var:  # Ensure we have a source from the previous chain link
+                source_var = last_node_var
+                target_var = args[0].id
+                source_class = worker_assignments.get(source_var)
+                target_class = worker_assignments.get(target_var)
+                if source_class and target_class:
+                    edges.append({"source": source_class, "target": target_class})
+                last_node_var = target_var  # next result flows from its argument
+            else:
+                last_node_var = None  # Break chain if source is lost
+        else:
+            last_node_var = None  # Unknown method breaks the chain tracking
+
+    return edges
+
+
 def get_definitions_from_file(filename: str) -> Dict[str, List[Dict[str, Any]]]:
     """
     Parses a Python file, extracts Task and Worker class definitions,
-    and formats them into separate lists within a dictionary.
-    Returns: {"tasks": [...], "workers": [...]}
+    graph edges, and formats them into separate lists within a dictionary.
+    Returns: {"tasks": [...], "workers": [...], "edges": [...]}
     """
     try:
         with open(filename, "r") as f:
@@ -606,13 +727,13 @@ def get_definitions_from_file(filename: str) -> Dict[str, List[Dict[str, Any]]]:
         parsed_ast = ast.parse(source_code)
     except FileNotFoundError:
         print(f"Error: File not found '{filename}'")
-        return {"tasks": [], "workers": []}
+        return {"tasks": [], "workers": [], "edges": []}
     except SyntaxError as e:
         print(f"Error: Syntax error parsing '{filename}': {e}")
-        return {"tasks": [], "workers": []}
+        return {"tasks": [], "workers": [], "edges": []}
     except Exception as e:
         print(f"Error: Could not read or parse file '{filename}': {e}")
-        return {"tasks": [], "workers": []}
+        return {"tasks": [], "workers": [], "edges": []}
 
     class_definitions = get_class_definitions(parsed_ast)
 
@@ -633,9 +754,31 @@ def get_definitions_from_file(filename: str) -> Dict[str, List[Dict[str, Any]]]:
     worker_results = []
     for class_def, worker_type in worker_definitions_with_type:
         details = extract_worker_details(class_def, worker_type, source_code)
+        # Add worker details including its assigned variable name if found later
         worker_results.append(details)
 
-    return {"tasks": task_results, "workers": worker_results}
+    # --- Extract Edges --- #
+    edges = []
+    graph_func_node = find_graph_builder_function(parsed_ast)
+    if graph_func_node:
+        print(f"Found graph builder function: {graph_func_node.name}")
+        # Get all worker class names defined in the file
+        worker_class_names = {w["className"] for w in worker_results}
+        assignments = get_worker_assignments(graph_func_node, worker_class_names)
+        print(f"Worker assignments: {assignments}")
+
+        # Add assigned variable name back to worker details for potential frontend use?
+        var_to_class = {v: k for k, v in assignments.items()}  # class:var
+        for worker in worker_results:
+            worker["variableName"] = var_to_class.get(worker["className"])
+
+        for stmt in graph_func_node.body:
+            edges.extend(parse_edge_statement(stmt, assignments))
+        print(f"Extracted edges: {edges}")
+    else:
+        print("Warning: Could not find a graph builder function.")
+
+    return {"tasks": task_results, "workers": worker_results, "edges": edges}
 
 
 # Example usage (optional, can be removed or kept for testing)
@@ -651,7 +794,7 @@ def main():
 
     definitions = get_definitions_from_file(filename)
 
-    if definitions["tasks"] or definitions["workers"]:
+    if definitions["tasks"] or definitions["workers"] or definitions["edges"]:
         import json
 
         print(json.dumps(definitions, indent=2))
