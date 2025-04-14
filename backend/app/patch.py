@@ -500,6 +500,19 @@ def extract_worker_details(
 
             if method_name in known_method_names:
                 details["methods"][method_name] = method_source
+
+                # Specifically parse consume_work input type hint
+                if method_name == "consume_work" and isinstance(node, ast.FunctionDef):
+                    if len(node.args.args) > 1:  # Check if there is an arg after self
+                        task_arg = node.args.args[1]
+                        if task_arg.annotation:
+                            # Use a simplified annotation parser here, assuming it's just a name or constant
+                            input_type_name = _parse_type_annotation_name(
+                                task_arg.annotation
+                            )
+                            if input_type_name:
+                                # Add to details, potentially overriding classVar if needed
+                                details["inputTypes"] = [input_type_name]
             else:  # Not a specifically handled method, add to consolidated source
                 details["otherMembersSource"] += method_source + "\n"
         # Could add handling for other node types like Import, If, etc. if needed

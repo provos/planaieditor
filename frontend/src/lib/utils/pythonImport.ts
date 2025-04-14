@@ -49,6 +49,7 @@ export interface ImportedWorker {
     className: string;
     workerType: string; // e.g., "taskworker", "llmtaskworker"
     classVars: Record<string, any>; // Dictionary of known parsed class vars
+    inputTypes?: string[]; // Optional: Parsed from consume_work type hint
     methods: Record<string, string>; // Dictionary of known method sources
     otherMembersSource: string; // Consolidated source code of other members
 }
@@ -196,7 +197,7 @@ export async function importPythonCode(
                 workerName: worker.className, // Use className as workerName
                 nodeId: id,
                 // Initialize common fields, specific nodes might override
-                inputTypes: [],
+                inputTypes: worker.inputTypes || [], // Use parsed inputTypes from backend if available
                 outputTypes: worker.classVars.output_types || [], // Map output_types
                 // Store unparsed methods and members for potential display/editing later
                 methods: worker.methods,
