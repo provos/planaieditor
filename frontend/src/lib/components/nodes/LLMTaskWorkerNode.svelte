@@ -6,6 +6,7 @@
 	import { getColorForType } from '$lib/utils/colorUtils';
 	import Trash from 'phosphor-svelte/lib/Trash';
 	import { useUpdateNodeInternals } from '@xyflow/svelte';
+	import { tick } from 'svelte';
 
 	// Extend the base data interface
 	export interface LLMWorkerData extends BaseWorkerData {
@@ -124,6 +125,11 @@
 		data.llm_output_type = '';
 		currentOutputType = '';
 	}
+
+	async function handleCollapse() {
+		await tick();
+		updateNodeInternals(id);
+	}
 </script>
 
 <BaseWorkerNode
@@ -206,14 +212,14 @@
 			code={data.prompt}
 			language="markdown"
 			onUpdate={handlePromptUpdate}
-			onCollapseToggle={() => updateNodeInternals(id)}
+			onCollapseToggle={handleCollapse}
 		/>
 		<EditableCodeSection
 			title="System Prompt"
 			code={data.systemPrompt}
 			language="markdown"
 			onUpdate={handleSystemPromptUpdate}
-			onCollapseToggle={() => updateNodeInternals(id)}
+			onCollapseToggle={handleCollapse}
 		/>
 
 		<!-- Customizable functions -->

@@ -4,7 +4,7 @@
 	import type { BaseWorkerData } from '$lib/components/nodes/BaseWorkerNode.svelte'; // Correct import
 	import { useStore, useUpdateNodeInternals } from '@xyflow/svelte'; // Import useStore and useUpdateNodeInternals
 	import type { Node, Edge } from '@xyflow/svelte';
-
+	import { tick } from 'svelte';
 	export interface TaskWorkerData extends BaseWorkerData {
 		consumeWork: string;
 	}
@@ -83,6 +83,11 @@
 			? `def consume_work(self, task: ${sourceClassNames[0]}):`
 			: defaultTitle;
 	}
+
+	async function handleCollapse() {
+		await tick();
+		updateNodeInternals(id);
+	}
 </script>
 
 <BaseWorkerNode {id} {data} defaultName="TaskWorker">
@@ -94,7 +99,7 @@
 				language="python"
 				onUpdate={(newCode) => (data.methods.consume_work = newCode)}
 				showReset={true}
-				onCollapseToggle={() => updateNodeInternals(id)}
+				onCollapseToggle={handleCollapse}
 			/>
 		{/if}
 	</div>

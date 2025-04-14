@@ -9,7 +9,7 @@
 	import type { Node, Edge } from '@xyflow/svelte';
 	import type { Snippet } from 'svelte';
 	import NodeDragHandle from './NodeDragHandle.svelte';
-	import { get } from 'svelte/store';
+	import { tick } from 'svelte';
 
 	// Base interface for worker node data
 	export interface BaseWorkerData {
@@ -260,7 +260,8 @@
 	let availableMethods = $derived(Object.keys(data.methods || {}));
 	let customMethods = $derived(availableMethods.filter((m) => !coreMethods.includes(m)));
 
-	function handleCollapse() {
+	async function handleCollapse() {
+		await tick();
 		updateNodeInternals(id);
 	}
 </script>
