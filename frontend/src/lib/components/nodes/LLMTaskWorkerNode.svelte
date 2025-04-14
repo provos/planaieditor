@@ -5,6 +5,7 @@
 	import { taskClassNamesStore } from '$lib/stores/taskClassNamesStore';
 	import { getColorForType } from '$lib/utils/colorUtils';
 	import Trash from 'phosphor-svelte/lib/Trash';
+	import { useUpdateNodeInternals } from '@xyflow/svelte';
 
 	// Extend the base data interface
 	export interface LLMWorkerData extends BaseWorkerData {
@@ -30,6 +31,8 @@
 		id: string;
 		data: LLMWorkerData;
 	}>();
+
+	const updateNodeInternals = useUpdateNodeInternals();
 
 	// Create local state variables for reactivity
 	let availableTaskClasses = $state<string[]>([]);
@@ -203,12 +206,14 @@
 			code={data.prompt}
 			language="markdown"
 			onUpdate={handlePromptUpdate}
+			onCollapseToggle={() => updateNodeInternals(id)}
 		/>
 		<EditableCodeSection
 			title="System Prompt"
 			code={data.systemPrompt}
 			language="markdown"
 			onUpdate={handleSystemPromptUpdate}
+			onCollapseToggle={() => updateNodeInternals(id)}
 		/>
 
 		<!-- Customizable functions -->

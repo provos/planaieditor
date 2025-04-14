@@ -14,7 +14,8 @@
 		initialCollapsed = false,
 		onUpdate,
 		onReset = undefined,
-		showReset = false
+		showReset = false,
+		onCollapseToggle
 	} = $props<{
 		title?: string;
 		code: string;
@@ -23,6 +24,7 @@
 		onUpdate: (newCode: string) => void;
 		onReset?: () => void;
 		showReset?: boolean;
+		onCollapseToggle?: () => void;
 	}>();
 
 	let collapsed = $state(initialCollapsed);
@@ -31,6 +33,7 @@
 
 	function toggleCollapse() {
 		collapsed = !collapsed;
+		onCollapseToggle?.();
 	}
 
 	function handleCodeUpdate(event: CustomEvent) {

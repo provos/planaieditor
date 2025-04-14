@@ -2,7 +2,7 @@
 	import BaseWorkerNode from '$lib/components/nodes/BaseWorkerNode.svelte';
 	import EditableCodeSection from '$lib/components/EditableCodeSection.svelte';
 	import type { BaseWorkerData } from '$lib/components/nodes/BaseWorkerNode.svelte'; // Correct import
-	import { useStore } from '@xyflow/svelte'; // Import useStore
+	import { useStore, useUpdateNodeInternals } from '@xyflow/svelte'; // Import useStore and useUpdateNodeInternals
 	import type { Node, Edge } from '@xyflow/svelte';
 
 	export interface TaskWorkerData extends BaseWorkerData {
@@ -15,6 +15,7 @@
 	}>();
 
 	const store = useStore(); // Access the store
+	const updateNodeInternals = useUpdateNodeInternals(); // Initialize the hook
 
 	// Use $state for the title and code content to ensure reactivity
 	const defaultTitle = 'def consume_work(self, task):';
@@ -93,6 +94,7 @@
 				language="python"
 				onUpdate={(newCode) => (data.methods.consume_work = newCode)}
 				showReset={true}
+				onCollapseToggle={() => updateNodeInternals(id)}
 			/>
 		{/if}
 	</div>

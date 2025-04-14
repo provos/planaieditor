@@ -43,6 +43,7 @@
 
 	// Access the SvelteFlow store and internals update hook
 	const store = useStore();
+	const updateNodeInternals = useUpdateNodeInternals();
 
 	// --- State Variables ---
 	let editingWorkerName = $state(false);
@@ -258,11 +259,15 @@
 	const coreMethods = ['consume_work', 'prompt', 'system_prompt'];
 	let availableMethods = $derived(Object.keys(data.methods || {}));
 	let customMethods = $derived(availableMethods.filter((m) => !coreMethods.includes(m)));
+
+	function handleCollapse() {
+		updateNodeInternals(id);
+	}
 </script>
 
 <div
 	bind:this={nodeRef}
-	class="base-worker-node relative flex h-full flex-col rounded-md border border-gray-300 bg-white shadow-md"
+	class="base-worker-node relative flex flex-col rounded-md border border-gray-300 bg-white shadow-md"
 >
 	<NodeResizer {minWidth} {minHeight} />
 
@@ -461,6 +466,7 @@
 					code={data.otherMembersSource}
 					language="python"
 					onUpdate={handleOtherMembersSourceUpdate}
+					onCollapseToggle={handleCollapse}
 				/>
 			</div>
 		{/if}
@@ -482,6 +488,7 @@
 							code={data.methods[methodName]}
 							language="python"
 							onUpdate={(newCode) => handleMethodUpdate(methodName, newCode)}
+							onCollapseToggle={handleCollapse}
 						/>
 					{/each}
 				</div>
