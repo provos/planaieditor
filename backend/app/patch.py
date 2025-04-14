@@ -366,7 +366,25 @@ def _get_consume_work_input_type(method_node: ast.FunctionDef) -> Optional[str]:
             task_arg = method_node.args.args[1]
             if task_arg.annotation:
                 # Use the existing helper to parse the annotation node
-                return _parse_type_annotation_name(task_arg.annotation)
+                # We don't need known_task_types here, just the basic name
+                input_type_name, _, _, _ = _parse_annotation(task_arg.annotation, set())
+                if input_type_name != "Any":
+                    return input_type_name
+    return None
+
+
+def _get_joined_consume_work_input_type(method_node: ast.FunctionDef) -> Optional[str]:
+    """Parses the List type hint of the second argument (tasks) of consume_work_joined."""
+    if method_node.name == "consume_work_joined":
+        if len(method_node.args.args) > 1:
+            tasks_arg = method_node.args.args[1]
+            if tasks_arg.annotation:
+                # Use _parse_annotation, expecting a List
+                inner_type_name, is_list, _, _ = _parse_annotation(
+                    tasks_arg.annotation, set()
+                )
+                if is_list and inner_type_name != "Any":
+                    return inner_type_name  # Return the inner type of the List
     return None
 
 
@@ -506,13 +524,6 @@ def extract_worker_details(
 
             if method_name in known_method_names:
                 details["methods"][method_name] = method_source
-
-                # Specifically parse consume_work input type hint
-                if method_name == "consume_work" and isinstance(node, ast.FunctionDef):
-                    input_type_name = _get_consume_work_input_type(node)
-                    if input_type_name:
-                        # Add to details, potentially overriding classVar if needed
-                        details["inputTypes"] = [input_type_name]
             else:  # Not a specifically handled method, add to consolidated source
                 details["otherMembersSource"] += method_source + "\n"
         # Could add handling for other node types like Import, If, etc. if needed
@@ -520,23 +531,67 @@ def extract_worker_details(
     # Clean up trailing newlines from the consolidated source
     details["otherMembersSource"] = details["otherMembersSource"].strip()
 
-    # --- Prioritize llm_input_type for LLM workers ---
+    # --- Determine Input Type based on Worker Type and available info ---
+    input_type = extract_input_type(class_def, worker_type, details)
+    if input_type:
+        details["inputTypes"] = [input_type]
+    elif "inputTypes" in details:  # Clean up if no type was found but key exists
+        del details["inputTypes"]
+
+    return details
+
+def extract_input_type(class_def: ast.ClassDef, worker_type: str, details: Dict[str, Any]) -> Optional[str]:
+    input_type_from_consume = None
+    input_type_from_joined = None
+    llm_input_type_val = None
+
+    # Re-iterate or access stored method nodes if needed to get types
+    # (This assumes methods are stored in details["methods"] - adjust if structure differs)
+    consume_work_node = next(
+        (
+            n
+            for n in class_def.body
+            if isinstance(n, ast.FunctionDef) and n.name == "consume_work"
+        ),
+        None,
+    )
+    if consume_work_node:
+        input_type_from_consume = _get_consume_work_input_type(consume_work_node)
+
+    consume_work_joined_node = next(
+        (
+            n
+            for n in class_def.body
+            if isinstance(n, ast.FunctionDef) and n.name == "consume_work_joined"
+        ),
+        None,
+    )
+    if consume_work_joined_node:
+        input_type_from_joined = _get_joined_consume_work_input_type(
+            consume_work_joined_node
+        )
+
     if worker_type in ("llmtaskworker", "cachedllmtaskworker"):
         llm_input_type_val = details["classVars"].get("llm_input_type")
-        # Check if it's a simple string or a Field object with a type
-        if isinstance(llm_input_type_val, str) and llm_input_type_val:
-            details["inputTypes"] = [llm_input_type_val]  # Overwrite with explicit type
-        elif (
+        # Handle string or Field dict
+        if (
             isinstance(llm_input_type_val, dict)
             and llm_input_type_val.get("isField")
             and llm_input_type_val.get("type")
         ):
-            details["inputTypes"] = [
-                llm_input_type_val["type"]
-            ]  # Overwrite with type from Field
-        # If llm_input_type is not found or has no usable value, the inputTypes from consume_work (if any) remain.
+            llm_input_type_val = llm_input_type_val["type"]
+        elif not isinstance(llm_input_type_val, str):
+            llm_input_type_val = None  # Ensure it's a string or None
 
-    return details
+    final_input_type = None
+    if worker_type == "joinedtaskworker" and input_type_from_joined:
+        final_input_type = input_type_from_joined
+    elif worker_type in ("llmtaskworker", "cachedllmtaskworker") and llm_input_type_val:
+        final_input_type = llm_input_type_val
+    elif input_type_from_consume:  # Fallback for all types
+        final_input_type = input_type_from_consume
+
+    return final_input_type
 
 
 def get_definitions_from_file(filename: str) -> Dict[str, List[Dict[str, Any]]]:

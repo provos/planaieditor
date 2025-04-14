@@ -310,3 +310,32 @@ class PrecedenceWorker(LLMTaskWorker):
     assert worker["inputTypes"] == ["LLMInputTypeTask"]
     # Also check that the classVar was parsed correctly
     assert worker["classVars"].get("llm_input_type") == "LLMInputTypeTask"
+
+
+def test_extract_joined_worker_input_type(temp_python_file):
+    """Test that input type is extracted from consume_work_joined for JoinedTaskWorker."""
+    code = """
+from planai import Task, JoinedTaskWorker
+from typing import List
+
+class SourceTask1(Task):
+    data1: int
+
+class SourceTask2(Task):
+    data2: str
+
+class MyJoinedWorker(JoinedTaskWorker):
+    def consume_work_joined(self, tasks: List[SourceTask2]):
+        print(f"Joined tasks: {tasks}")
+"""
+    file_path = temp_python_file(code)
+    definitions = get_definitions_from_file(str(file_path))
+
+    assert len(definitions["workers"]) == 1
+    worker = definitions["workers"][0]
+
+    assert worker["className"] == "MyJoinedWorker"
+    assert worker["workerType"] == "joinedtaskworker"
+    assert "inputTypes" in worker
+    # Verify it used the inner type from List[SourceTask2]
+    assert worker["inputTypes"] == ["SourceTask2"]
