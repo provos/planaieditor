@@ -249,18 +249,9 @@ def extract_task_fields(
             if not field_name:
                 continue  # Skip complex targets for now
 
-            # Debug output
-            print("--------------------------------")
-            print(ast.unparse(node))
-            print(ast.dump(node))
-
             field_type, is_list, literal_values, is_optional = _parse_annotation(
                 node.annotation, known_task_types
             )
-            print(f"field_type: {field_type}")
-            print(f"is_list: {is_list}")
-            print(f"literal_values: {literal_values}")
-            print(f"is_optional: {is_optional}")
 
             # Field is not required if:
             # 1. It has an Optional[] annotation
@@ -277,8 +268,6 @@ def extract_task_fields(
                 is_default_none = True
 
             is_required = not (is_optional or is_default_none)
-            print(f"is_required: {is_required}")
-            print("--------------------------------")
 
             description = _get_field_description(node)
 
@@ -365,6 +354,23 @@ def _parse_type_annotation_name(annotation: Optional[ast.expr]) -> Optional[str]
         return annotation.value
     # Add more complex parsing if needed (e.g., Subscript like Optional[Type])
     return ast.unparse(annotation)  # Fallback
+
+
+# --- Helper for Input Type Extraction ---
+
+
+def _get_consume_work_input_type(method_node: ast.FunctionDef) -> Optional[str]:
+    """Parses the type hint of the second argument (task) of consume_work."""
+    if method_node.name == "consume_work":
+        if len(method_node.args.args) > 1:  # Check if there is an arg after self
+            task_arg = method_node.args.args[1]
+            if task_arg.annotation:
+                # Use the existing helper to parse the annotation node
+                return _parse_type_annotation_name(task_arg.annotation)
+    return None
+
+
+# --- Worker Detail Extraction ---
 
 
 def extract_worker_details(
@@ -503,16 +509,10 @@ def extract_worker_details(
 
                 # Specifically parse consume_work input type hint
                 if method_name == "consume_work" and isinstance(node, ast.FunctionDef):
-                    if len(node.args.args) > 1:  # Check if there is an arg after self
-                        task_arg = node.args.args[1]
-                        if task_arg.annotation:
-                            # Use a simplified annotation parser here, assuming it's just a name or constant
-                            input_type_name = _parse_type_annotation_name(
-                                task_arg.annotation
-                            )
-                            if input_type_name:
-                                # Add to details, potentially overriding classVar if needed
-                                details["inputTypes"] = [input_type_name]
+                    input_type_name = _get_consume_work_input_type(node)
+                    if input_type_name:
+                        # Add to details, potentially overriding classVar if needed
+                        details["inputTypes"] = [input_type_name]
             else:  # Not a specifically handled method, add to consolidated source
                 details["otherMembersSource"] += method_source + "\n"
         # Could add handling for other node types like Import, If, etc. if needed

@@ -1,3 +1,4 @@
+import ast
 import os
 import sys
 from pathlib import Path
@@ -8,7 +9,7 @@ import pytest
 # Add app directory to path for import
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from app.patch import get_definitions_from_file
+from app.patch import _get_consume_work_input_type, get_definitions_from_file
 
 # --- Fixtures ---
 
@@ -229,3 +230,46 @@ class WorkerWithOtherStuff(TaskWorker):
     # Check that known members are NOT in other source
     assert "output_types" not in other_source
     assert "consume_work" not in other_source
+
+
+def test_get_consume_work_input_type_helper():
+    """Test the helper function for extracting consume_work input type."""
+    # Test case with valid hint
+    code_with_hint = """
+def consume_work(self, task: InputData):
+    pass
+"""
+    tree_with_hint = ast.parse(code_with_hint)
+    func_def_with_hint = tree_with_hint.body[0]
+    assert isinstance(func_def_with_hint, ast.FunctionDef)
+    assert _get_consume_work_input_type(func_def_with_hint) == "InputData"
+
+    # Test case without hint
+    code_no_hint = """
+def consume_work(self, task):
+    pass
+"""
+    tree_no_hint = ast.parse(code_no_hint)
+    func_def_no_hint = tree_no_hint.body[0]
+    assert isinstance(func_def_no_hint, ast.FunctionDef)
+    assert _get_consume_work_input_type(func_def_no_hint) is None
+
+    # Test case with different method name
+    code_wrong_name = """
+def process_task(self, task: InputData):
+    pass
+"""
+    tree_wrong_name = ast.parse(code_wrong_name)
+    func_def_wrong_name = tree_wrong_name.body[0]
+    assert isinstance(func_def_wrong_name, ast.FunctionDef)
+    assert _get_consume_work_input_type(func_def_wrong_name) is None
+
+    # Test case with no second argument
+    code_no_task_arg = """
+def consume_work(self):
+    pass
+"""
+    tree_no_task_arg = ast.parse(code_no_task_arg)
+    func_def_no_task_arg = tree_no_task_arg.body[0]
+    assert isinstance(func_def_no_task_arg, ast.FunctionDef)
+    assert _get_consume_work_input_type(func_def_no_task_arg) is None
