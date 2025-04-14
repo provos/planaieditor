@@ -363,7 +363,7 @@ export async function importPythonCode(
         });
 
         // --- Apply Edge Styling based on Source Task Type ---
-        const finalEdges = newEdges.map(svelteEdge => {
+        const styledEdges = newEdges.map(svelteEdge => {
             const sourceNode = newNodes.find(n => n.id === svelteEdge.source);
             if (!sourceNode) return svelteEdge; // Should not happen if ID was found before
 
@@ -399,7 +399,7 @@ export async function importPythonCode(
             success: true,
             message: `Imported ${importedTasks.length} Task(s) and ${importedWorkers.length} Worker(s).`,
             nodes: newNodes,      // Return original nodes (without layout positions yet)
-            edges: newEdges       // Return original edges
+            edges: styledEdges       // Return styled edges
         };
     } catch (error: any) {
         console.error('Error importing Python code:', error);
