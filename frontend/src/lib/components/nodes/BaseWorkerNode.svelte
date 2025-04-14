@@ -53,6 +53,7 @@
 	let typeError = $state('');
 	let availableTaskClasses = $state<string[]>([]);
 	let inferredInputTypes = $state<string[]>([]);
+	let manuallySelectedInputType = $state<string>('');
 	let currentOutputTypes = $state<string[]>([...(data.outputTypes || [])]);
 	let nodeRef: HTMLElement | null = $state(null);
 
@@ -98,10 +99,17 @@
 		};
 	});
 
+	$effect(() => {
+		if (manuallySelectedInputType && inferredInputTypes.length === 0) {
+			inferredInputTypes = [manuallySelectedInputType];
+			data.inputTypes = [manuallySelectedInputType];
+		}
+	});
+
 	// Function to calculate and update inferred input types
 	function updateInferredTypes(nodes: Node[], edges: Edge[]) {
 		if (!edges || !nodes) {
-			inferredInputTypes = [];
+			inferredInputTypes = manuallySelectedInputType ? [manuallySelectedInputType] : [];
 			return;
 		}
 
@@ -201,6 +209,14 @@
 		editingOutputType = null;
 		tempType = '';
 		typeError = '';
+	}
+
+	function setInputTypeManually(event: Event) {
+		const select = event.target as HTMLSelectElement;
+		if (select && select.value) {
+			manuallySelectedInputType = select.value;
+			select.value = ''; // Reset select
+		}
 	}
 
 	function addOutputTypeFromSelect(event: Event) {
@@ -313,6 +329,21 @@
 			<h3 class="text-2xs font-semibold text-gray-600">Input Types (Auto)</h3>
 			{#if inferredInputTypes.length === 0}
 				<div class="text-2xs py-0.5 italic text-gray-400">Connect Task nodes</div>
+
+				<!-- Input Type Select Dropdown (only shown when no edges are connected) -->
+				{#if availableTaskClasses.length > 0}
+					<div class="mb-1 mt-1">
+						<select
+							class="text-2xs w-full rounded border border-gray-200 px-1 py-0.5"
+							onchange={setInputTypeManually}
+						>
+							<option value="">Set input type manually...</option>
+							{#each availableTaskClasses as className}
+								<option value={className}>{className}</option>
+							{/each}
+						</select>
+					</div>
+				{/if}
 			{/if}
 			<div class="mt-1 space-y-1">
 				{#each inferredInputTypes as type (type)}
