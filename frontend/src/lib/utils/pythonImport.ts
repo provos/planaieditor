@@ -4,6 +4,7 @@ import { allClassNames } from '$lib/stores/classNameStore';
 import { get } from 'svelte/store';
 import ELK from 'elkjs/lib/elk.bundled.js';
 import { Position } from '@xyflow/svelte';
+import { getColorForType } from '$lib/utils/colorUtils';
 
 // Type for the structured error from the backend
 export interface BackendError {
@@ -363,8 +364,31 @@ export async function importPythonCode(
             }
         });
 
-        // --- Layout Graph using ELKjs --- //
-        // const { nodes: layoutedNodes, edges: layoutedEdges } = await layoutGraph(newNodes, newEdges);
+        // --- Apply Edge Styling based on Source Task Type ---
+        const finalEdges = newEdges.map(svelteEdge => {
+            const sourceNode = newNodes.find(n => n.id === svelteEdge.source);
+            if (!sourceNode) return svelteEdge; // Should not happen if ID was found before
+
+            let taskType: string | undefined = undefined;
+            if (sourceNode.type === 'task') {
+                taskType = (sourceNode.data as any)?.className;
+            } else if (svelteEdge.sourceHandle && svelteEdge.sourceHandle.startsWith('output-')) {
+                taskType = svelteEdge.sourceHandle.split('-')[1];
+            } else if (sourceNode.data && Array.isArray(sourceNode.data.outputTypes) && sourceNode.data.outputTypes.length === 1) {
+                taskType = sourceNode.data.outputTypes[0];
+            }
+
+            let styleString = 'stroke-width:3;'; // Default thickness
+            if (taskType) {
+                const color = getColorForType(taskType);
+                styleString += `stroke:${color};`; // Add color if type found
+            }
+
+            return {
+                ...svelteEdge,
+                style: styleString
+            };
+        });
 
         // Update the taskClassNamesStore with the newly imported names
         const importedTaskNames = new Set(importedTasks.map((task) => task.className));
