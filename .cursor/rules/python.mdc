@@ -10,6 +10,10 @@ alwaysApply: false
 2. Separate your app into Blueprints for logical groupings of endpoints
 3. Implement the application factory pattern to create the Flask app with different configurations
 
+## Python Practices
+1. Use type hints for everything
+2. Use pytest for writing tests
+
 ## Flask Configuration
 1. Store configurations in separate files for different environments (dev, test, prod)
 2. Never hardcode sensitive values - use environment variables
