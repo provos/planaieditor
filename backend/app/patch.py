@@ -643,7 +643,11 @@ def get_worker_assignments(
 
 
 def parse_edge_statement(
-    stmt: ast.stmt, worker_assignments: Dict[str, str]
+    stmt: ast.stmt,
+    worker_assignments: Dict[str, str],
+    worker_details_map: Dict[
+        str, Dict[str, Any]
+    ],  # Map className to its full details dict
 ) -> List[Dict[str, str]]:
     """Parses a statement to extract PlanAI graph edges."""
     edges = []
@@ -695,7 +699,12 @@ def parse_edge_statement(
             source_class = worker_assignments.get(source_var)
             target_class = worker_assignments.get(target_var)
             if source_class and target_class:
-                edges.append({"source": source_class, "target": target_class})
+                edge_info = {"source": source_class, "target": target_class}
+                # Add target input type if available
+                target_details = worker_details_map.get(target_class)
+                if target_details and target_details.get("inputTypes"):
+                    edge_info["targetInputType"] = target_details["inputTypes"][0]
+                edges.append(edge_info)
             last_node_var = target_var  # set_dependency result flows from target
 
         elif method == "next" and len(args) == 1 and isinstance(args[0], ast.Name):
@@ -705,7 +714,12 @@ def parse_edge_statement(
                 source_class = worker_assignments.get(source_var)
                 target_class = worker_assignments.get(target_var)
                 if source_class and target_class:
-                    edges.append({"source": source_class, "target": target_class})
+                    edge_info = {"source": source_class, "target": target_class}
+                    # Add target input type if available
+                    target_details = worker_details_map.get(target_class)
+                    if target_details and target_details.get("inputTypes"):
+                        edge_info["targetInputType"] = target_details["inputTypes"][0]
+                    edges.append(edge_info)
                 last_node_var = target_var  # next result flows from its argument
             else:
                 last_node_var = None  # Break chain if source is lost
@@ -764,6 +778,7 @@ def get_definitions_from_file(filename: str) -> Dict[str, List[Dict[str, Any]]]:
         print(f"Found graph builder function: {graph_func_node.name}")
         # Get all worker class names defined in the file
         worker_class_names = {w["className"] for w in worker_results}
+        worker_details_map = {w["className"]: w for w in worker_results}  # Create map
         assignments = get_worker_assignments(graph_func_node, worker_class_names)
         print(f"Worker assignments: {assignments}")
 
@@ -773,7 +788,7 @@ def get_definitions_from_file(filename: str) -> Dict[str, List[Dict[str, Any]]]:
             worker["variableName"] = var_to_class.get(worker["className"])
 
         for stmt in graph_func_node.body:
-            edges.extend(parse_edge_statement(stmt, assignments))
+            edges.extend(parse_edge_statement(stmt, assignments, worker_details_map))
         print(f"Extracted edges: {edges}")
     else:
         print("Warning: Could not find a graph builder function.")

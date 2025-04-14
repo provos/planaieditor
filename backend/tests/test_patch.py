@@ -410,15 +410,21 @@ def build_my_graph():
     assert len(edges) == 4
     # Check for specific edges (order might vary depending on statement order)
     expected_edges = [
-        {"source": "Worker1", "target": "Worker2"},  # from graph.set_dependency(w1, w2)
-        {"source": "Worker2", "target": "Worker3"},  # from graph.set_dependency(w2, w3)
-        {"source": "Worker3", "target": "Worker4"},  # from .next(w4)
-        {"source": "Worker2", "target": "Worker5"},  # from w2.next(w5)
+        # targetInputType comes from the type hint in the target worker's consume_work
+        {"source": "Worker1", "target": "Worker2", "targetInputType": "TaskA"},
+        {"source": "Worker2", "target": "Worker3", "targetInputType": "TaskB"},
+        {"source": "Worker3", "target": "Worker4", "targetInputType": "TaskC"},
+        {"source": "Worker2", "target": "Worker5", "targetInputType": "TaskB"},
     ]
 
     # Check if all expected edges are present
     for expected in expected_edges:
-        assert any(
-            e["source"] == expected["source"] and e["target"] == expected["target"]
-            for e in edges
-        ), f"Expected edge {expected} not found in {edges}"
+        found = False
+        for e in edges:
+            if e["source"] == expected["source"] and e["target"] == expected["target"]:
+                assert e.get("targetInputType") == expected.get(
+                    "targetInputType"
+                ), f"Edge {expected} found, but targetInputType mismatch: expected {expected.get('targetInputType')}, got {e.get('targetInputType')}"
+                found = True
+                break
+        assert found, f"Expected edge {expected} not found in {edges}"
