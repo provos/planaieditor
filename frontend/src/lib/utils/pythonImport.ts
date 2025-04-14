@@ -81,6 +81,7 @@ const elkOptions = {
     'elk.layered.spacing.nodeNodeBetweenLayers': '120',
     'elk.spacing.nodeNode': '100',
     'elk.layered.cycleBreaking.strategy': 'GREEDY',
+    'elk.edgeRouting': 'SPLINES',
     'elk.direction': 'DOWN'
 };
 
