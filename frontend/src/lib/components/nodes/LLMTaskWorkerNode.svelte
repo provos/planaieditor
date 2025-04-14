@@ -7,6 +7,7 @@
 	import Trash from 'phosphor-svelte/lib/Trash';
 	import { useUpdateNodeInternals } from '@xyflow/svelte';
 	import { tick } from 'svelte';
+	import type { Action } from 'svelte/action';
 
 	// Extend the base data interface
 	export interface LLMWorkerData extends BaseWorkerData {
@@ -130,6 +131,38 @@
 		await tick();
 		updateNodeInternals(id);
 	}
+
+	// Action to detect clicks outside an element
+	const clickOutside: Action<HTMLElement, () => void> = (node, callback) => {
+		const handleClick = (event: MouseEvent) => {
+			if (
+				node &&
+				!node.contains(event.target as Node) &&
+				!event.defaultPrevented &&
+				callback // Ensure callback exists
+			) {
+				// Call the callback directly
+				callback();
+			}
+		};
+
+		// Use capture phase to catch clicks even if event propagation is stopped
+		document.addEventListener('click', handleClick, true);
+
+		return {
+			destroy() {
+				document.removeEventListener('click', handleClick, true);
+			}
+		};
+	};
+
+	// Close dropdown on Escape key press when trigger has focus
+	function handleTriggerKeydown(event: KeyboardEvent) {
+		if (event.key === 'Escape' && showLLMOutputTypeDropdown) {
+			showLLMOutputTypeDropdown = false;
+			event.stopPropagation();
+		}
+	}
 </script>
 
 <BaseWorkerNode
@@ -154,6 +187,7 @@
 						onclick={toggleLLMOutputTypeDropdown}
 						role="button"
 						tabindex="0"
+						onkeydown={handleTriggerKeydown}
 					>
 						<span class="font-mono">{currentOutputType}</span>
 						<button
@@ -174,6 +208,7 @@
 						onclick={toggleLLMOutputTypeDropdown}
 						role="button"
 						tabindex="0"
+						onkeydown={handleTriggerKeydown}
 					>
 						Select LLM output type
 					</div>
@@ -185,7 +220,10 @@
 			{/if}
 
 			{#if showLLMOutputTypeDropdown}
-				<div class="absolute z-10 mt-1 w-full rounded border border-gray-200 bg-white shadow-md">
+				<div
+					class="absolute z-10 mt-1 w-full rounded border border-gray-200 bg-white shadow-md"
+					use:clickOutside={() => (showLLMOutputTypeDropdown = false)}
+				>
 					{#each availableTaskClasses as className}
 						<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
 						<div

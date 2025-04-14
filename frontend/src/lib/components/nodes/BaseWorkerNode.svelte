@@ -208,12 +208,24 @@
 	function deleteOutputType(index: number) {
 		data.outputTypes = data.outputTypes.filter((_: string, i: number) => i !== index);
 		currentOutputTypes = [...data.outputTypes];
+		typeError = '';
 	}
 
 	function cancelTypeEditing() {
 		editingOutputType = null;
 		tempType = '';
 		typeError = '';
+	}
+
+	// Keydown handler specifically for the output type edit input
+	function handleTypeKeydown(event: KeyboardEvent) {
+		if (event.key === 'Enter') {
+			saveOutputType();
+		} else if (event.key === 'Escape') {
+			cancelTypeEditing();
+			// Prevent the event from bubbling up further
+			event.stopPropagation();
+		}
 	}
 
 	function setInputTypeManually(event: Event) {
@@ -415,7 +427,7 @@
 								<input
 									type="text"
 									bind:value={tempType}
-									onkeydown={handleNameKeydown}
+									onkeydown={handleTypeKeydown}
 									class="text-2xs w-full rounded border border-gray-200 px-1 py-0.5 {typeError
 										? 'border-red-500'
 										: ''}"
