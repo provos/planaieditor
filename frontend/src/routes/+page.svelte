@@ -521,14 +521,17 @@ Analyze the following information and provide a response.`,
 		}
 		const targetNodeData = targetNode.data as BaseWorkerData;
 		// Get source className based on node type
-		const sourceClassName =
-			sourceNode.type === 'task'
-				? (sourceNode.data as unknown as NodeData).className
-				: "invalid-ignore-for-now"
+		let sourceClassName = null;
+		if (sourceNode.type === 'task') {
+			sourceClassName = (sourceNode.data as unknown as NodeData).className;
+		} else if (connection.sourceHandle) {
+			sourceClassName = connection.sourceHandle.split('-')[1];
+		}
+
 		if (
 			targetNode.type !== 'mergedtaskworker' &&
 			targetNodeData.inputTypes.length > 0 &&
-			!targetNodeData.inputTypes.includes(sourceClassName)
+			(!sourceClassName || !targetNodeData.inputTypes.includes(sourceClassName))
 		) {
 			// all workers but merged task workers have only one input type
 			return false;

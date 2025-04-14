@@ -53,7 +53,7 @@
 	let typeError = $state('');
 	let availableTaskClasses = $state<string[]>([]);
 	let inferredInputTypes = $state<string[]>([]);
-	let manuallySelectedInputType = $state<string>('');
+	let manuallySelectedInputType = $state<string>(data.inputTypes.length > 0 ? data.inputTypes[0] : '');
 	let currentOutputTypes = $state<string[]>([...(data.outputTypes || [])]);
 	let nodeRef: HTMLElement | null = $state(null);
 

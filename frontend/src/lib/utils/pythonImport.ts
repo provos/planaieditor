@@ -212,9 +212,6 @@ export async function importPythonCode(
                     break;
                 case 'llmtaskworker':
                 case 'cachedllmtaskworker': // Treat similarly for basic import
-                    nodeData.inputTypes = worker.classVars.llm_input_type
-                        ? [worker.classVars.llm_input_type]
-                        : [];
                     nodeData.prompt = worker.classVars.prompt || '# No prompt found';
                     nodeData.systemPrompt =
                         worker.classVars.system_prompt || worker.classVars.system || '';
