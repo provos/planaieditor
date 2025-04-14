@@ -664,7 +664,7 @@ Analyze the following information and provide a response.`,
 			ondragover={onDragOver}
 			onclick={onPaneClick}
 			{isValidConnection}
-			defaultEdgeOptions={{ type: 'smoothstep' }}
+			defaultEdgeOptions={{ type: 'smoothstep', style: { strokeWidth: 3 } }}
 			class="flex-grow"
 			fitView
 			nodesDraggable
