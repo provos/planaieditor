@@ -53,7 +53,9 @@
 	let typeError = $state('');
 	let availableTaskClasses = $state<string[]>([]);
 	let inferredInputTypes = $state<string[]>([]);
-	let manuallySelectedInputType = $state<string>(data.inputTypes.length > 0 ? data.inputTypes[0] : '');
+	let manuallySelectedInputType = $state<string>(
+		data.inputTypes.length > 0 ? data.inputTypes[0] : ''
+	);
 	let currentOutputTypes = $state<string[]>([...(data.outputTypes || [])]);
 	let nodeRef: HTMLElement | null = $state(null);
 
@@ -352,7 +354,7 @@
 				{/if}
 			{/if}
 			<div class="mt-1 space-y-1">
-				{#each inferredInputTypes as type (type)}
+				{#each inferredInputTypes as type, index (type + '-' + index)}
 					{@const color = getColorForType(type)}
 					<div
 						class="text-2xs group flex items-center rounded px-1 py-0.5"
