@@ -452,11 +452,6 @@
 			</div>
 		</div>
 
-		<!-- Placeholder for derived component content -->
-		<div class="min-h-0 flex-grow">
-			{@render children?.()}
-		</div>
-
 		<!-- Other Members Section -->
 		{#if data.otherMembersSource}
 			<div class="mt-3 flex-none border-t border-gray-200 p-1.5">
@@ -468,6 +463,16 @@
 					onUpdate={handleOtherMembersSourceUpdate}
 				/>
 			</div>
+		{/if}
+
+		<!-- Scrollable Content Area -->
+		<div class="min-h-0 flex-grow overflow-auto">
+			<!-- Placeholder for derived component content -->
+			<div>
+				{@render children?.()}
+			</div>
+
+			<!-- Custom Methods -->
 			{#if customMethods.length > 0}
 				<div class="mt-3 border-t border-gray-200 pt-1.5">
 					<h4 class="text-2xs mb-1 font-medium text-gray-500">Custom Methods</h4>
@@ -481,7 +486,7 @@
 					{/each}
 				</div>
 			{/if}
-		{/if}
+		</div>
 
 		<!-- Error Display Area -->
 		{#if data.error}
