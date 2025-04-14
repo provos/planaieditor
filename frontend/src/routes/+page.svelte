@@ -557,8 +557,6 @@ Analyze the following information and provide a response.`,
 
 			// Use requestAnimationFrame to fitView after the DOM updates
 			requestAnimationFrame(() => {
-				// Get fitView from the hook again within this scope
-				const { fitView } = useSvelteFlow();
 				fitView({ padding: 0.1 }); // Add padding
 			});
 			console.log('ELK layout applied.');
