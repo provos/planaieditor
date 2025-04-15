@@ -1,4 +1,5 @@
 # Updated function to generate PlanAI Python code from graph data
+import json
 import os
 import re
 from pathlib import Path
@@ -41,38 +42,6 @@ def return_code_snippet(name):
         return f.read() + "\n\n"
 
 
-def create_llm_worker_code(data: dict, input_type: str) -> str:
-    """
-    Creates the code for an LLM worker based on the provided data.
-    """
-    workers = []
-    output_types = data.get("outputTypes", [])
-    workers.append(f"    output_types: List[Type[Task]] = [{', '.join(output_types)}]")
-    workers.append(f"    llm_input_type: Type[Task] = {input_type}")
-    system_prompt = data.get("systemPrompt", "You are a helpful assistant.")
-    prompt = data.get("prompt", "# Define your prompt here")
-    workers.append(f'    system_prompt: str = """{dedent(system_prompt)}"""')
-    workers.append(f'    prompt: str = """{dedent(prompt)}"""')
-
-    enabled_functions_definitions = {
-        "extraValidation": "def extra_validation(self, task: Task) -> Optional[str]:",
-        "formatPrompt": "def format_prompt(self, task: Task) -> str:",
-        "preProcess": "def pre_process(self, task: Task) -> Task:",
-        "postProcess": "def post_process(self, task: Task):",
-    }
-
-    enabled_functions = data.get("enabledFunctions", {})
-    for key, value in enabled_functions.items():
-        if not value:
-            continue
-        workers.append(f"    {enabled_functions_definitions[key]}")
-        body = data.get(key, "")
-        workers.append(indent(dedent(body), " " * 8))
-        workers.append("\n")
-
-    return "\n".join(workers)
-
-
 def generate_python_module(
     graph_data: dict,
 ) -> Tuple[Optional[str], Optional[str], Optional[dict]]:
@@ -93,7 +62,7 @@ def generate_python_module(
     edges = graph_data.get("edges", [])
 
     print("--------------------------------")
-    print(graph_data)
+    print(json.dumps(graph_data, indent=4))
 
     # --- Code Generation Start ---
 
@@ -110,7 +79,7 @@ def generate_python_module(
         for node in task_nodes:
             node_id = node["id"]
             data = node.get("data", {})
-            class_name = data.get("className", f"Task_{node_id}")
+            class_name = data.get("className")
             if not is_valid_python_class_name(class_name):
                 raise ValueError(f"Invalid class name: {class_name}")
             task_class_names[node_id] = class_name
