@@ -37,18 +37,10 @@ def create_graph(
     graph = Graph(name="GeneratedPlan")
 
     # --- Worker Instantiation with Error Handling ---
-    workers_dict: Dict[str, TaskWorker] = {}
-    # Keep track of mapping from generated instance name back to original frontend node ID
-    instance_to_node_id: Dict[str, str] = {}
+
+    workers_dict = {}
 
     # {worker_instantiation}
-
-    # Add graph workers *after* instantiation block
-    all_worker_instances = list(workers_dict.values())
-    if all_worker_instances:  # Only add if any were successful
-        graph.add_workers(*all_worker_instances)
-    else:
-        raise ValueError("No worker instances were successfully created.")
 
     # {dependency_setup}
 

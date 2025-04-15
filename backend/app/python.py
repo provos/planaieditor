@@ -215,7 +215,14 @@ def generate_python_module(
     worker_nodes = [
         n
         for n in nodes
-        if n.get("type") in ("taskworker", "llmtaskworker", "joinedtaskworker")
+        if n.get("type")
+        in (
+            "taskworker",
+            "llmtaskworker",
+            "joinedtaskworker",
+            "cachedtaskworker",
+            "cachedllmtaskworker",
+        )
     ]
     worker_classes = {}  # Map node ID to worker class name
     # Instance names will be generated later
@@ -233,7 +240,7 @@ def generate_python_module(
 
             base_class = "TaskWorker"
             extra_args = ""
-            if node_type == "llmtaskworker":
+            if node_type == "llmtaskworker" or node_type == "cachedllmtaskworker":
                 base_class = "LLMTaskWorker"
                 # TODO: Map llm_input_type, llm_output_type if specified in data
                 # extra_args = ", llm_input_type=..., llm_output_type=..."
@@ -269,7 +276,7 @@ def generate_python_module(
                     },
                 )
             input_type = get_task_class_name(data.get("inputTypes")[0])
-            if node_type == "llmtaskworker":
+            if node_type == "llmtaskworker" or node_type == "cachedllmtaskworker":
                 workers.append(create_llm_worker_code(data, input_type))
 
             # Consume Work Method
@@ -283,14 +290,16 @@ def generate_python_module(
     # 4. Graph Creation Function
     worker_setup = []
 
+    worker_names = []
+
     if not worker_classes:
         worker_setup.append("# No workers to instantiate")
     else:
         for node_id, worker_class_name in worker_classes.items():
             worker_node = next((n for n in nodes if n["id"] == node_id), None)
             if worker_node:
-                instance_name = worker_class_name[0].lower() + worker_class_name[1:]
-
+                instance_name = worker_to_instance_name(worker_class_name)
+                worker_names.append(instance_name)
                 # Basic LLM assignment - needs refinement based on node config/needs
                 llm_arg = ""
                 if worker_node["type"] == "llmtaskworker":
@@ -306,12 +315,7 @@ def generate_python_module(
                 worker_setup.append(
                     f"  {instance_name} = {worker_class_name}({llm_arg})"
                 )
-                worker_setup.append(
-                    f"  workers_dict['{instance_name}'] = {instance_name}"
-                )
-                worker_setup.append(
-                    f"  instance_to_node_id['{instance_name}'] = '{node_id}'"
-                )  # Map generated instance name to original node ID
+                worker_setup.append(f"  workers_dict['{instance_name}'] = {instance_name}")
                 worker_setup.append("except Exception as e:")
                 # Format error JSON including the worker_class_name which failed
                 # We construct the Python code that will *create* the dictionary string
@@ -328,6 +332,8 @@ def generate_python_module(
                 )  # Marker end
                 worker_setup.append("  sys.exit(1)")  # Exit after reporting error
 
+    worker_setup.append(f"graph.add_workers([{', '.join(worker_names)}])")
+
     dep_code_lines = []
 
     # --- Generate Code for Dependencies and Entry Point *inside* create_graph ---
@@ -339,32 +345,16 @@ def generate_python_module(
             source_node_id = edge.get("source")
             target_node_id = edge.get("target")
 
-            # Find the instance names corresponding to these node IDs
-            # This check happens *at runtime* inside the generated code
-            dep_code_lines.append(
-                f"source_inst_name = next((inst for inst, node_id in instance_to_node_id.items() if node_id == '{source_node_id}'), None)"
-            )
-            dep_code_lines.append(
-                f"target_inst_name = next((inst for inst, node_id in instance_to_node_id.items() if node_id == '{target_node_id}'), None)"
-            )
-            dep_code_lines.append(
-                "if source_inst_name in workers_dict and target_inst_name in workers_dict:"
-            )
-            # Assuming simple one-to-one dependencies for now, not chaining .next()
-            dep_code_lines.append("  try:")  # Add try-except for set_dependency
-            dep_code_lines.append(
-                "    graph.set_dependency(workers_dict[source_inst_name], workers_dict[target_inst_name])"
-            )
-            dep_code_lines.append("  except Exception as e:")
-            dep_code_lines.append(
-                '    print(f"Warning: Failed to set dependency {{source_inst_name}} -> {{target_inst_name}}: {{e}}")'
-            )
-            dep_code_lines.append(
-                "elif source_inst_name or target_inst_name:"
-            )  # Only print warning if at least one was expected
-            dep_code_lines.append(
-                f'  print(f"Warning: Skipping edge {source_node_id} -> {target_node_id} due to failed worker instantiation.")'
-            )
+            source_node = next((n for n in worker_nodes if n["id"] == source_node_id), None)
+            target_node = next((n for n in worker_nodes if n["id"] == target_node_id), None)
+
+            if source_node and target_node:
+                source_inst_name = worker_to_instance_name(worker_classes[source_node_id])
+                target_inst_name = worker_to_instance_name(worker_classes[target_node_id])
+
+                dep_code_lines.append(
+                    f"  graph.set_dependency({source_inst_name}, {target_inst_name})"
+                )
 
     final_code = custom_format(
         code_to_format,
@@ -399,3 +389,7 @@ def generate_python_module(
                 },
             },
         )
+
+
+def worker_to_instance_name(worker_class_name: str) -> str:
+    return worker_class_name.lower() + "_worker"
