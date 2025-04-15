@@ -12,6 +12,7 @@
 	let { id, data } = $props<{
 		id: string;
 		data: TaskWorkerData;
+		isCached?: boolean;
 	}>();
 
 	const store = useStore(); // Access the store
@@ -90,7 +91,7 @@
 	}
 </script>
 
-<BaseWorkerNode {id} {data} defaultName="TaskWorker">
+<BaseWorkerNode {id} {data} defaultName="TaskWorker" isCached={data.isCached}>
 	<div class="flex min-h-0 flex-grow flex-col overflow-hidden p-1">
 		{#if data.methods?.consume_work}
 			<EditableCodeSection

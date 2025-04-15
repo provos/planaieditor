@@ -200,6 +200,7 @@
 	additionalOutputType={currentOutputType}
 	defaultName="LLMTaskWorker"
 	minHeight={400}
+	isCached={data.isCached}
 >
 	<!-- LLM Output Type Section -->
 	<div class="mb-2 flex-none">
