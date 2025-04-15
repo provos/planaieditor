@@ -12,7 +12,7 @@
 	// Extend the base data interface
 	export interface LLMWorkerData extends BaseWorkerData {
 		prompt: string;
-		systemPrompt: string;
+		system_prompt: string;
 		llm_output_type?: string;
 		extraValidation: string;
 		formatPrompt: string;
@@ -47,8 +47,8 @@
 	if (!data.prompt) {
 		data.prompt = '';
 	}
-	if (!data.systemPrompt) {
-		data.systemPrompt = '';
+	if (!data.system_prompt) {
+		data.system_prompt = '';
 	}
 	if (!data.llm_output_type) {
 		data.llm_output_type = '';
@@ -137,7 +137,7 @@
 	}
 
 	function handleSystemPromptUpdate(newCode: string) {
-		data.systemPrompt = newCode;
+		data.system_prompt = newCode;
 	}
 
 	// LLM Output Type functions
@@ -298,7 +298,7 @@
 		/>
 		<EditableCodeSection
 			title="System Prompt"
-			code={data.systemPrompt}
+			code={data.system_prompt}
 			language="markdown"
 			onUpdate={handleSystemPromptUpdate}
 			onCollapseToggle={handleCollapse}

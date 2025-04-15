@@ -45,6 +45,28 @@ export function exportPythonCode(
         }
     });
 
+    const knownClassVars = [
+        'prompt',
+        'system_prompt',
+        'use_xml',
+        'debug_mode',
+        'llm_input_type',
+        'llm_output_type',
+        'join_type',
+        'output_types'
+    ];
+    nodes.forEach(node => {
+        if (!node.data.classVars) {
+            node.data.classVars = {};
+        }
+        for (const key of knownClassVars) {
+            if (node.data[key] !== undefined) {
+                (node.data.classVars as Record<string, any>)[key] = node.data[key];
+                delete node.data[key];
+            }
+        }
+    });
+
     // Transform edges to use class names instead of node IDs
     const exportedEdges: Array<{ source: string; target: string }> = edges
         .map(edge => {

@@ -241,7 +241,7 @@
 					outputTypes: [],
 					prompt: `# Process the task using an LLM
 Analyze the following information and provide a response.`,
-					systemPrompt: `You are a helpful task processing assistant.`,
+					system_prompt: `You are a helpful task processing assistant.`,
 					extraValidation: 'return None',
 					formatPrompt: 'return self.prompt',
 					preProcess: 'return task',
