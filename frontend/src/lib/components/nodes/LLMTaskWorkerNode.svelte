@@ -92,6 +92,10 @@
 		data.debug_mode = false;
 	}
 
+	// Local state for boolean flags
+	let useXml = $state(data.use_xml);
+	let debugMode = $state(data.debug_mode);
+
 	// Subscribe to the taskClassNamesStore for output type selection
 	$effect(() => {
 		const unsubClassNames = taskClassNamesStore.subscribe((taskClasses) => {
@@ -111,6 +115,20 @@
 	// Sync local state with data object
 	$effect(() => {
 		currentOutputType = data.llm_output_type || '';
+	});
+
+	// Sync local checkbox state back to data prop
+	$effect(() => {
+		data.use_xml = useXml;
+	});
+	$effect(() => {
+		data.debug_mode = debugMode;
+	});
+
+	// Sync data prop changes to local state (e.g., on import)
+	$effect(() => {
+		useXml = data.use_xml;
+		debugMode = data.debug_mode;
 	});
 
 	// Handle code updates
@@ -258,11 +276,11 @@
 		<h3 class="text-2xs mb-1 font-semibold text-gray-600">Settings</h3>
 		<div class="flex items-center space-x-4">
 			<label class="text-2xs flex items-center">
-				<input type="checkbox" class="mr-1 h-2.5 w-2.5" bind:checked={data.use_xml} />
+				<input type="checkbox" class="mr-1 h-2.5 w-2.5" bind:checked={useXml} />
 				Use XML Output
 			</label>
 			<label class="text-2xs flex items-center">
-				<input type="checkbox" class="mr-1 h-2.5 w-2.5" bind:checked={data.debug_mode} />
+				<input type="checkbox" class="mr-1 h-2.5 w-2.5" bind:checked={debugMode} />
 				Debug Mode
 			</label>
 		</div>
