@@ -36,6 +36,15 @@ export function exportPythonCode(
         }
     });
 
+    // replace workerName with className in nodes
+    nodes.forEach(node => {
+        const data = node.data as { className?: string; workerName?: string }; // Type assertion
+        if (data?.workerName) {
+            data.className = data.workerName;
+            delete data.workerName;
+        }
+    });
+
     // Transform edges to use class names instead of node IDs
     const exportedEdges: Array<{ source: string; target: string }> = edges
         .map(edge => {

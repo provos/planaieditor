@@ -233,10 +233,7 @@ def generate_python_module(
             node_id = node["id"]
             node_type = node["type"]
             data = node.get("data", {})
-            # Prioritize className (from parsed data), then workerName, then fallback
-            worker_name = data.get("className") or data.get(
-                "workerName", f"Worker_{node_id}"
-            )
+            worker_name = data.get("className")
             if not is_valid_python_class_name(worker_name):
                 raise ValueError(f"Invalid worker name: {worker_name}")
             worker_classes[node_id] = worker_name  # Store class name
