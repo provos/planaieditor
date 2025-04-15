@@ -34,26 +34,26 @@
 		data.join_type = ''; // Initialize if not present
 	}
 
-	const store = useStore(); // Access the store
+	const { nodes, edges } = useStore(); // Access the nodes and edges stores
 	const updateNodeInternals = useUpdateNodeInternals(); // Initialize the hook
 
 	// State for editing join_type
 	let availableWorkerClasses = $state<string[]>([]);
 	let joinedInputType = $state<string>(''); // Derived input type for consume_work_joined
 
+	// Local state for join_type
+	let joinType = $state(data.join_type);
+
 	// Combine hardcoded option with dynamic ones
-	let allJoinTypeOptions = $derived([
-		'InitialTaskWorker',
-		...availableWorkerClasses
-	]);
+	let allJoinTypeOptions = $derived(['InitialTaskWorker', ...availableWorkerClasses]);
 
 	// Get available worker names from the store
 	$effect(() => {
 		const unsub = allClassNames.subscribe((nameMap) => {
 			const workers: string[] = [];
-			const currentNodes = get(store.nodes); // Get current nodes
+			const currentNodes = get(nodes); // Get current nodes directly from the nodes store
 			nameMap.forEach((name, nodeId) => {
-				const node = currentNodes.find((n) => n.id === nodeId);
+				const node = currentNodes.find((n: Node) => n.id === nodeId); // Add type annotation
 				// Check if it's a worker type (excluding self) and has a name
 				if (node && node.type !== 'task' && node.id !== id && name) {
 					workers.push(name);
@@ -69,8 +69,8 @@
 		let currentNodes: Node[] = [];
 		let currentEdges: Edge[] = [];
 
-		const unsubNodes = store.nodes.subscribe((nodesValue) => (currentNodes = nodesValue || []));
-		const unsubEdges = store.edges.subscribe((edgesValue) => (currentEdges = edgesValue || []));
+		const unsubNodes = nodes.subscribe((nodesValue: Node[]) => (currentNodes = nodesValue || [])); // Use nodes store directly
+		const unsubEdges = edges.subscribe((edgesValue: Edge[]) => (currentEdges = edgesValue || [])); // Use edges store directly
 
 		const incomingEdges = currentEdges.filter((edge: Edge) => edge.target === id);
 		const sourceNodeIds = incomingEdges.map((edge: Edge) => edge.source);
@@ -97,16 +97,19 @@
 		};
 	});
 
+	// Sync local joinType state back to data prop
+	$effect(() => {
+		data.join_type = joinType;
+	});
+
+	// Sync data prop changes to local state (e.g., on import)
+	$effect(() => {
+		joinType = data.join_type;
+	});
+
 	// Update code in the data object
 	function handleCodeUpdate(newCode: string) {
 		data.methods.consume_work_joined = newCode;
-	}
-
-	function selectJoinType(event: Event) {
-		const select = event.target as HTMLSelectElement;
-		if (select.value !== undefined) { // Check if a value is selected (even empty string)
-			data.join_type = select.value;
-		}
 	}
 
 	// Compute the title for the code section
@@ -127,8 +130,7 @@
 		<!-- Always visible dropdown -->
 		<select
 			class="text-2xs mt-1 w-full rounded border border-gray-200 px-1 py-0.5"
-			bind:value={data.join_type}
-			onchange={selectJoinType}
+			bind:value={joinType}
 		>
 			<option value="">Select join type...</option>
 			{#each allJoinTypeOptions as workerName (workerName)}
