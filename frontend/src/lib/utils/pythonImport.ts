@@ -297,6 +297,9 @@ export async function importPythonCode(
                     nodeData.prompt = worker.classVars.prompt || '# No prompt found';
                     nodeData.systemPrompt =
                         worker.classVars.system_prompt || worker.classVars.system || '';
+                    // Map boolean flags directly from classVars (parser still puts them there)
+                    nodeData.use_xml = worker.classVars.use_xml || false;
+                    nodeData.debug_mode = worker.classVars.debug_mode || false;
                     break;
                 case 'joinedtaskworker':
                     // Map the join_type from class variables

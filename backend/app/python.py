@@ -255,55 +255,68 @@ def generate_python_module(
             workers.append(f"\nclass {worker_name}({base_class}):")
             class_body = []  # Store lines for the current class body
 
-            # --- Process Class Variables ---
-            class_vars = data.get("classVars", {})
-            if class_vars:
-                for var_name, var_value in class_vars.items():
-                    if var_value is None:  # Skip None values for now
-                        continue
-                    # Handle specific known variables formatting
-                    if var_name == "output_types" and isinstance(var_value, list):
-                        types_str = ", ".join(get_task_class_name(t) for t in var_value)
-                        class_body.append(
-                            f"    output_types: List[Type[Task]] = [{types_str}]"
-                        )
-                    elif var_name == "llm_input_type" and isinstance(var_value, str):
-                        try:
-                            input_type = get_task_class_name(var_value)
-                            class_body.append(
-                                f"    llm_input_type: Type[Task] = {input_type}"
-                            )
-                        except ValueError:
-                            print(
-                                f"Warning: Could not find Task definition for llm_input_type '{var_value}' in {worker_name}. Skipping."
-                            )
-                    elif var_name == "llm_output_type" and isinstance(var_value, str):
-                        try:
-                            output_type = get_task_class_name(var_value)
-                            class_body.append(
-                                f"    llm_output_type: Type[Task] = {output_type}"
-                            )
-                        except ValueError:
-                            print(
-                                f"Warning: Could not find Task definition for llm_output_type '{var_value}' in {worker_name}. Skipping."
-                            )
-                    elif var_name == "join_type" and isinstance(var_value, str):
-                        # We assume join_type refers to another Worker class name
-                        class_body.append(
-                            f"    join_type: Type[TaskWorker] = {var_value}"
-                        )
-                    elif var_name == "prompt" and isinstance(var_value, str):
-                        dedented_prompt = dedent(var_value).strip()
-                        class_body.append(f'    prompt: str = """{dedented_prompt}"""')
-                    elif var_name == "system_prompt" and isinstance(var_value, str):
-                        dedented_prompt = dedent(var_value).strip()
-                        class_body.append(
-                            f'    system_prompt: str = """{dedented_prompt}"""'
-                        )
-                    else:
-                        # Generic handling for other vars (bool, int, str)
-                        # Use repr() to get a Python representation (e.g., True, 123, 'hello')
-                        class_body.append(f"    {var_name} = {repr(var_value)}")
+            # --- Process Class Variables (Simplified for booleans) ---
+            # Note: Prompts and other specific vars are handled separately if needed below
+            class_vars = data.get("classVars", {})  # Keep this for other potential vars
+            output_types = data.get("outputTypes", [])  # Get output types directly
+            llm_input_type = data.get(
+                "llm_input_type"
+            )  # Get llm_input_type directly if present
+            llm_output_type = data.get(
+                "llm_output_type"
+            )  # Get llm_output_type directly if present
+            join_type = data.get("join_type")  # Get join_type directly if present
+            prompt = data.get("prompt")  # Get prompt directly
+            system_prompt = data.get("systemPrompt")  # Get system prompt directly
+
+            # Handle Output Types
+            if output_types:
+                types_str = ", ".join(get_task_class_name(t) for t in output_types)
+                class_body.append(f"    output_types: List[Type[Task]] = [{types_str}]")
+
+            # Handle LLM Input Type
+            if llm_input_type:
+                try:
+                    input_type_class = get_task_class_name(llm_input_type)
+                    class_body.append(
+                        f"    llm_input_type: Type[Task] = {input_type_class}"
+                    )
+                except ValueError:
+                    print(
+                        f"Warning: Could not find Task definition for llm_input_type '{llm_input_type}' in {worker_name}. Skipping."
+                    )
+
+            # Handle LLM Output Type
+            if llm_output_type:
+                try:
+                    output_type_class = get_task_class_name(llm_output_type)
+                    class_body.append(
+                        f"    llm_output_type: Type[Task] = {output_type_class}"
+                    )
+                except ValueError:
+                    print(
+                        f"Warning: Could not find Task definition for llm_output_type '{llm_output_type}' in {worker_name}. Skipping."
+                    )
+
+            # Handle Join Type
+            if join_type:
+                class_body.append(f"    join_type: Type[TaskWorker] = {join_type}")
+
+            # Handle Prompts
+            if prompt:
+                dedented_prompt = dedent(prompt).strip()
+                class_body.append(f'    prompt: str = """{dedented_prompt}"""')
+            if system_prompt:
+                dedented_sys_prompt = dedent(system_prompt).strip()
+                class_body.append(
+                    f'    system_prompt: str = """{dedented_sys_prompt}"""'
+                )
+
+            # Handle Boolean Flags (use_xml, debug_mode)
+            if data.get("use_xml") is True:
+                class_body.append("    use_xml: bool = True")
+            if data.get("debug_mode") is True:
+                class_body.append("    debug_mode: bool = True")
 
             # --- Process Methods ---
             methods = data.get("methods", {})

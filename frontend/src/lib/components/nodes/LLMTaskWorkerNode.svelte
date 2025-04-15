@@ -27,6 +27,9 @@
 			postProcess: boolean;
 		};
 		isCached?: boolean;
+		// Add simple boolean flags
+		use_xml: boolean;
+		debug_mode: boolean;
 	}
 
 	let { id, data } = $props<{
@@ -79,6 +82,14 @@
 			preProcess: false,
 			postProcess: false
 		};
+	}
+
+	// Initialize boolean flags if not present
+	if (data.use_xml === undefined) {
+		data.use_xml = false;
+	}
+	if (data.debug_mode === undefined) {
+		data.debug_mode = false;
 	}
 
 	// Subscribe to the taskClassNamesStore for output type selection
@@ -239,6 +250,21 @@
 					{/each}
 				</div>
 			{/if}
+		</div>
+	</div>
+
+	<!-- New Settings Section -->
+	<div class="mb-2 flex-none border-t border-gray-200 pt-2">
+		<h3 class="text-2xs mb-1 font-semibold text-gray-600">Settings</h3>
+		<div class="flex items-center space-x-4">
+			<label class="text-2xs flex items-center">
+				<input type="checkbox" class="mr-1 h-2.5 w-2.5" bind:checked={data.use_xml} />
+				Use XML Output
+			</label>
+			<label class="text-2xs flex items-center">
+				<input type="checkbox" class="mr-1 h-2.5 w-2.5" bind:checked={data.debug_mode} />
+				Debug Mode
+			</label>
 		</div>
 	</div>
 
