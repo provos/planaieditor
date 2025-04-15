@@ -38,7 +38,7 @@ The backend is powered by Python using Flask and Flask-SocketIO to handle graph 
 
 1.  **Clone the repository:**
     ```bash
-    git clone <your-repo-url>
+    git clone https://github.com/provos/planaieditor.git
     cd planaieditor
     ```
 2.  **Backend Setup:**
