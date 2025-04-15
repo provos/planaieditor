@@ -298,7 +298,7 @@ class DataCollectorWorker(JoinedTaskWorker):
         keys_to_compare = set(orig_vars.keys()) - {"prompt", "system_prompt"}
         assert keys_to_compare == (
             set(regen_vars.keys()) - {"prompt", "system_prompt"}
-        ), f"Class var keys mismatch for {name}"
+        ), f"Class var keys mismatch for {name}: {orig_vars.keys()} != {regen_vars.keys()}"
         for key in keys_to_compare:
             # Special handling for output_types list comparison
             if key == "output_types":

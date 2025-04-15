@@ -255,10 +255,10 @@ def generate_python_module(
             workers.append(f"\nclass {worker_name}({base_class}):")
             class_body = []  # Store lines for the current class body
 
-            # --- Process Class Variables (Simplified for booleans) ---
-            # Note: Prompts and other specific vars are handled separately if needed below
-            class_vars = data.get("classVars", {})  # Keep this for other potential vars
-            output_types = data.get("outputTypes", [])  # Get output types directly
+            # --- Process Class Variables ---
+            class_vars = data.get("classVars", {})
+            # Read output_types from class_vars, not the top-level data
+            output_types = class_vars.get("output_types", [])
             # Retrieve specific class variables from the classVars dict
             llm_input_type = class_vars.get("llm_input_type")
             llm_output_type = class_vars.get("llm_output_type")
@@ -310,9 +310,9 @@ def generate_python_module(
                 )
 
             # Handle Boolean Flags (use_xml, debug_mode)
-            if data.get("use_xml") is True:
+            if class_vars.get("use_xml") is True:
                 class_body.append("    use_xml: bool = True")
-            if data.get("debug_mode") is True:
+            if class_vars.get("debug_mode") is True:
                 class_body.append("    debug_mode: bool = True")
 
             # --- Process Methods ---
