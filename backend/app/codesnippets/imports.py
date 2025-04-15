@@ -16,7 +16,7 @@ from planai import (
     TaskWorker,
     llm_from_config,
 )
-from pydantic import ConfigDict, Field
+from pydantic import ConfigDict, Field, PrivateAttr
 
 # Add any other necessary imports based on worker code (e.g., planai.patterns)
 

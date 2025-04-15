@@ -452,26 +452,46 @@ def generate_python_module(
     else:
         # Create the dependency setting code strings
         for edge in edges:
-            source_node_id = edge.get("source")
-            target_node_id = edge.get("target")
+            source_class_name = edge.get("source")
+            target_class_name = edge.get("target")
 
+            # Find the nodes by matching the CLASS NAME stored in their data
             source_node = next(
-                (n for n in worker_nodes if n["id"] == source_node_id), None
+                (
+                    n
+                    for n in worker_nodes
+                    if n.get("data", {}).get("className") == source_class_name
+                ),
+                None,
             )
             target_node = next(
-                (n for n in worker_nodes if n["id"] == target_node_id), None
+                (
+                    n
+                    for n in worker_nodes
+                    if n.get("data", {}).get("className") == target_class_name
+                ),
+                None,
             )
 
             if source_node and target_node:
-                source_inst_name = worker_to_instance_name(
-                    worker_classes[source_node_id]
-                )
-                target_inst_name = worker_to_instance_name(
-                    worker_classes[target_node_id]
-                )
+                # Get the definitive class name (already validated)
+                source_worker_class = source_node.get("data", {}).get("className")
+                target_worker_class = target_node.get("data", {}).get("className")
 
-                dep_code_lines.append(
-                    f"  graph.set_dependency({source_inst_name}, {target_inst_name})"
+                if source_worker_class and target_worker_class:
+                    source_inst_name = worker_to_instance_name(source_worker_class)
+                    target_inst_name = worker_to_instance_name(target_worker_class)
+
+                    dep_code_lines.append(
+                        f"    graph.set_dependency({source_inst_name}, {target_inst_name})"
+                    )
+                else:
+                    print(
+                        f"Warning: Could not retrieve class names for edge {source_class_name} -> {target_class_name}"
+                    )
+            else:
+                print(
+                    f"Warning: Could not find nodes for edge {source_class_name} -> {target_class_name}"
                 )
 
     final_code = custom_format(

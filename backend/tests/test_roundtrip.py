@@ -329,3 +329,117 @@ class DataCollectorWorker(JoinedTaskWorker):
             # More detailed comparison is tricky, check if helper method is there
             if name == "BasicWorker":
                 assert "_helper_method" in regen_worker["otherMembersSource"]
+
+
+def test_releasenotes_roundtrip(temp_file):
+    """Test roundtrip conversion of a complex example with multiple workers and edges."""
+    # Define the path to the original releasenotes example
+    original_file_path = (
+        Path(__file__).parent.parent / "app" / "codesnippets" / "releasenotes.py"
+    )
+    assert original_file_path.exists(), f"Original file not found: {original_file_path}"
+
+    # Step 1: Parse original file
+    print(f"\nParsing original file: {original_file_path}")
+    definitions = get_definitions_from_file(str(original_file_path))
+    orig_task_defs = definitions["tasks"]
+    orig_worker_defs = definitions["workers"]
+    orig_edges = definitions["edges"]
+    # orig_entry_edges = definitions["entryEdges"] # Not currently regenerated
+
+    print(
+        f"Parsed {len(orig_task_defs)} tasks, {len(orig_worker_defs)} workers, {len(orig_edges)} edges."
+    )
+    assert len(orig_task_defs) > 0, "No tasks parsed from original file"
+    assert len(orig_worker_defs) > 0, "No workers parsed from original file"
+    assert len(orig_edges) > 0, "No edges parsed from original file"
+
+    # Step 2: Create graph data for regeneration
+    task_nodes = []
+    for i, task_def in enumerate(orig_task_defs):
+        task_nodes.append({"id": f"task_{i}", "type": "task", "data": task_def})
+
+    worker_nodes = []
+    for i, worker_def in enumerate(orig_worker_defs):
+        worker_nodes.append(
+            {
+                "id": f"worker_{i}",
+                "type": worker_def["workerType"],
+                "data": worker_def,  # Pass parsed data
+            }
+        )
+
+    # Important: Pass the original edges to the generator
+    # The generator needs edge information to potentially infer types or structure, although
+    # currently it mainly uses it to recreate graph.set_dependency calls.
+    graph_data = {
+        "nodes": task_nodes + worker_nodes,
+        "edges": orig_edges,  # Include edges in the data sent for generation
+        # "entryEdges": orig_entry_edges # If generator handled this
+    }
+
+    # Step 3: Regenerate Python code
+    print("\nRegenerating Python code...")
+    python_code, _, error = generate_python_module(graph_data)
+    assert error is None, f"Error generating Python code: {error}"
+    assert python_code is not None, "No Python code generated"
+
+    # Step 4: Write and parse regenerated code
+    regen_file = temp_file(python_code)
+    print(f"Parsing regenerated file: {regen_file}")
+    print(python_code)
+    print("--------------------------------")
+    regen_definitions = get_definitions_from_file(regen_file)
+    regen_task_defs = regen_definitions["tasks"]
+    regen_worker_defs = regen_definitions["workers"]
+    regen_edges = regen_definitions["edges"]
+    # regen_entry_edges = regen_definitions["entryEdges"]
+
+    print(
+        f"Regenerated {len(regen_task_defs)} tasks, {len(regen_worker_defs)} workers, {len(regen_edges)} edges."
+    )
+
+    # Step 5: Compare Task Definitions (reuse logic from test_task_roundtrip if needed)
+    assert len(orig_task_defs) == len(regen_task_defs), "Task count mismatch"
+    # Basic check: ensure all original task names exist in regenerated
+    orig_task_names = {t["className"] for t in orig_task_defs}
+    regen_task_names = {t["className"] for t in regen_task_defs}
+    assert orig_task_names == regen_task_names, "Task names mismatch"
+    # Could add detailed field comparison here later if needed
+
+    # Step 6: Compare Worker Definitions (reuse logic from test_worker_roundtrip)
+    assert len(orig_worker_defs) == len(regen_worker_defs), "Worker count mismatch"
+    orig_workers_by_name = {w["className"]: w for w in orig_worker_defs}
+    regen_workers_by_name = {w["className"]: w for w in regen_worker_defs}
+    assert set(orig_workers_by_name.keys()) == set(
+        regen_workers_by_name.keys()
+    ), "Worker names mismatch"
+
+    for name, orig_worker in orig_workers_by_name.items():
+        regen_worker = regen_workers_by_name[name]
+        assert (
+            orig_worker["workerType"] == regen_worker["workerType"]
+        ), f"Worker type mismatch for {name}"
+        # Add detailed comparison of classVars, methods, otherMembersSource as in test_worker_roundtrip
+        # ... (comparison logic omitted for brevity, assume it's similar to test_worker_roundtrip)
+
+    # Step 7: Compare Edges
+    assert len(orig_edges) == len(
+        regen_edges
+    ), f"Edge count mismatch. Original: {len(orig_edges)}, Regenerated: {len(regen_edges)}"
+
+    # Compare edges based on source and target class names
+    def edge_to_tuple(edge):
+        # Use class names for comparison, as node IDs change
+        return (edge.get("source"), edge.get("target"), edge.get("targetInputType"))
+
+    orig_edge_tuples = {edge_to_tuple(e) for e in orig_edges}
+    regen_edge_tuples = {edge_to_tuple(e) for e in regen_edges}
+
+    assert (
+        orig_edge_tuples == regen_edge_tuples
+    ), f"Edge definitions mismatch.\nOriginal: {orig_edge_tuples}\nRegenerated: {regen_edge_tuples}"
+
+    # Step 8: Compare Entry Edges (if implemented)
+    # assert len(orig_entry_edges) == len(regen_entry_edges), "Entry edge count mismatch"
+    # Compare entry edge details...

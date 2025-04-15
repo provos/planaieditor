@@ -629,21 +629,39 @@ def find_graph_builder_function(parsed_ast: ast.Module) -> Optional[ast.Function
 def get_worker_assignments(
     func_node: ast.FunctionDef, worker_classes: Set[str]
 ) -> Dict[str, str]:
-    """Extracts variable assignments for worker instances within a function."""
+    """Extracts variable assignments for worker instances within a function.
+    Looks inside try blocks as well.
+    """
     assignments = {}
-    for stmt in func_node.body:
-        if (
-            isinstance(stmt, ast.Assign)
-            and len(stmt.targets) == 1
-            and isinstance(stmt.targets[0], ast.Name)
-        ):
-            var_name = stmt.targets[0].id
-            if isinstance(stmt.value, ast.Call) and isinstance(
-                stmt.value.func, ast.Name
+
+    def find_assignments_in_body(body: List[ast.stmt]):
+        for stmt in body:
+            target_stmt = None
+            # Check if it's a direct assignment
+            if isinstance(stmt, ast.Assign):
+                target_stmt = stmt
+            # Check if it's a try block, look inside its body
+            elif isinstance(stmt, ast.Try):
+                # Recursively search within the try block's body
+                find_assignments_in_body(stmt.body)
+                # Optionally, could also check stmt.handlers or stmt.finalbody if needed
+
+            # Process the assignment statement if found
+            if (
+                target_stmt
+                and len(target_stmt.targets) == 1
+                and isinstance(target_stmt.targets[0], ast.Name)
             ):
-                class_name = stmt.value.func.id
-                if class_name in worker_classes:
-                    assignments[var_name] = class_name
+                var_name = target_stmt.targets[0].id
+                if isinstance(target_stmt.value, ast.Call) and isinstance(
+                    target_stmt.value.func, ast.Name
+                ):
+                    class_name = target_stmt.value.func.id
+                    if class_name in worker_classes:
+                        assignments[var_name] = class_name
+
+    # Start search from the main function body
+    find_assignments_in_body(func_node.body)
     return assignments
 
 

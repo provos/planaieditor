@@ -25,8 +25,41 @@ export function exportPythonCode(
         return { type: 'error', message: 'Not connected to backend.' };
     }
 
-    const graphData = { nodes, edges };
-    console.log('Exporting graph:', graphData);
+    // --- Transformation Step ---
+    // Create a map from nodeId to className/workerName
+    const nodeIdToNameMap = new Map<string, string>();
+    nodes.forEach(node => {
+        const name: string | undefined = node.data?.className || node.data?.workerName;
+        if (name) {
+            nodeIdToNameMap.set(node.id, name);
+        }
+    });
+
+    // Transform edges to use class names instead of node IDs
+    const exportedEdges: Array<{ source: string; target: string }> = edges
+        .map(edge => {
+            const sourceName = nodeIdToNameMap.get(edge.source);
+            const targetName = nodeIdToNameMap.get(edge.target);
+
+            if (!sourceName || !targetName) {
+                console.warn(`Skipping edge ${edge.id}: Could not find names for source/target IDs.`);
+                return null; // Mark edge for removal if names aren't found
+            }
+
+            // Return new edge structure with names
+            // TODO: Potentially include targetInputType if needed by generator?
+            return {
+                source: sourceName,
+                target: targetName
+                // targetInputType: ... // If needed
+            };
+        })
+        .filter((edge): edge is { source: string; target: string } => edge !== null); // Type guard to filter out nulls and satisfy TypeScript
+    // --- End Transformation ---
+
+    // Send transformed data
+    const graphData = { nodes, edges: exportedEdges }; // Use transformed edges
+    console.log('Exporting transformed graph:', graphData);
 
     socket.emit('export_graph', graphData);
     return { type: 'loading', message: 'Exporting...' };
