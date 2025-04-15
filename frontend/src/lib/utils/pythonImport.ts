@@ -83,7 +83,7 @@ const elkOptions = {
     'elk.spacing.nodeNode': '100',
     'elk.layered.cycleBreaking.strategy': 'GREEDY',
     'elk.edgeRouting': 'SPLINES',
-    'elk.direction': 'DOWN'
+    'elk.direction': 'RIGHT'
 };
 
 // Minimal fallback dimensions if node size isn't available yet
