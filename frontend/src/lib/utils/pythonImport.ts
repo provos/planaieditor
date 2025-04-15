@@ -289,15 +289,19 @@ export async function importPythonCode(
             switch (worker.workerType) {
                 case 'taskworker':
                 case 'cachedtaskworker':
+                    nodeData.requiredMembers = ['consume_work'];
                     break;
                 case 'llmtaskworker':
                 case 'cachedllmtaskworker': // Treat similarly for basic import
+                    nodeData.requiredMembers = ['prompt', 'system_prompt'];
                     nodeData.prompt = worker.classVars.prompt || '# No prompt found';
                     nodeData.systemPrompt =
                         worker.classVars.system_prompt || worker.classVars.system || '';
                     break;
                 case 'joinedtaskworker':
-                    // Add specific data mapping for JoinedTaskWorker if needed in the future
+                    // Map the join_type from class variables
+                    nodeData.join_type = worker.classVars.join_type || ''; // Use extracted join_type or default to empty
+                    nodeData.requiredMembers = ['consume_work_joined'];
                     break;
                 // Add other worker types if needed
             }

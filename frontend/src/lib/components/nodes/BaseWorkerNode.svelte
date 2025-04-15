@@ -16,6 +16,7 @@
 		nodeId: string;
 		inputTypes: string[];
 		outputTypes: string[];
+		requiredMembers: string[];
 		// Derived components can extend this
 		[key: string]: any;
 	}
@@ -273,7 +274,7 @@
 	}
 
 	// Define core methods that might have special display logic
-	const coreMethods = ['consume_work', 'prompt', 'system_prompt'];
+	const coreMethods = data.requiredMembers || ['consume_work', 'prompt', 'system_prompt'];
 	let availableMethods = $derived(Object.keys(data.methods || {}));
 	let customMethods = $derived(availableMethods.filter((m) => !coreMethods.includes(m)));
 

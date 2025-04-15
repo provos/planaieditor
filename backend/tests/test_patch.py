@@ -341,6 +341,54 @@ class MyJoinedWorker(JoinedTaskWorker):
     assert worker["inputTypes"] == ["SourceTask2"]
 
 
+def test_extract_joined_worker_join_type(temp_python_file):
+    """Test that join_type class variable is extracted from JoinedTaskWorker."""
+    code = """
+from planai import Task, TaskWorker, JoinedTaskWorker
+from typing import List, Type
+
+class InitialTask(Task):
+    initial_data: str
+
+class ResultTask(Task):
+    final_data: str
+
+class ChangeCollection(Task):
+    changes: List[str]
+
+class InitialTaskWorker(TaskWorker): # The worker we join on
+    output_types = [ResultTask]
+    def consume_work(self, task: InitialTask):
+        pass
+
+class ChangeCollector(JoinedTaskWorker):
+    \"""Worker that collects all analyzed changes\"""
+    join_type: Type[TaskWorker] = InitialTaskWorker # Assign join_type
+    output_types: List[Type[Task]] = [ChangeCollection]
+
+    def consume_work_joined(self, tasks: List[ResultTask]):
+        self.publish_work(ChangeCollection(changes=[t.final_data for t in tasks]), input_task=tasks[0])
+"""
+    file_path = temp_python_file(code)
+    definitions = get_definitions_from_file(str(file_path))
+
+    assert len(definitions["workers"]) == 2
+    # Find the JoinedTaskWorker
+    joined_worker = next(
+        (w for w in definitions["workers"] if w["className"] == "ChangeCollector"), None
+    )
+    assert joined_worker is not None, "ChangeCollector worker not found"
+
+    assert joined_worker["workerType"] == "joinedtaskworker"
+    # Check if join_type was extracted correctly
+    assert "classVars" in joined_worker
+    assert "join_type" in joined_worker["classVars"]
+    assert joined_worker["classVars"]["join_type"] == "InitialTaskWorker"
+    # Check that consume_work_joined method is present
+    assert "methods" in joined_worker
+    assert "consume_work_joined" in joined_worker["methods"]
+
+
 def test_extract_edges(temp_python_file):
     """Test extraction of graph edges from set_dependency and next calls."""
     code = """

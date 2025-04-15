@@ -414,6 +414,7 @@ def extract_worker_details(
         "extra_validation",
         "pre_consume_work",
         "extra_cache_key",
+        "consume_work_joined",
     }
     known_class_var_names = {
         "output_types",
@@ -423,6 +424,7 @@ def extract_worker_details(
         "system_prompt",
         "debug_mode",
         "use_xml",
+        "join_type",
     }
 
     # Helper function to parse potentially complex value assignments
@@ -455,12 +457,14 @@ def extract_worker_details(
         if isinstance(value_node, ast.Name) and var_name in (
             "llm_input_type",
             "llm_output_type",
+            "join_type",
         ):
             return value_node.id
         # String annotation for type name
         if isinstance(value_node, ast.Constant) and var_name in (
             "llm_input_type",
             "llm_output_type",
+            "join_type",
         ):
             return value_node.value
         # Pydantic Field

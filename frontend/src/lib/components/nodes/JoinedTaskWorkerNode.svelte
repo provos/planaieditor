@@ -2,11 +2,16 @@
 	import BaseWorkerNode from '$lib/components/nodes/BaseWorkerNode.svelte';
 	import EditableCodeSection from '$lib/components/EditableCodeSection.svelte';
 	import type { BaseWorkerData } from '$lib/components/nodes/BaseWorkerNode.svelte';
-	import ArrowsIn from 'phosphor-svelte/lib/ArrowsIn';
+	import { allClassNames } from '$lib/stores/classNameStore'; // Import store for worker names
+	import { get } from 'svelte/store'; // To get store value
+	import { useStore, useUpdateNodeInternals } from '@xyflow/svelte';
+	import type { Node, Edge } from '@xyflow/svelte';
+	import { tick } from 'svelte';
 
 	// Extend the base data interface
 	interface JoinedWorkerData extends BaseWorkerData {
-		joinMethod: 'merge' | 'zip' | 'custom';
+		join_type: string; // Class name of the worker to join on
+		// consume_work_joined is now handled within methods
 	}
 
 	let { id, data } = $props<{
@@ -14,82 +19,136 @@
 		data: JoinedWorkerData;
 	}>();
 
-	// Ensure additional fields are initialized
-	if (!data.joinMethod) {
-		data.joinMethod = 'merge';
+	// Ensure default methods are initialized
+	const defaultConsumeWorkJoined = `    # Process the list of input tasks and produce output
+    # Example: self.publish_work(output_task, input_task=tasks[0])
+    pass`;
+
+	if (!data.methods) {
+		data.methods = {};
+	}
+	if (!data.methods.consume_work_joined) {
+		data.methods.consume_work_joined = defaultConsumeWorkJoined;
+	}
+	if (!data.join_type) {
+		data.join_type = ''; // Initialize if not present
 	}
 
-	// Join method state
-	let joinMethod = $state(data.joinMethod);
+	const store = useStore(); // Access the store
+	const updateNodeInternals = useUpdateNodeInternals(); // Initialize the hook
 
-	// Simplified handleCodeUpdate for the new component
-	function handleCodeUpdate(newCode: string) {
-		data.consumeWork = newCode;
-	}
+	// State for editing join_type
+	let availableWorkerClasses = $state<string[]>([]);
+	let joinedInputType = $state<string>(''); // Derived input type for consume_work_joined
 
-	// Join method handling
-	function updateJoinMethod(method: 'merge' | 'zip' | 'custom') {
-		data.joinMethod = method;
-		joinMethod = method;
-	}
+	// Combine hardcoded option with dynamic ones
+	let allJoinTypeOptions = $derived([
+		'InitialTaskWorker',
+		...availableWorkerClasses
+	]);
 
-	// Update join method when data changes
+	// Get available worker names from the store
 	$effect(() => {
-		joinMethod = data.joinMethod;
+		const unsub = allClassNames.subscribe((nameMap) => {
+			const workers: string[] = [];
+			const currentNodes = get(store.nodes); // Get current nodes
+			nameMap.forEach((name, nodeId) => {
+				const node = currentNodes.find((n) => n.id === nodeId);
+				// Check if it's a worker type (excluding self) and has a name
+				if (node && node.type !== 'task' && node.id !== id && name) {
+					workers.push(name);
+				}
+			});
+			availableWorkerClasses = workers;
+		});
+		return unsub;
 	});
+
+	// Update derived input type based on incoming edges
+	$effect(() => {
+		let currentNodes: Node[] = [];
+		let currentEdges: Edge[] = [];
+
+		const unsubNodes = store.nodes.subscribe((nodesValue) => (currentNodes = nodesValue || []));
+		const unsubEdges = store.edges.subscribe((edgesValue) => (currentEdges = edgesValue || []));
+
+		const incomingEdges = currentEdges.filter((edge: Edge) => edge.target === id);
+		const sourceNodeIds = incomingEdges.map((edge: Edge) => edge.source);
+		const sourceClassNames: string[] = sourceNodeIds
+			.map((nodeId: string) => {
+				const sourceNode = currentNodes.find((node: Node) => node.id === nodeId);
+				const edge = incomingEdges.find((e) => e.source === nodeId);
+				const sourceHandleId = edge?.sourceHandle;
+				if (sourceHandleId && sourceHandleId.startsWith('output-')) {
+					return sourceHandleId.substring(7);
+				}
+				return sourceNode?.data?.className; // Primarily from Task nodes
+			})
+			.filter(Boolean) as string[];
+
+		// Use the first identified unique input type for the signature
+		const uniqueInputs = [...new Set(sourceClassNames)];
+		joinedInputType = uniqueInputs[0] || 'Task'; // Default to 'Task' if no input connected
+
+		// Cleanup
+		return () => {
+			unsubNodes();
+			unsubEdges();
+		};
+	});
+
+	// Update code in the data object
+	function handleCodeUpdate(newCode: string) {
+		data.methods.consume_work_joined = newCode;
+	}
+
+	function selectJoinType(event: Event) {
+		const select = event.target as HTMLSelectElement;
+		if (select.value !== undefined) { // Check if a value is selected (even empty string)
+			data.join_type = select.value;
+		}
+	}
+
+	// Compute the title for the code section
+	let consumeWorkJoinedTitle = $derived(
+		`def consume_work_joined(self, tasks: list[${joinedInputType}]):`
+	);
+
+	async function handleCollapse() {
+		await tick();
+		updateNodeInternals(id);
+	}
 </script>
 
-<BaseWorkerNode {id} {data} defaultName="JoinedTaskWorker" minHeight={200}>
-	<!-- Join Method Section -->
-	<div class="mb-2 flex-none">
-		<div class="flex items-center justify-between">
-			<h3 class="text-2xs font-semibold text-gray-600">Join Method</h3>
-			<div
-				class="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-blue-100 text-blue-500 shadow-sm"
-			>
-				<ArrowsIn size={8} weight="bold" />
-			</div>
-		</div>
-
-		<div class="mt-1 grid grid-cols-3 gap-1">
-			<button
-				class="text-2xs rounded border px-2 py-0.5 {joinMethod === 'merge'
-					? 'border-blue-500 bg-blue-50 text-blue-700'
-					: 'border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100'}"
-				onclick={() => updateJoinMethod('merge')}
-			>
-				Merge
-			</button>
-			<button
-				class="text-2xs rounded border px-2 py-0.5 {joinMethod === 'zip'
-					? 'border-blue-500 bg-blue-50 text-blue-700'
-					: 'border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100'}"
-				onclick={() => updateJoinMethod('zip')}
-			>
-				Zip
-			</button>
-			<button
-				class="text-2xs rounded border px-2 py-0.5 {joinMethod === 'custom'
-					? 'border-blue-500 bg-blue-50 text-blue-700'
-					: 'border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100'}"
-				onclick={() => updateJoinMethod('custom')}
-			>
-				Custom
-			</button>
-		</div>
+<BaseWorkerNode {id} {data} defaultName="JoinedTaskWorker" minHeight={220}>
+	<!-- Join Type Section -->
+	<div class="mb-2 flex-none px-1">
+		<h3 class="text-2xs mb-1 font-semibold text-gray-600">Join Type</h3>
+		<!-- Always visible dropdown -->
+		<select
+			class="text-2xs mt-1 w-full rounded border border-gray-200 px-1 py-0.5"
+			bind:value={data.join_type}
+			onchange={selectJoinType}
+		>
+			<option value="">Select join type...</option>
+			{#each allJoinTypeOptions as workerName (workerName)}
+				<option value={workerName}>{workerName}</option>
+			{/each}
+		</select>
 	</div>
 
-	<!-- Code Section (only shown when join method is 'custom') -->
-	{#if joinMethod === 'custom'}
-		<div class="flex min-h-0 flex-grow flex-col overflow-hidden">
-			<EditableCodeSection
-				title="consume_work()"
-				code={data.consumeWork}
-				language="python"
-				onUpdate={handleCodeUpdate}
-			/>
-		</div>
-	{/if}
+	<!-- Code Section for consume_work_joined -->
+	<div class="flex min-h-0 flex-grow flex-col overflow-hidden px-1 pb-1">
+		<EditableCodeSection
+			title={consumeWorkJoinedTitle}
+			code={data.methods.consume_work_joined}
+			language="python"
+			onUpdate={handleCodeUpdate}
+			showReset={true}
+			initialCollapsed={false}
+			onCollapseToggle={handleCollapse}
+		/>
+	</div>
 </BaseWorkerNode>
 
 <style>
