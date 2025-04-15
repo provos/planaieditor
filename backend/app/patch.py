@@ -509,7 +509,7 @@ def extract_worker_details(
                 var_name
             ):  # It's an assignment, but not a known class var - treat as other member
                 try:
-                    details["otherMembersSource"] += ast.unparse(node) + "\n"
+                    details["otherMembersSource"] += dedent(ast.unparse(node)) + "\n"
                 except Exception:
                     details[
                         "otherMembersSource"
@@ -530,7 +530,7 @@ def extract_worker_details(
             if method_name in known_method_names:
                 details["methods"][method_name] = method_source
             else:  # Not a specifically handled method, add to consolidated source
-                details["otherMembersSource"] += method_source + "\n"
+                details["otherMembersSource"] += dedent(method_source) + "\n"
         # Could add handling for other node types like Import, If, etc. if needed
 
     # Clean up trailing newlines from the consolidated source

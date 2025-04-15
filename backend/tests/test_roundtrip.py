@@ -158,3 +158,174 @@ def test_task_roundtrip(sample_planai_module, temp_file):
                 assert set(orig_field["literalValues"]) == set(
                     regen_field["literalValues"]
                 ), f"literalValues mismatch for {class_name}.{field_name}"
+
+
+def test_worker_roundtrip(temp_file):
+    """Test roundtrip conversion of Worker definitions between Python and JSON."""
+    original_code = """
+from pydantic import Field
+from typing import List, Optional, Literal, Type
+from planai import Task, TaskWorker, LLMTaskWorker, JoinedTaskWorker, CachedLLMTaskWorker
+from textwrap import dedent
+
+# --- Task Definitions ---
+class InputTask(Task):
+    data: str
+
+class OutputTask(Task):
+    result: str
+
+class AnalysisTask(Task):
+    analysis: dict
+
+class FinalReport(Task):
+    report: str
+
+class JoinedInput(Task):
+    value: int
+
+class CollectionTask(Task):
+    items: List[str]
+
+# --- Worker Definitions ---
+
+class BasicWorker(TaskWorker):
+    output_types: List[Type[Task]] = [OutputTask]
+    CUSTOM_VAR = "hello"
+
+    def consume_work(self, task: InputTask):
+        # Basic processing
+        processed = task.data.upper()
+        self.publish_work(OutputTask(result=processed), input_task=task)
+
+    def _helper_method(self):
+        return self.CUSTOM_VAR
+
+class AdvancedLLMWorker(CachedLLMTaskWorker):
+    llm_input_type = InputTask
+    llm_output_type = AnalysisTask
+    output_types = [AnalysisTask] # Explicitly define if different from llm_output_type
+    debug_mode = True
+    prompt: str = dedent(\"""
+        Analyze the input data: {task.data}
+        Provide the analysis.
+        \""").strip()
+    system_prompt: str = "You are an analyst."
+
+    # Optional methods
+    def extra_cache_key(self, task: InputTask) -> str:
+        return task.data[:10] # Cache based on first 10 chars
+
+    def post_process(self, task: AnalysisTask):
+        # Modify the analysis after LLM
+        task.analysis['timestamp'] = "now"
+        return task
+
+class DataCollectorWorker(JoinedTaskWorker):
+    join_type: Type[TaskWorker] = BasicWorker # Join on BasicWorker outputs
+    output_types: List[Type[Task]] = [CollectionTask]
+
+    def consume_work_joined(self, tasks: List[OutputTask]):
+        # Collect results from BasicWorker
+        collected_items = [t.result for t in tasks]
+        self.publish_work(CollectionTask(items=collected_items), input_task=tasks[0])
+
+"""
+    original_file = temp_file(original_code)
+
+    # Step 1: Parse original file
+    definitions = get_definitions_from_file(original_file)
+    task_defs = definitions["tasks"]
+    worker_defs = definitions["workers"]
+
+    print("\nParsed Worker definitions:")
+    for worker in worker_defs:
+        print(f"  {worker['className']} ({worker['workerType']})")
+
+    assert len(worker_defs) == 3, "Expected 3 worker classes"
+
+    # Step 2: Create graph data for regeneration
+    task_nodes = []
+    for i, task_def in enumerate(task_defs):
+        task_nodes.append({"id": f"task_{i}", "type": "task", "data": task_def})
+
+    worker_nodes = []
+    for i, worker_def in enumerate(worker_defs):
+        worker_nodes.append(
+            {
+                "id": f"worker_{i}",
+                "type": worker_def["workerType"],  # Use parsed worker type
+                "data": worker_def,  # Pass the whole parsed data back
+            }
+        )
+
+    graph_data = {"nodes": task_nodes + worker_nodes, "edges": []}
+
+    # Step 3: Regenerate Python code
+    python_code, _, error = generate_python_module(graph_data)
+    assert error is None, f"Error generating Python code: {error}"
+    assert python_code is not None, "No Python code generated"
+
+    # Step 4: Write and parse regenerated code
+    regen_file = temp_file(python_code)
+    regen_definitions = get_definitions_from_file(regen_file)
+    regen_worker_defs = regen_definitions["workers"]
+
+    print("\nRegenerated Worker definitions:")
+    for worker in regen_worker_defs:
+        print(f"  {worker['className']} ({worker['workerType']})")
+
+    # Step 5: Compare original and regenerated worker definitions
+    assert len(worker_defs) == len(regen_worker_defs), "Number of workers mismatch"
+
+    orig_workers_by_name = {w["className"]: w for w in worker_defs}
+    regen_workers_by_name = {w["className"]: w for w in regen_worker_defs}
+
+    for name, orig_worker in orig_workers_by_name.items():
+        assert (
+            name in regen_workers_by_name
+        ), f"Worker {name} missing in regenerated code"
+        regen_worker = regen_workers_by_name[name]
+
+        assert (
+            orig_worker["workerType"] == regen_worker["workerType"]
+        ), f"Worker type mismatch for {name}"
+
+        # Compare classVars (basic check for key presence and simple values)
+        orig_vars = orig_worker.get("classVars", {})
+        regen_vars = regen_worker.get("classVars", {})
+        # Don't compare prompts directly due to potential formatting nuances
+        keys_to_compare = set(orig_vars.keys()) - {"prompt", "system_prompt"}
+        assert keys_to_compare == (
+            set(regen_vars.keys()) - {"prompt", "system_prompt"}
+        ), f"Class var keys mismatch for {name}"
+        for key in keys_to_compare:
+            # Special handling for output_types list comparison
+            if key == "output_types":
+                assert set(orig_vars[key]) == set(
+                    regen_vars[key]
+                ), f"Output types mismatch for {name}"
+            else:
+                assert (
+                    orig_vars[key] == regen_vars[key]
+                ), f"Class var '{key}' mismatch for {name}"
+
+        # Compare methods (check for presence)
+        orig_methods = orig_worker.get("methods", {})
+        regen_methods = regen_worker.get("methods", {})
+        assert set(orig_methods.keys()) == set(
+            regen_methods.keys()
+        ), f"Method keys mismatch for {name}"
+        # Note: Direct string comparison of regenerated code can be brittle.
+
+        # Compare otherMembersSource (presence check)
+        assert ("otherMembersSource" in orig_worker) == (
+            "otherMembersSource" in regen_worker
+        ), f"Other members presence mismatch for {name}"
+        if "otherMembersSource" in orig_worker and orig_worker["otherMembersSource"]:
+            assert regen_worker.get(
+                "otherMembersSource"
+            ), f"Regenerated {name} missing other members source"
+            # More detailed comparison is tricky, check if helper method is there
+            if name == "BasicWorker":
+                assert "_helper_method" in regen_worker["otherMembersSource"]

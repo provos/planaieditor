@@ -233,59 +233,167 @@ def generate_python_module(
             node_id = node["id"]
             node_type = node["type"]
             data = node.get("data", {})
-            worker_name = data.get("workerName", f"Worker_{node_id}")
+            # Prioritize className (from parsed data), then workerName, then fallback
+            worker_name = data.get("className") or data.get(
+                "workerName", f"Worker_{node_id}"
+            )
             if not is_valid_python_class_name(worker_name):
                 raise ValueError(f"Invalid worker name: {worker_name}")
             worker_classes[node_id] = worker_name  # Store class name
 
-            base_class = "TaskWorker"
-            extra_args = ""
-            if node_type == "llmtaskworker" or node_type == "cachedllmtaskworker":
+            # Determine base class based on node type, including cached variants
+            base_class = "TaskWorker"  # Default
+            if node_type == "llmtaskworker":
                 base_class = "LLMTaskWorker"
-                # TODO: Map llm_input_type, llm_output_type if specified in data
-                # extra_args = ", llm_input_type=..., llm_output_type=..."
             elif node_type == "joinedtaskworker":
                 base_class = "JoinedTaskWorker"
-                # TODO: Add join_method if specified
-                # join_method = data.get('joinMethod', 'merge')
+            elif node_type == "cachedtaskworker":
+                base_class = "CachedTaskWorker"
+            elif node_type == "cachedllmtaskworker":
+                base_class = "CachedLLMTaskWorker"
 
             workers.append(f"\nclass {worker_name}({base_class}):")
+            class_body = []  # Store lines for the current class body
 
-            # Input/Output Types
-            if len(data.get("inputTypes", [])) > 1 and node_type != "mergedtaskworker":
-                raise ValueError(
-                    f'Only MergedTaskWorker can have multiple input types. Got {len(data.get("inputTypes", []))} for {worker_name}.'
-                )
-            output_types_str = ", ".join(
-                get_task_class_name(t) for t in data.get("outputTypes", [])
-            )
-            workers.append(f"    output_types: List[Type[Task]] = [{output_types_str}]")
+            # --- Process Class Variables ---
+            class_vars = data.get("classVars", {})
+            if class_vars:
+                for var_name, var_value in class_vars.items():
+                    if var_value is None:  # Skip None values for now
+                        continue
+                    # Handle specific known variables formatting
+                    if var_name == "output_types" and isinstance(var_value, list):
+                        types_str = ", ".join(get_task_class_name(t) for t in var_value)
+                        class_body.append(
+                            f"    output_types: List[Type[Task]] = [{types_str}]"
+                        )
+                    elif var_name == "llm_input_type" and isinstance(var_value, str):
+                        try:
+                            input_type = get_task_class_name(var_value)
+                            class_body.append(
+                                f"    llm_input_type: Type[Task] = {input_type}"
+                            )
+                        except ValueError:
+                            print(
+                                f"Warning: Could not find Task definition for llm_input_type '{var_value}' in {worker_name}. Skipping."
+                            )
+                    elif var_name == "llm_output_type" and isinstance(var_value, str):
+                        try:
+                            output_type = get_task_class_name(var_value)
+                            class_body.append(
+                                f"    llm_output_type: Type[Task] = {output_type}"
+                            )
+                        except ValueError:
+                            print(
+                                f"Warning: Could not find Task definition for llm_output_type '{var_value}' in {worker_name}. Skipping."
+                            )
+                    elif var_name == "join_type" and isinstance(var_value, str):
+                        # We assume join_type refers to another Worker class name
+                        class_body.append(
+                            f"    join_type: Type[TaskWorker] = {var_value}"
+                        )
+                    elif var_name == "prompt" and isinstance(var_value, str):
+                        dedented_prompt = dedent(var_value).strip()
+                        class_body.append(f'    prompt: str = """{dedented_prompt}"""')
+                    elif var_name == "system_prompt" and isinstance(var_value, str):
+                        dedented_prompt = dedent(var_value).strip()
+                        class_body.append(
+                            f'    system_prompt: str = """{dedented_prompt}"""'
+                        )
+                    else:
+                        # Generic handling for other vars (bool, int, str)
+                        # Use repr() to get a Python representation (e.g., True, 123, 'hello')
+                        class_body.append(f"    {var_name} = {repr(var_value)}")
 
-            # LLM Specifics
-            if not data.get("inputTypes", []):
-                return (
-                    None,
-                    None,
-                    {
-                        "success": False,
-                        "error": {
-                            "message": f"No input types defined for {worker_name}. Please add at least one input type.",
-                            "nodeName": worker_name,
-                            "fullTraceback": None,
-                        },
-                    },
-                )
-            input_type = get_task_class_name(data.get("inputTypes")[0])
-            if node_type == "llmtaskworker" or node_type == "cachedllmtaskworker":
-                workers.append(create_llm_worker_code(data, input_type))
+            # --- Process Methods ---
+            methods = data.get("methods", {})
+            if methods:
+                # Determine input type hint for consume_work/consume_work_joined
+                input_type_hint = "Task"  # Default
+                input_types = data.get("inputTypes", [])
+                if input_types:
+                    try:
+                        input_type_hint = get_task_class_name(input_types[0])
+                    except ValueError:
+                        print(
+                            f"Warning: Could not find Task definition for input type '{input_types[0]}' in {worker_name}. Using default 'Task'."
+                        )
 
-            # Consume Work Method
-            consume_work_code = data.get("consumeWork", None)
-            if consume_work_code:
-                indented_consume_work = indent(dedent(consume_work_code), "        ")
-                workers.append(f"\n    def consume_work(self, task: {input_type}):")
-                workers.append(indented_consume_work)
-                workers.append("\n")
+                for method_name, method_source in methods.items():
+                    # Handle signatures for known methods
+                    if method_name == "consume_work":
+                        signature = f"def consume_work(self, task: {input_type_hint}):"
+                    elif method_name == "consume_work_joined":
+                        signature = f"def consume_work_joined(self, tasks: List[{input_type_hint}]):"
+                    # Add signatures for other known methods if needed
+                    elif method_name == "post_process":
+                        # Ensure correct signature, potentially needs input_task too?
+                        # Assuming it processes the output task type for now.
+                        output_type_hint = "Task"  # Default
+                        if (
+                            base_class == "LLMTaskWorker"
+                            or base_class == "CachedLLMTaskWorker"
+                        ):
+                            # Try to get llm_output_type
+                            llm_output_type_name = class_vars.get("llm_output_type")
+                            if llm_output_type_name and isinstance(
+                                llm_output_type_name, str
+                            ):
+                                try:
+                                    output_type_hint = get_task_class_name(
+                                        llm_output_type_name
+                                    )
+                                except ValueError:
+                                    pass  # Keep default if task not found
+                        signature = f"def post_process(self, task: {output_type_hint}):"
+                    elif method_name == "extra_cache_key":
+                        signature = f"def extra_cache_key(self, task: {input_type_hint}) -> str:"
+                    # Add more method signatures as needed
+                    else:
+                        # Fallback: try to extract signature from source (simple cases)
+                        match = re.match(r"^\s*def\s+(\w+)\s*\((.*?)\):", method_source)
+                        if match:
+                            signature = f"def {match.group(1)}({match.group(2)}):"
+                        else:
+                            signature = (
+                                f"def {method_name}(self, ...):"  # Generic fallback
+                            )
+
+                    # Dedent and prepare the body code lines
+                    dedented_code = dedent(method_source).strip()
+                    body_lines = dedented_code.splitlines()
+
+                    # Remove the signature line if it exists in the source already
+                    if body_lines and body_lines[0].strip().startswith(
+                        signature.split("(")[0].strip()
+                    ):
+                        body_lines = body_lines[1:]
+
+                    # Ensure body is not empty
+                    if not body_lines or all(not line.strip() for line in body_lines):
+                        body_lines = ["pass"]
+
+                    class_body.append(f"\n    {signature}")
+                    # Indent each line of the body correctly
+                    for line in body_lines:
+                        class_body.append(
+                            f"        {line.rstrip()}"
+                        )  # Indent with 8 spaces
+
+            # --- Process Other Members Source ---
+            other_source = data.get("otherMembersSource", None)
+            if other_source:
+                dedented_other = dedent(other_source).strip()
+                if dedented_other:
+                    indented_other = indent(dedented_other, "    ").strip()
+                    class_body.append("\n    # --- Other Class Members ---")
+                    class_body.append(f"    {indented_other}")
+
+            # Add pass if class body is empty
+            if not class_body:
+                class_body.append("    pass")
+
+            workers.extend(class_body)
 
     # 4. Graph Creation Function
     worker_setup = []
@@ -315,7 +423,9 @@ def generate_python_module(
                 worker_setup.append(
                     f"  {instance_name} = {worker_class_name}({llm_arg})"
                 )
-                worker_setup.append(f"  workers_dict['{instance_name}'] = {instance_name}")
+                worker_setup.append(
+                    f"  workers_dict['{instance_name}'] = {instance_name}"
+                )
                 worker_setup.append("except Exception as e:")
                 # Format error JSON including the worker_class_name which failed
                 # We construct the Python code that will *create* the dictionary string
@@ -345,12 +455,20 @@ def generate_python_module(
             source_node_id = edge.get("source")
             target_node_id = edge.get("target")
 
-            source_node = next((n for n in worker_nodes if n["id"] == source_node_id), None)
-            target_node = next((n for n in worker_nodes if n["id"] == target_node_id), None)
+            source_node = next(
+                (n for n in worker_nodes if n["id"] == source_node_id), None
+            )
+            target_node = next(
+                (n for n in worker_nodes if n["id"] == target_node_id), None
+            )
 
             if source_node and target_node:
-                source_inst_name = worker_to_instance_name(worker_classes[source_node_id])
-                target_inst_name = worker_to_instance_name(worker_classes[target_node_id])
+                source_inst_name = worker_to_instance_name(
+                    worker_classes[source_node_id]
+                )
+                target_inst_name = worker_to_instance_name(
+                    worker_classes[target_node_id]
+                )
 
                 dep_code_lines.append(
                     f"  graph.set_dependency({source_inst_name}, {target_inst_name})"
