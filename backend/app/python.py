@@ -259,15 +259,12 @@ def generate_python_module(
             # Note: Prompts and other specific vars are handled separately if needed below
             class_vars = data.get("classVars", {})  # Keep this for other potential vars
             output_types = data.get("outputTypes", [])  # Get output types directly
-            llm_input_type = data.get(
-                "llm_input_type"
-            )  # Get llm_input_type directly if present
-            llm_output_type = data.get(
-                "llm_output_type"
-            )  # Get llm_output_type directly if present
-            join_type = data.get("join_type")  # Get join_type directly if present
-            prompt = data.get("prompt")  # Get prompt directly
-            system_prompt = data.get("systemPrompt")  # Get system prompt directly
+            # Retrieve specific class variables from the classVars dict
+            llm_input_type = class_vars.get("llm_input_type")
+            llm_output_type = class_vars.get("llm_output_type")
+            join_type = class_vars.get("join_type")
+            prompt = class_vars.get("prompt")
+            system_prompt = class_vars.get("system_prompt")
 
             # Handle Output Types
             if output_types:
