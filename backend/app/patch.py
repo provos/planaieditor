@@ -1,5 +1,6 @@
 import ast
 import re
+from textwrap import dedent
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 # Define the base class name we are looking for
@@ -442,7 +443,7 @@ def extract_worker_details(
             and isinstance(value_node.func.value.args[0], ast.Constant)
         ):
             # Extract the raw string from inside dedent()
-            return value_node.func.value.args[0].value
+            return dedent(value_node.func.value.args[0].value)
 
         # Standard Constant (str, int, bool, etc.)
         if isinstance(value_node, ast.Constant):
