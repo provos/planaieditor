@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { SvelteFlow, Background, Controls, useSvelteFlow } from '@xyflow/svelte';
+	import { SvelteFlow, Background, Controls, ControlButton, useSvelteFlow } from '@xyflow/svelte';
 	import type { Node, Edge, Connection } from '@xyflow/svelte';
 	import '@xyflow/svelte/dist/style.css';
 	import ToolShelf from '$lib/components/ToolShelf.svelte';
@@ -21,6 +21,7 @@
 	import PythonInterpreterSelector from '$lib/components/PythonInterpreterSelector.svelte';
 	import UploadSimple from 'phosphor-svelte/lib/UploadSimple'; // Icon for import
 	import Code from 'phosphor-svelte/lib/Code';
+	import ArrowsClockwise from 'phosphor-svelte/lib/ArrowsClockwise'; // Icon for layout
 	import { tick } from 'svelte'; // Import tick for timing
 
 	// Import utility for default method bodies
@@ -663,7 +664,7 @@ Analyze the following information and provide a response.`,
 			ondragover={onDragOver}
 			onclick={onPaneClick}
 			{isValidConnection}
-			defaultEdgeOptions={{ type: 'smoothstep', style: { strokeWidth: 3 } }}
+			defaultEdgeOptions={{ type: 'smoothstep', style: 'stroke-width: 3;' }}
 			class="flex-grow"
 			fitView
 			nodesDraggable
@@ -676,7 +677,11 @@ Analyze the following information and provide a response.`,
 			on:edgecontextmenu={handleEdgeContextMenu}
 		>
 			<Background />
-			<Controls />
+			<Controls>
+				<ControlButton on:click={runElkLayout} title="Re-run Layout">
+					<ArrowsClockwise size={16} />
+				</ControlButton>
+			</Controls>
 		</SvelteFlow>
 
 		{#if showContextMenu}
@@ -710,7 +715,6 @@ Analyze the following information and provide a response.`,
 		stroke-width: 2;
 	}
 
-	
 	/* Restore appropriate cursors for interactive elements */
 	:global(.svelte-flow .svelte-flow__node input) {
 		cursor: text !important;
