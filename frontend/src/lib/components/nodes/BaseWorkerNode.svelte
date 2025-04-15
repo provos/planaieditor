@@ -58,6 +58,7 @@
 	);
 	let currentOutputTypes = $state<string[]>([...(data.outputTypes || [])]);
 	let nodeRef: HTMLElement | null = $state(null);
+	let currentHeight = $state(minHeight); // State for reactive height
 
 	let combinedOutputTypes = $derived(
 		currentOutputTypes.length > 0
@@ -73,13 +74,18 @@
 		let currentEdges: Edge[] = [];
 
 		// Subscribe to nodes store changes
-		const unsubNodes = store.nodes.subscribe((nodesValue) => {
+		const unsubNodes = store.nodes.subscribe((nodesValue: Node[]) => {
 			currentNodes = nodesValue || [];
+			// Find this node and update height
+			const thisNode = currentNodes.find((n) => n.id === id);
+			if (thisNode) {
+				currentHeight = thisNode.measured?.height ?? thisNode.height ?? minHeight;
+			}
 			updateInferredTypes(currentNodes, currentEdges);
 		});
 
 		// Subscribe to edges store changes
-		const unsubEdges = store.edges.subscribe((edgesValue) => {
+		const unsubEdges = store.edges.subscribe((edgesValue: Edge[]) => {
 			currentEdges = edgesValue || [];
 			updateInferredTypes(currentNodes, currentEdges);
 		});
@@ -300,11 +306,7 @@
 	{#each combinedOutputTypes as type, index (type)}
 		{@const handleId = `output-${type}`}
 		{@const color = getColorForType(type)}
-		{@const topPos = calculateHandlePosition(
-			index,
-			combinedOutputTypes.length,
-			nodeRef?.clientHeight ?? minHeight
-		)}
+		{@const topPos = calculateHandlePosition(index, combinedOutputTypes.length, currentHeight)}
 		<Handle
 			type="source"
 			position={Position.Right}
