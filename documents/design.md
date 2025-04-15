@@ -259,7 +259,7 @@ interface WorkerNode extends Node {
     }>;
     code?: string;
     prompt?: string;
-    systemPrompt?: string;
+    system_prompt?: string;
     llmConfig?: any;
   };
 }
