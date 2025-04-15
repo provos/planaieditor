@@ -300,6 +300,8 @@ export async function importPythonCode(
                     // Map boolean flags directly from classVars (parser still puts them there)
                     nodeData.use_xml = worker.classVars.use_xml || false;
                     nodeData.debug_mode = worker.classVars.debug_mode || false;
+                    // Explicitly map llm_input_type from classVars
+                    nodeData.llm_input_type = worker.classVars.llm_input_type || '';
                     break;
                 case 'joinedtaskworker':
                     // Map the join_type from class variables
