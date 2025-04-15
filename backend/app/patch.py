@@ -605,6 +605,23 @@ def extract_input_type(
 # --- Edge Extraction Logic ---
 
 
+def find_assignment_in_scope(
+    var_name: str, start_node: ast.AST, scope_node: ast.FunctionDef
+) -> Optional[ast.expr]:
+    """Finds the value assigned to var_name before start_node within the scope_node."""
+    # Simple approach: find the last assignment in the function scope.
+    # A more robust approach might consider line numbers or control flow.
+    assignments_in_scope = {}
+    for stmt in ast.walk(scope_node):
+        if isinstance(stmt, ast.Assign):
+            # Simple assignment: var = value
+            if len(stmt.targets) == 1 and isinstance(stmt.targets[0], ast.Name):
+                target_name = stmt.targets[0].id
+                assignments_in_scope[target_name] = stmt.value
+
+    return assignments_in_scope.get(var_name)
+
+
 def find_graph_builder_function(parsed_ast: ast.Module) -> Optional[ast.FunctionDef]:
     """Finds a function likely responsible for building the PlanAI graph."""
     for node in ast.walk(parsed_ast):
@@ -752,7 +769,7 @@ def parse_edge_statement(
     return edges
 
 
-def parse_entry_point_statement(
+def parse_set_entry_statement(
     stmt: ast.stmt,
     worker_assignments: Dict[str, str],
     worker_details_map: Dict[str, Dict[str, Any]],
@@ -782,6 +799,87 @@ def parse_entry_point_statement(
                         "targetWorker": entry_worker_class,
                     }
     return None
+
+
+def parse_graph_run_entry_points(
+    stmt: ast.stmt,
+    worker_assignments: Dict[str, str],
+    func_node: ast.FunctionDef,  # Pass the function node for scope lookup
+) -> List[Dict[str, str]]:
+    """Parses a graph.run(initial_tasks=[...]) call to extract entry points."""
+    entry_edges = []
+    if not (isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call)):
+        return entry_edges
+
+    call_node = stmt.value
+    # Check for graph.run(...)
+    if not (
+        isinstance(call_node.func, ast.Attribute)
+        and call_node.func.attr == "run"
+        and isinstance(call_node.func.value, ast.Name)
+        # Assume graph variable name is 'graph' for now
+        and call_node.func.value.id == "graph"
+    ):
+        return entry_edges
+
+    # Find the initial_tasks keyword argument
+    initial_tasks_arg_value = None
+    for keyword in call_node.keywords:
+        if keyword.arg == "initial_tasks":
+            initial_tasks_arg_value = keyword.value
+            break
+
+    if not initial_tasks_arg_value:
+        return entry_edges
+
+    initial_tasks_list_node = None
+    if isinstance(initial_tasks_arg_value, ast.List):
+        # Direct list literal
+        initial_tasks_list_node = initial_tasks_arg_value
+    elif isinstance(initial_tasks_arg_value, ast.Name):
+        # Variable name, find its assignment in the current function scope
+        var_name = initial_tasks_arg_value.id
+        assigned_value_node = find_assignment_in_scope(var_name, stmt, func_node)
+        if isinstance(assigned_value_node, ast.List):
+            initial_tasks_list_node = assigned_value_node
+        else:
+            print(
+                f"Warning: Could not resolve variable '{var_name}' for initial_tasks to a List node."
+            )
+            return entry_edges  # Couldn't resolve or not a list
+    else:
+        # Not a list literal or a variable name we can resolve
+        return entry_edges
+
+    if not initial_tasks_list_node:
+        return entry_edges
+
+    # --- Now parse the initial_tasks_list_node (ast.List) ---
+    for element in initial_tasks_list_node.elts:
+        if not (isinstance(element, ast.Tuple) and len(element.elts) == 2):
+            continue
+
+        worker_node = element.elts[0]
+        task_call_node = element.elts[1]
+
+        worker_var_name = None
+        if isinstance(worker_node, ast.Name):
+            worker_var_name = worker_node.id
+
+        task_class_name = None
+        if isinstance(task_call_node, ast.Call) and isinstance(
+            task_call_node.func, ast.Name
+        ):
+            task_class_name = task_call_node.func.id
+
+        if worker_var_name and task_class_name:
+            worker_class_name = worker_assignments.get(worker_var_name)
+            if worker_class_name:
+                entry_edges.append(
+                    {"sourceTask": task_class_name, "targetWorker": worker_class_name}
+                )
+
+    return entry_edges
 
 
 def get_definitions_from_file(filename: str) -> Dict[str, List[Dict[str, Any]]]:
@@ -845,11 +943,32 @@ def get_definitions_from_file(filename: str) -> Dict[str, List[Dict[str, Any]]]:
 
         for stmt in graph_func_node.body:
             edges.extend(parse_edge_statement(stmt, assignments, worker_details_map))
-            entry_edge = parse_entry_point_statement(
+            # --- Combine entry point detection ---
+            # Check for graph.set_entry(...)
+            entry_edge_set = parse_set_entry_statement(  # Use renamed function
                 stmt, assignments, worker_details_map
             )
-            if entry_edge:
-                entry_edges.append(entry_edge)
+            if entry_edge_set:
+                entry_edges.append(entry_edge_set)
+
+            # Check for graph.run(initial_tasks=...)
+            # Pass the graph_func_node for scope analysis
+            entry_edges_run = parse_graph_run_entry_points(
+                stmt, assignments, graph_func_node
+            )
+            entry_edges.extend(entry_edges_run)
+            # --- End combine entry point detection ---
+
+        # Remove duplicates just in case both methods found the same entry point
+        unique_entry_edges = []
+        seen_entry_edges = set()
+        for edge in entry_edges:
+            # Create a tuple representation for checking uniqueness
+            edge_tuple = (edge.get("sourceTask"), edge.get("targetWorker"))
+            if edge_tuple not in seen_entry_edges:
+                unique_entry_edges.append(edge)
+                seen_entry_edges.add(edge_tuple)
+        entry_edges = unique_entry_edges
 
         print(f"Extracted edges: {edges}")
         print(f"Extracted entry edges: {entry_edges}")
