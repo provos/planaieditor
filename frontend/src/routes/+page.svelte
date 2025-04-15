@@ -552,7 +552,20 @@ Analyze the following information and provide a response.`,
 				currentEdges
 			);
 
-			nodes.set(layoutedNodes);
+			// Update positions of existing nodes instead of replacing the array
+			nodes.update((nds) => {
+				const nodeMap = new Map(layoutedNodes.map((n) => [n.id, n]));
+				return nds.map((node) => {
+					const layoutedNode = nodeMap.get(node.id);
+					if (layoutedNode && layoutedNode.position) {
+						// Create a new object with updated position to trigger reactivity
+						return { ...node, position: layoutedNode.position };
+					}
+					return node; // Return original node if not found in layout results
+				});
+			});
+
+			// Still set edges directly, as edge paths might change
 			edges.set(layoutedEdges);
 
 			// Use requestAnimationFrame to fitView after the DOM updates
