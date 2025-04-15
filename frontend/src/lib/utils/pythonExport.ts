@@ -29,7 +29,8 @@ export function exportPythonCode(
     // Create a map from nodeId to className/workerName
     const nodeIdToNameMap = new Map<string, string>();
     nodes.forEach(node => {
-        const name: string | undefined = node.data?.className || node.data?.workerName;
+        const data = node.data as { className?: string; workerName?: string }; // Type assertion
+        const name: string | undefined = data?.className || data?.workerName;
         if (name) {
             nodeIdToNameMap.set(node.id, name);
         }
