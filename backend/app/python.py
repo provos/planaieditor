@@ -72,7 +72,39 @@ def generate_python_module(
     # 2. Task Definitions (from 'task' nodes)
     tasks = []
     task_nodes = [n for n in nodes if n.get("type") == "task"]
+    imported_tasks = {}  # Store details of imported tasks: {className: modulePath}
+    task_import_nodes = [n for n in nodes if n.get("type") == "taskimport"]
     task_class_names = {}  # Map node ID to generated Task class name
+
+    # Add imports for TaskImportNodes first
+    import_statements = []
+    for node in task_import_nodes:
+        data = node.get("data", {})
+        import_details = data.get("importDetails")
+        if import_details:
+            module_path = import_details.get("modulePath")
+            class_name = import_details.get("className")
+            if module_path and class_name and is_valid_python_class_name(class_name):
+                if class_name not in imported_tasks:  # Avoid duplicate imports
+                    import_statements.append(f"from {module_path} import {class_name}")
+                    imported_tasks[class_name] = module_path
+                else:
+                    # Handle potential name collision or duplicate import?
+                    print(
+                        f"Warning: Task '{class_name}' already imported or name collision."
+                    )
+                # Store mapping for dependency resolution later
+                task_class_names[node["id"]] = class_name
+            else:
+                print(
+                    f"Warning: Invalid or missing import details for node {node['id']}."
+                )
+
+    if import_statements:
+        tasks.extend(import_statements)
+        tasks.append("")  # Add a blank line after imports
+
+    # Add locally defined Task nodes
     if not task_nodes:
         tasks.append("# No Task nodes defined in the graph.")
     else:
@@ -177,7 +209,15 @@ def generate_python_module(
         for _, task_name in task_class_names.items():
             if task_name == type_name:
                 return task_name
-        raise ValueError(f"Could not find Task definition for type '{type_name}'")
+
+        # If not found by mapping (shouldn't happen if graph is consistent)
+        # Check if it was an imported task by name
+        if type_name in imported_tasks:
+            return type_name
+
+        raise ValueError(
+            f"Could not find Task definition or import for type '{type_name}'"
+        )
 
     # 3. Worker Definitions (from worker nodes)
     workers = []

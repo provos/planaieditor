@@ -9,9 +9,9 @@
 	export interface TaskImportNodeData {
 		modulePath: string;
 		selectedClassName: string | null;
-		availableClasses: string[];
-		taskFields: TaskNodeData['fields']; // Reuse TaskNode's field structure
 		nodeId: string; // The node's ID
+		error?: string | null; // Error state is now local
+		loading?: boolean; // Loading state is now local
 	}
 
 	let { id, data } = $props<{
@@ -22,20 +22,20 @@
 	// Initialize data if needed
 	if (!data.modulePath) data.modulePath = '';
 	if (!data.selectedClassName) data.selectedClassName = null;
-	if (!data.availableClasses) data.availableClasses = [];
-	if (!data.taskFields) data.taskFields = [];
 
 	// Internal state
 	let internalModulePath = $state(data.modulePath);
 	let error = $state<string | null>(null);
 	let loading = $state(false);
+	let localSelectedClassName = $state<string | null>(data.selectedClassName); // Local reactive state
+	let availableClasses = $state<string[]>([]); // Local state for classes
+	let taskFields = $state<TaskNodeData['fields']>([]); // Local state for fields
 
 	// Placeholder functions for backend interaction
 	async function fetchTaskClasses() {
 		loading = true;
 		error = null;
 		console.log(`Fetching classes for module: ${internalModulePath}...`);
-		// TODO: Implement API call to backend /api/import-task-classes
 		try {
 			// Simulating API call
 			// await new Promise(resolve => setTimeout(resolve, 1000));
@@ -49,13 +49,11 @@
 			const result = await response.json();
 			if (response.ok && result.success) {
 				// Check response.ok too
-				data.availableClasses = result.classes;
-				data.modulePath = internalModulePath; // Update data on success
-				data.selectedClassName = null; // Reset selection
-				data.taskFields = []; // Clear fields
+				availableClasses = result.classes; // Update local state
+				data.modulePath = internalModulePath; // Update data prop
 			} else {
 				error = result.error || `HTTP error ${response.status}`;
-				data.availableClasses = []; // Clear classes on error
+				availableClasses = []; // Clear local state on error
 			}
 
 			// --- Mock Data ---
@@ -72,9 +70,10 @@
 	}
 
 	async function fetchTaskFields(className: string) {
+		console.log('[fetchTaskFields] Started for class:', className);
 		if (!className) return;
 		loading = true;
-		error = undefined;
+		error = null; // Assign null instead of undefined
 		console.log(`Fetching fields for class: ${className} in module ${data.modulePath}...`);
 		// TODO: Implement API call to backend /api/get-task-fields
 		try {
@@ -88,13 +87,18 @@
 				body: JSON.stringify({ module_path: data.modulePath, class_name: className })
 			});
 			const result = await response.json();
+			console.log('[fetchTaskFields] API Result:', result);
 			if (response.ok && result.success) {
 				// Check response.ok too
-				data.taskFields = result.fields;
-				data.selectedClassName = className; // Update data on success
+				taskFields = result.fields; // Update local state
+				console.log('[fetchTaskFields] Success, updating taskFields.');
 			} else {
+				console.error(
+					'[fetchTaskFields] API Error or non-success:',
+					result.error || `HTTP ${response.status}`
+				);
 				error = result.error || `HTTP error ${response.status}`;
-				data.taskFields = []; // Clear fields on error
+				taskFields = []; // Clear local state on error
 			}
 
 			// --- Mock Data ---
@@ -112,32 +116,44 @@
 			// data.selectedClassName = className;
 			// --- End Mock Data ---
 		} catch (err: any) {
+			console.error('[fetchTaskFields] Catch block error:', err);
 			error = err.message || 'Failed to fetch task fields.';
 		} finally {
+			console.log('[fetchTaskFields] Setting loading to false.');
 			loading = false;
 		}
 	}
 
-	// Reactive effect to fetch fields when className changes
+	// Effect 2: Sync local changes UP to prop & trigger fetch
 	$effect(() => {
-		if (data.selectedClassName) {
-			fetchTaskFields(data.selectedClassName);
+		const currentLocalSelection = localSelectedClassName; // Capture current value
+		console.log('[Effect 2] Triggered. currentLocalSelection:', currentLocalSelection);
+
+		// Sync local state change UP to the data prop if they differ
+		if (data.selectedClassName !== currentLocalSelection) {
+			console.log(
+				'[Effect 2] Updating data.selectedClassName from:',
+				data.selectedClassName,
+				'to:',
+				currentLocalSelection
+			);
+			data.selectedClassName = currentLocalSelection;
+		}
+
+		// Fetch fields based on the current local state
+		if (currentLocalSelection) {
+			console.log('[Effect 2] Calling fetchTaskFields with:', currentLocalSelection);
+			fetchTaskFields(currentLocalSelection);
 		}
 	});
 
 	// Create data structure needed for the embedded TaskNode (read-only view)
-	let taskNodeViewData = $state<TaskNodeData>({
-		className: data.selectedClassName || 'Select Class',
-		fields: data.taskFields || [],
+	// Use $derived for reactive computation based on other state
+	let taskNodeViewData: TaskNodeData = $derived({
+		className: localSelectedClassName || 'Select Class',
+		fields: taskFields || [],
 		nodeId: data.nodeId + '-view',
-		error: undefined
-	});
-
-	$effect(() => {
-		taskNodeViewData.className = data.selectedClassName || 'Select Class';
-		taskNodeViewData.fields = data.taskFields || [];
-		// nodeId doesn't change, error can be updated if needed
-		// taskNodeViewData.error = data.error;
+		error: undefined // Explicitly include optional property
 	});
 </script>
 
@@ -145,9 +161,6 @@
 	class="task-import-node flex h-full flex-col rounded-md border border-gray-300 bg-white shadow-md"
 >
 	<NodeResizer minWidth={250} minHeight={200} />
-
-	<!-- Output handle (representing the imported Task type) -->
-	<Handle type="source" position={Position.Right} id="output" class="task-import-handle" />
 
 	<!-- Header Section -->
 	<div class="flex-none border-b border-gray-200 bg-gray-50 p-1.5">
@@ -158,7 +171,7 @@
 				bind:value={internalModulePath}
 				placeholder="e.g., my_tasks.core_types"
 				class="text-2xs w-full flex-grow rounded border border-gray-200 px-1.5 py-1 {error &&
-				!data.availableClasses.length
+				!availableClasses.length
 					? 'border-red-400'
 					: ''}"
 				disabled={loading}
@@ -169,22 +182,32 @@
 				disabled={!internalModulePath || loading}
 				title="Load classes from module"
 			>
-				{#if loading && !data.selectedClassName}
+				{#if loading && !localSelectedClassName}
 					<Spinner size={12} class="animate-spin" />
 				{:else}
 					<DownloadSimple size={12} weight="bold" />
 				{/if}
 			</button>
 		</div>
-		{#if data.availableClasses.length > 0}
+		{#if availableClasses.length > 0}
 			<div class="mt-1.5">
 				<select
-					bind:value={data.selectedClassName}
+					value={localSelectedClassName}
+					onchange={(e) => {
+						const target = e.currentTarget as HTMLSelectElement;
+						localSelectedClassName = target.value ? target.value : null;
+						console.log(
+							'[Select onchange] Updated localSelectedClassName:',
+							localSelectedClassName
+						);
+					}}
 					class="text-2xs w-full rounded border border-gray-200 px-1.5 py-1"
 					disabled={loading}
 				>
-					<option value={null} disabled selected>Select a Task Class...</option>
-					{#each data.availableClasses as className}
+					<option value={null} disabled selected={!localSelectedClassName}
+						>Select a Task Class...</option
+					>
+					{#each availableClasses as className}
 						<option value={className}>{className}</option>
 					{/each}
 				</select>
@@ -194,7 +217,7 @@
 
 	<!-- Embedded TaskNode for Read-Only View -->
 	<div class="relative h-full min-h-0 flex-grow overflow-hidden p-0">
-		{#if data.selectedClassName}
+		{#if localSelectedClassName}
 			<TaskNode id={taskNodeViewData.nodeId} data={taskNodeViewData} readOnly={true} />
 		{:else if !error}
 			<div class="text-2xs flex h-full items-center justify-center p-2 italic text-gray-400">
@@ -204,7 +227,7 @@
 	</div>
 
 	<!-- Loading Indicator for Field Fetch -->
-	{#if loading && data.selectedClassName}
+	{#if loading && localSelectedClassName}
 		<div class="absolute inset-0 z-10 flex items-center justify-center bg-white/70">
 			<Spinner size={24} class="animate-spin text-blue-500" />
 		</div>
@@ -220,11 +243,6 @@
 </div>
 
 <style>
-	/* Add custom styles if needed */
-	.task-import-handle {
-		/* Style the handle based on whether a task is selected? */
-		background-color: #a0aec0; /* Default gray */
-	}
 	.text-2xs {
 		font-size: 0.65rem; /* 10.4px */
 		line-height: 1rem; /* 16px */

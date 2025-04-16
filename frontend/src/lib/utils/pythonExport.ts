@@ -1,7 +1,7 @@
 import type { Node, Edge } from '@xyflow/svelte';
 import type { Socket } from 'socket.io-client';
 import type { BackendError } from './pythonImport';
-import type { TaskImportNodeData } from '../components/nodes/TaskImportNode.svelte'; // Import type
+// import type { TaskImportNodeData } from '../components/nodes/TaskImportNode.svelte'; // Removed import
 
 // Type for export status updates
 export interface ExportStatus {
@@ -71,10 +71,9 @@ export function exportPythonCode(
             }
         }
 
-        // --- Handle TaskImportNode ---
         if (node.type === 'taskimport') {
             // Explicitly check type before asserting
-            const importData = data as unknown as TaskImportNodeData;
+            const importData = data as { modulePath?: string, selectedClassName?: string }; // Use inline type
             if (importData.modulePath && importData.selectedClassName) {
                 processedData.importDetails = {
                     modulePath: importData.modulePath,
@@ -83,8 +82,6 @@ export function exportPythonCode(
                 // Set the className for dependency mapping
                 processedData.className = importData.selectedClassName;
                 // Remove fields that are not needed by the backend generator for this type
-                delete processedData.availableClasses;
-                delete processedData.taskFields;
                 delete processedData.selectedClassName;
                 delete processedData.modulePath;
             } else {
@@ -93,11 +90,6 @@ export function exportPythonCode(
                 // For now, let's keep it but it might cause issues downstream if className isn't set.
             }
         }
-        // --- End Handle TaskImportNode ---
-
-        // Remove frontend-specific state like loading/error before sending
-        delete processedData.loading;
-        delete processedData.error;
 
         return { ...node, data: processedData };
     });
@@ -188,7 +180,7 @@ export function processExportResult(
                     (n.data as any)?.className === errorInfo.nodeName || // Check className
                     (n.data as any)?.workerName === errorInfo.nodeName || // Check old workerName
                     // Check type before asserting for TaskImportNodeData access
-                    (n.type === 'taskimport' && (n.data as unknown as TaskImportNodeData)?.selectedClassName === errorInfo.nodeName) // Cast via unknown
+                    (n.type === 'taskimport' && (n.data as any)?.selectedClassName === errorInfo.nodeName) // Use direct access
             );
 
             if (targetNode) {
