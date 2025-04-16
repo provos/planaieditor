@@ -135,7 +135,7 @@
 		class:ring-red-300={error}
 		class:ring-yellow-300={!selectedPath}
 		class:bg-yellow-50={!selectedPath}
-		on:click={toggleDropdown}
+		onclick={toggleDropdown}
 	>
 		<span class={!selectedPath ? 'text-yellow-600' : 'text-gray-500'}>
 			<Database class="h-4 w-4" />
@@ -159,7 +159,7 @@
 				<div class="mb-2 flex items-center justify-between border-b border-gray-100 pb-2">
 					<h3 class="text-sm font-medium text-gray-900">Select Python Interpreter</h3>
 					<button
-						on:click={() => {
+						onclick={() => {
 							isOpen = false;
 						}}
 						class="text-gray-400 hover:text-gray-600"
@@ -184,7 +184,7 @@
 							<button
 								class="flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm hover:bg-gray-100"
 								class:bg-blue-50={selectedPath === env.path}
-								on:click={() => selectInterpreter(env.path)}
+								onclick={() => selectInterpreter(env.path)}
 							>
 								<div class="flex-1 truncate">
 									<div class="font-medium">{env.name}</div>
@@ -200,7 +200,7 @@
 
 				<div class="mt-2 border-t border-gray-100 pt-2">
 					<button
-						on:click={fetchEnvironments}
+						onclick={fetchEnvironments}
 						class="flex w-full items-center justify-center rounded-md bg-gray-50 px-3 py-2 text-sm font-medium text-gray-900 hover:bg-gray-100"
 					>
 						<GearSix class="mr-1.5 h-4 w-4 text-gray-500" />
