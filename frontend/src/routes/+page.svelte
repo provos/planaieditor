@@ -62,7 +62,7 @@
 	const edges = writable<Edge[]>([]);
 
 	// Socket.IO connection state
-	let socket: Socket | null = null;
+	let socket: Socket | null = $state(null);
 	let isConnected = $state(false);
 	let exportStatus = $state<ExportStatus>({
 		// Export status
@@ -80,7 +80,7 @@
 
 	onMount(() => {
 		// Connect to the backend Socket.IO server
-		socket = io('http://localhost:5001'); // Ensure this matches your backend port
+		socket = io('http://localhost:5001');
 
 		socket.on('connect', () => {
 			console.log('Connected to backend:', socket?.id);
@@ -635,7 +635,7 @@ Analyze the following information and provide a response.`,
 				Import Python
 			</button>
 
-			<PythonInterpreterSelector />
+			<PythonInterpreterSelector {socket} />
 
 			{#if !isConnected}
 				<span class="rounded bg-red-100 px-1.5 py-0.5 text-red-700">Disconnected</span>

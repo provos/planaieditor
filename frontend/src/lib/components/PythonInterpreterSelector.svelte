@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { Socket } from 'socket.io-client';
 	import GearSix from 'phosphor-svelte/lib/GearSix';
 	import Database from 'phosphor-svelte/lib/Database';
 	import X from 'phosphor-svelte/lib/X';
@@ -10,6 +11,9 @@
 		path: string;
 		name: string;
 	}
+
+	// Props
+	let { socket } = $props<{ socket: Socket | null }>();
 
 	// Component state
 	let environments = $state<PythonEnvironment[]>([]);
@@ -72,6 +76,7 @@
 				isOpen = false; // Close the dropdown after selection
 			} else {
 				error = data.error || 'Failed to set Python interpreter';
+				selectedPath = null;
 			}
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Network error';
@@ -102,6 +107,16 @@
 
 	// Setup on component mount
 	onMount(() => {
+		// On backend disconnect, let's try to reset the interpreter
+		if (socket) {
+			socket.on('connect', () => {
+				if (selectedPath) {
+					console.log('Resetting interpreter on backend reconnect:', selectedPath);
+				selectInterpreter(selectedPath);
+				}
+			});
+		}
+
 		fetchCurrentInterpreter();
 		document.addEventListener('click', handleClickOutside);
 
