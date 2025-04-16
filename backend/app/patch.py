@@ -34,6 +34,25 @@ WORKER_TYPE_MAP = {
 #     "MergedTaskWorker",
 # ]
 
+# --- Allow List for Imported Tasks ---
+ALLOWED_TASK_IMPORTS: Dict[str, List[str]] = {
+    "planai.patterns": [
+        "ConsolidatedPages",
+        "SearchQuery",
+        "SearchResult",
+        "FinalPlan",
+        "PlanRequest",
+    ],
+    "planai.patterns.planner": [
+        "PlanRequest",
+        "FinalPlan",
+    ],
+    "planai.patterns.search_fetcher": [
+        "SearchQuery",
+        "SearchResult",
+    ],
+}
+
 
 def get_ast_from_file(filename: str) -> ast.Module:
     """Parses a Python file and returns its AST."""
@@ -975,11 +994,43 @@ def get_definitions_from_file(filename: str) -> Dict[str, List[Dict[str, Any]]]:
     else:
         print("Warning: Could not find a graph builder function.")
 
+    # --- Extract Imported Tasks (Based on Allow List) ---
+    imported_tasks = []
+    imported_task_names: Set[str] = set()  # Keep track of names found via import
+
+    for node in parsed_ast.body:
+        if isinstance(node, ast.ImportFrom):
+            module_path = node.module
+            if module_path and module_path in ALLOWED_TASK_IMPORTS:
+                allowed_classes = ALLOWED_TASK_IMPORTS[module_path]
+                for alias in node.names:
+                    original_name = alias.name
+                    imported_as = alias.asname or original_name
+                    if original_name in allowed_classes:
+                        # Found an allowed imported Task
+                        imported_tasks.append(
+                            {
+                                "modulePath": module_path,
+                                "className": imported_as,  # Use the name it's imported as
+                                # 'fields' are not extracted here, frontend will fetch them
+                            }
+                        )
+                        imported_task_names.add(imported_as)
+        # TODO: Add support for 'import module' and then using 'module.TaskName' if needed
+
+    print(f"Extracted imported tasks: {imported_tasks}")
+
+    # Update known_task_names with imported ones for cross-referencing if necessary
+    # This might be useful if a locally defined Task references an imported Task in a field
+    known_task_names.update(imported_task_names)
+    # Re-run field extraction if necessary? For now, assume frontend handles fetching details for imported tasks.
+
     return {
         "tasks": task_results,
         "workers": worker_results,
         "edges": edges,
         "entryEdges": entry_edges,
+        "imported_tasks": imported_tasks,  # Add the new list
     }
 
 

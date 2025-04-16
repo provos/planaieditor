@@ -3,6 +3,7 @@
 	import type { NodeData as TaskNodeData } from './TaskNode.svelte';
 	import Spinner from 'phosphor-svelte/lib/Spinner';
 	import DownloadSimple from 'phosphor-svelte/lib/DownloadSimple';
+	import { onMount } from 'svelte';
 
 	// Interface for this node's specific data
 	export interface TaskImportNodeData extends TaskNodeData {
@@ -23,8 +24,7 @@
 	let error = $state<string | null>(null);
 	let loading = $state(false);
 	let localSelectedClassName = $state<string | null>(data.className); // Local reactive state
-	let availableClasses = $state<string[]>([]); // Local state for classes
-
+	let availableClasses = $state<string[]>(data.className ? [data.className] : []); // Local state for classes
 
 	// Placeholder functions for backend interaction
 	async function fetchTaskClasses() {
@@ -117,6 +117,12 @@
 			loading = false;
 		}
 	}
+
+	onMount(() => {
+		if (data.className) {
+			fetchTaskFields(data.className);
+		}
+	});
 
 	// Effect 2: Sync local changes UP to prop & trigger fetch
 	$effect(() => {

@@ -73,6 +73,24 @@ export interface ImportedEdge {
     targetInputType?: string; // Optional: Input type name of the target worker
 }
 
+// Interface for the new imported task references from backend
+export interface ImportedTaskReference {
+    modulePath: string;
+    className: string;
+}
+
+// --- Type for Edges from Backend --- //
+export interface ImportedEdge {
+    source: string; // Class name of source worker
+    target: string; // Class name of target worker
+    targetInputType?: string; // Optional: Input type name of the target worker
+    message: string;
+    nodes?: Node[];
+    edges?: Edge[];
+    entryEdges?: Array<{ sourceTask: string, targetWorker: string }>;
+    importedTasks?: ImportedTaskReference[]; // Add the new field
+}
+
 // --- ELKjs Layout Function --- //
 const elk = new ELK();
 
@@ -203,8 +221,9 @@ export async function importPythonCode(
         const importedWorkers: ImportedWorker[] = result.workers || [];
         const importedEdges: ImportedEdge[] = result.edges || [];
         const importedEntryEdges: Array<{ sourceTask: string, targetWorker: string }> = result.entryEdges || [];
+        const importedTaskReferences: ImportedTaskReference[] = result.imported_tasks || []; // Get imported task references
 
-        if (importedTasks.length === 0 && importedWorkers.length === 0) {
+        if (importedTasks.length === 0 && importedWorkers.length === 0 && importedTaskReferences.length === 0) {
             return {
                 success: true,
                 message: 'No Task or Worker classes found.'
@@ -242,6 +261,35 @@ export async function importPythonCode(
                 id,
                 type: 'task', // It's a TaskNode
                 position: { x: startX, y: nextY },
+                draggable: true,
+                selectable: true,
+                deletable: true,
+                selected: false,
+                dragging: false,
+                zIndex: 0,
+                data: nodeData,
+                origin: [0, 0],
+            };
+            newNodes.push(newNode);
+            nextY += 180; // Basic vertical spacing
+        });
+
+        // --- Create Task Import Nodes --- //
+        importedTaskReferences.forEach((importedTaskRef) => {
+            const id = `imported-taskref-${importedTaskRef.className}-${Date.now()}`;
+            classNameToNodeId[importedTaskRef.className] = id; // Store mapping
+
+            const nodeData = {
+                modulePath: importedTaskRef.modulePath,
+                className: importedTaskRef.className, // Store class name
+                fields: [], // Fields will be fetched by the node itself
+                nodeId: id // Crucial: Pass the generated node ID
+            };
+
+            const newNode: Node = {
+                id,
+                type: 'taskimport', // Use the new node type
+                position: { x: startX, y: nextY }, // Position with other tasks for now
                 draggable: true,
                 selectable: true,
                 deletable: true,

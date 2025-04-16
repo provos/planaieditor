@@ -8,7 +8,7 @@
 	import Trash from 'phosphor-svelte/lib/Trash';
 	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
 	import { onDestroy } from 'svelte';
-
+	import type { Snippet } from 'svelte';
 	// Define basic field types
 	type BaseFieldType = 'string' | 'integer' | 'float' | 'boolean' | 'literal';
 	// Enhanced field type can be a basic type or a custom Task name
