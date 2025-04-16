@@ -31,9 +31,14 @@
 		error?: string;
 	}
 
-	let { id, data } = $props<{
+	let {
+		id,
+		data,
+		readOnly = false
+	} = $props<{
 		id: string;
 		data: NodeData;
+		readOnly?: boolean;
 	}>();
 
 	// Ensure data.fields is initialized
@@ -104,6 +109,7 @@
 	});
 
 	function startEditingClassName() {
+		if (readOnly) return;
 		tempClassName = data.className;
 		editingClassName = true;
 	}
@@ -152,6 +158,7 @@
 	}
 
 	function startEditingField(index: number) {
+		if (readOnly) return;
 		const field = data.fields[index];
 		editingFieldIndex = index;
 		editingFieldName = field.name;
@@ -164,6 +171,7 @@
 	}
 
 	function startAddingField() {
+		if (readOnly) return;
 		editingFieldIndex = -1;
 		editingFieldName = '';
 		editingFieldType = 'string';
@@ -238,6 +246,7 @@
 	}
 
 	function deleteField(index: number) {
+		if (readOnly) return;
 		data.fields = data.fields.filter((_: Field, i: number) => i !== index);
 		currentFields = [...data.fields];
 	}
@@ -341,6 +350,7 @@
 						? 'border-red-500'
 						: ''}"
 					autofocus
+					disabled={readOnly}
 				/>
 				{#if classNameError}
 					<div class="mt-0.5 text-xs text-red-500">{classNameError}</div>
@@ -349,10 +359,14 @@
 		{:else}
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<div
-				class="w-full cursor-pointer rounded px-1 py-0.5 text-center text-xs font-medium hover:bg-gray-100"
+				class="w-full {readOnly
+					? 'cursor-default'
+					: 'cursor-pointer'} rounded px-1 py-0.5 text-center text-xs font-medium {readOnly
+					? ''
+					: 'hover:bg-gray-100'}"
 				onclick={startEditingClassName}
 				role="button"
-				tabindex="0"
+				tabindex={readOnly ? -1 : 0}
 			>
 				{data.className || 'Unnamed Task'}
 			</div>
@@ -379,11 +393,13 @@
 									? 'border-red-500'
 									: ''}"
 								autofocus
+								disabled={readOnly}
 							/>
 
 							<select
 								bind:value={editingFieldType}
 								class="text-2xs w-auto min-w-[4rem] max-w-xs rounded border border-gray-200 px-1 py-0.5"
+								disabled={readOnly}
 							>
 								{#each fieldTypeOptions as option}
 									<option value={option.value}>{option.label}</option>
@@ -396,6 +412,7 @@
 									type="checkbox"
 									bind:checked={editingFieldIsList}
 									class="ml-0.5 h-2.5 w-2.5 rounded"
+									disabled={readOnly}
 								/>
 							</div>
 						</div>
@@ -412,6 +429,7 @@
 								placeholder="Description (optional)"
 								class="text-2xs w-full rounded border border-gray-200 px-1 py-0.5"
 								onkeydown={handleFieldKeydown}
+								disabled={readOnly}
 							/>
 						</div>
 
@@ -426,10 +444,12 @@
 										placeholder="Add value..."
 										class="text-2xs flex-1 rounded border border-gray-200 px-1 py-0.5"
 										onkeydown={handleLiteralKeydown}
+										disabled={readOnly}
 									/>
 									<button
 										class="text-2xs rounded bg-blue-100 px-1 py-0.5 text-blue-700 hover:bg-blue-200"
 										onclick={addLiteralValue}
+										disabled={readOnly}
 									>
 										Add
 									</button>
@@ -448,6 +468,7 @@
 													class="text-gray-500 hover:text-red-500"
 													onclick={() => removeLiteralValue(idx)}
 													title="Remove value"
+													disabled={readOnly}
 												>
 													×
 												</button>
@@ -465,6 +486,7 @@
 									id="fieldRequired{id}{index}"
 									bind:checked={editingFieldRequired}
 									class="h-2.5 w-2.5 rounded"
+									disabled={readOnly}
 								/>
 								<label for="fieldRequired{id}{index}" class="text-2xs ml-0.5">Required</label>
 							</div>
@@ -473,12 +495,14 @@
 								<button
 									class="text-2xs rounded bg-gray-200 px-1 py-0.5 hover:bg-gray-300"
 									onclick={cancelFieldEditing}
+									disabled={readOnly}
 								>
 									Cancel
 								</button>
 								<button
 									class="text-2xs rounded bg-blue-500 px-1 py-0.5 text-white hover:bg-blue-600"
 									onclick={saveField}
+									disabled={readOnly}
 								>
 									Save
 								</button>
@@ -488,10 +512,14 @@
 				{:else}
 					<!-- svelte-ignore a11y_click_events_have_key_events -->
 					<div
-						class="text-2xs group flex cursor-pointer items-center justify-between rounded bg-gray-50 px-1 py-0.5 hover:bg-gray-100"
+						class="text-2xs group flex {readOnly
+							? 'cursor-default'
+							: 'cursor-pointer'} items-center justify-between rounded bg-gray-50 px-1 py-0.5 {readOnly
+							? ''
+							: 'hover:bg-gray-100'}"
 						onclick={() => startEditingField(index)}
 						role="button"
-						tabindex="0"
+						tabindex={readOnly ? -1 : 0}
 					>
 						<div class="flex items-center gap-1">
 							<span class="font-medium">{field.name}</span>
@@ -509,28 +537,30 @@
 								<span class="text-gray-400">?</span>
 							{/if}
 						</div>
-						<div class="flex items-center">
-							<button
-								class="ml-1 flex h-3.5 w-3.5 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-gray-200 hover:text-blue-500 group-hover:opacity-100"
-								onclick={(e) => {
-									e.stopPropagation();
-									startEditingField(index);
-								}}
-								title="Edit field"
-							>
-								<PencilSimple size={8} weight="bold" />
-							</button>
-							<button
-								class="ml-1 flex h-3.5 w-3.5 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
-								onclick={(e) => {
-									e.stopPropagation();
-									deleteField(index);
-								}}
-								title="Remove field"
-							>
-								<Trash size={8} weight="bold" />
-							</button>
-						</div>
+						{#if !readOnly}
+							<div class="flex items-center">
+								<button
+									class="ml-1 flex h-3.5 w-3.5 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-gray-200 hover:text-blue-500 group-hover:opacity-100"
+									onclick={(e) => {
+										e.stopPropagation();
+										startEditingField(index);
+									}}
+									title="Edit field"
+								>
+									<PencilSimple size={8} weight="bold" />
+								</button>
+								<button
+									class="ml-1 flex h-3.5 w-3.5 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
+									onclick={(e) => {
+										e.stopPropagation();
+										deleteField(index);
+									}}
+									title="Remove field"
+								>
+									<Trash size={8} weight="bold" />
+								</button>
+							</div>
+						{/if}
 					</div>
 				{/if}
 			{/each}
@@ -548,11 +578,13 @@
 								? 'border-red-500'
 								: ''}"
 							autofocus
+							disabled={readOnly}
 						/>
 
 						<select
 							bind:value={editingFieldType}
 							class="text-2xs w-auto min-w-[4rem] max-w-xs rounded border border-gray-200 px-1 py-0.5"
+							disabled={readOnly}
 						>
 							{#each fieldTypeOptions as option}
 								<option value={option.value}>{option.label}</option>
@@ -565,6 +597,7 @@
 								type="checkbox"
 								bind:checked={editingFieldIsList}
 								class="ml-0.5 h-2.5 w-2.5 rounded"
+								disabled={readOnly}
 							/>
 						</div>
 					</div>
@@ -581,6 +614,7 @@
 							placeholder="Description (optional)"
 							class="text-2xs w-full rounded border border-gray-200 px-1 py-0.5"
 							onkeydown={handleFieldKeydown}
+							disabled={readOnly}
 						/>
 					</div>
 
@@ -595,10 +629,12 @@
 									placeholder="Add value..."
 									class="text-2xs flex-1 rounded border border-gray-200 px-1 py-0.5"
 									onkeydown={handleLiteralKeydown}
+									disabled={readOnly}
 								/>
 								<button
 									class="text-2xs rounded bg-blue-100 px-1 py-0.5 text-blue-700 hover:bg-blue-200"
 									onclick={addLiteralValue}
+									disabled={readOnly}
 								>
 									Add
 								</button>
@@ -615,6 +651,7 @@
 												class="text-gray-500 hover:text-red-500"
 												onclick={() => removeLiteralValue(idx)}
 												title="Remove value"
+												disabled={readOnly}
 											>
 												×
 											</button>
@@ -632,6 +669,7 @@
 								id="newFieldRequired{id}"
 								bind:checked={editingFieldRequired}
 								class="h-2.5 w-2.5 rounded"
+								disabled={readOnly}
 							/>
 							<label for="newFieldRequired{id}" class="text-2xs ml-0.5">Required</label>
 						</div>
@@ -640,12 +678,14 @@
 							<button
 								class="text-2xs rounded bg-gray-200 px-1 py-0.5 hover:bg-gray-300"
 								onclick={cancelFieldEditing}
+								disabled={readOnly}
 							>
 								Cancel
 							</button>
 							<button
 								class="text-2xs rounded bg-blue-500 px-1 py-0.5 text-white hover:bg-blue-600"
 								onclick={saveField}
+								disabled={readOnly}
 							>
 								Add
 							</button>
@@ -656,7 +696,7 @@
 		</div>
 
 		<!-- Plus button at the bottom center -->
-		{#if editingFieldIndex === null}
+		{#if editingFieldIndex === null && !readOnly}
 			<div class="mt-2 flex justify-center">
 				<button
 					class="z-10 flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 text-blue-500 shadow-sm hover:bg-blue-200"

@@ -439,6 +439,125 @@ def import_python_module():
                 print(f"Error removing temporary file {tmp_file.name}: {e}")
 
 
+# --- Helper function to run the inspection script --- #
+def run_inspection_script(
+    module_path: str, action: str, class_name: Optional[str] = None
+) -> dict:
+    """Runs the inspect_module.py script in the selected venv and returns parsed JSON output."""
+    python_executable = app.config.get("SELECTED_VENV_PATH")
+    if not python_executable:
+        return {"success": False, "error": "No Python interpreter selected."}
+    if not os.path.exists(python_executable):
+        return {
+            "success": False,
+            "error": f"Selected Python interpreter not found: {python_executable}",
+        }
+
+    script_path = (
+        Path(__file__).parent / "app" / "codesnippets" / "inspect_module.py"
+    )
+    if not script_path.exists():
+        return {
+            "success": False,
+            "error": "Internal error: inspect_module.py not found.",
+        }
+
+    command = [python_executable, str(script_path), module_path, action]
+    if class_name:
+        command.append(class_name)
+
+    try:
+        # Use the directory of the module path as cwd? Or workspace root?
+        # This might need adjustment depending on how modules are typically structured/imported
+        process = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            check=False,  # Check return code manually
+            timeout=30,  # Timeout for inspection
+            # cwd= # Consider setting cwd if relative imports are an issue
+        )
+
+        # Debugging output
+        print(f"--- Inspect Script Start ---")
+        print(f"Command: {' '.join(command)}")
+        print(f"Return Code: {process.returncode}")
+        if process.stdout:
+            print(f"stdout:\n{process.stdout.strip()}")
+        if process.stderr:
+            print(f"stderr:\n{process.stderr.strip()}")
+        print(f"--- Inspect Script End ---")
+
+        # Attempt to parse JSON from stdout first (expected output)
+        try:
+            result_json = json.loads(process.stdout)
+            return result_json
+        except json.JSONDecodeError:
+            # If stdout is not JSON, return an error with stderr content
+            error_message = f"Script execution failed or produced invalid output."
+            if process.stderr:
+                error_message += f" Error details: {process.stderr.strip()}"
+            elif process.stdout:
+                # Maybe stdout has a plain error message?
+                error_message += f" Output: {process.stdout.strip()}"
+            return {"success": False, "error": error_message}
+
+    except subprocess.TimeoutExpired:
+        return {
+            "success": False,
+            "error": f"Module inspection timed out for '{module_path}'.",
+        }
+    except Exception as e:
+        return {"success": False, "error": f"Failed to run inspection script: {e}"}
+
+
+# --- New endpoints for Task Import --- #
+@app.route("/api/import-task-classes", methods=["POST"])
+def import_task_classes():
+    """Imports a module in the venv and lists PlanAI Task classes."""
+    if not request.is_json:
+        return jsonify({"success": False, "error": "Request must be JSON"}), 400
+
+    data = request.get_json()
+    module_path = data.get("module_path")
+    if not module_path:
+        return (
+            jsonify({"success": False, "error": "Missing 'module_path' in request"}),
+            400,
+        )
+
+    result = run_inspection_script(module_path, action="list_classes")
+    status_code = 200 if result.get("success") else 400  # Or 500 for internal errors?
+    return jsonify(result), status_code
+
+
+@app.route("/api/get-task-fields", methods=["POST"])
+def get_task_fields():
+    """Gets Pydantic fields for a specific PlanAI Task class in a module."""
+    if not request.is_json:
+        return jsonify({"success": False, "error": "Request must be JSON"}), 400
+
+    data = request.get_json()
+    module_path = data.get("module_path")
+    class_name = data.get("class_name")
+    if not module_path or not class_name:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": "Missing 'module_path' or 'class_name' in request",
+                }
+            ),
+            400,
+        )
+
+    result = run_inspection_script(
+        module_path, action="get_fields", class_name=class_name
+    )
+    status_code = 200 if result.get("success") else 400  # Or 500?
+    return jsonify(result), status_code
+
+
 if __name__ == "__main__":
     print("Starting Flask-SocketIO server...")
     # Use eventlet for better performance if available

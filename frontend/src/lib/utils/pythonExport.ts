@@ -1,6 +1,7 @@
 import type { Node, Edge } from '@xyflow/svelte';
 import type { Socket } from 'socket.io-client';
 import type { BackendError } from './pythonImport';
+import type { TaskImportNodeData } from '../components/nodes/TaskImportNode.svelte'; // Import type
 
 // Type for export status updates
 export interface ExportStatus {
@@ -29,42 +30,76 @@ export function exportPythonCode(
     // Create a map from nodeId to className/workerName
     const nodeIdToNameMap = new Map<string, string>();
     nodes.forEach(node => {
-        const data = node.data as { className?: string; workerName?: string }; // Type assertion
-        const name: string | undefined = data?.className || data?.workerName;
+        const data = node.data as any; // Use any for broader compatibility during processing
+        const name: string | undefined = data?.className || data?.workerName || (node.type === 'taskimport' ? data?.selectedClassName : undefined);
         if (name) {
             nodeIdToNameMap.set(node.id, name);
         }
     });
 
     // replace workerName with className in nodes
-    nodes.forEach(node => {
-        const data = node.data as { className?: string; workerName?: string }; // Type assertion
-        if (data?.workerName) {
-            data.className = data.workerName;
-            delete data.workerName;
-        }
-    });
+    const exportedNodes = nodes.map(node => {
+        const data = node.data as any; // Use any for easier manipulation
+        let processedData = { ...data };
 
-    const knownClassVars = [
-        'prompt',
-        'system_prompt',
-        'use_xml',
-        'debug_mode',
-        'llm_input_type',
-        'llm_output_type',
-        'join_type',
-        'output_types'
-    ];
-    nodes.forEach(node => {
-        if (!node.data.classVars) {
-            node.data.classVars = {};
+        // Standardize workerName to className for worker nodes
+        if (data?.workerName) {
+            processedData.className = data.workerName;
+            delete processedData.workerName;
         }
-        for (const key of knownClassVars) {
-            if (node.data[key] !== undefined) {
-                (node.data.classVars as Record<string, any>)[key] = node.data[key];
-                delete node.data[key];
+
+        // Consolidate known class variables into classVars for worker nodes
+        const knownClassVars = [
+            'prompt',
+            'system_prompt',
+            'use_xml',
+            'debug_mode',
+            'llm_input_type',
+            'llm_output_type',
+            'join_type',
+            'output_types'
+        ];
+        if (node.type?.endsWith('worker')) { // Apply only to worker node types
+            if (!processedData.classVars) {
+                processedData.classVars = {};
+            }
+            for (const key of knownClassVars) {
+                if (processedData[key] !== undefined) {
+                    (processedData.classVars as Record<string, any>)[key] = processedData[key];
+                    delete processedData[key];
+                }
             }
         }
+
+        // --- Handle TaskImportNode ---
+        if (node.type === 'taskimport') {
+            // Explicitly check type before asserting
+            const importData = data as unknown as TaskImportNodeData;
+            if (importData.modulePath && importData.selectedClassName) {
+                processedData.importDetails = {
+                    modulePath: importData.modulePath,
+                    className: importData.selectedClassName
+                };
+                // Set the className for dependency mapping
+                processedData.className = importData.selectedClassName;
+                // Remove fields that are not needed by the backend generator for this type
+                delete processedData.availableClasses;
+                delete processedData.taskFields;
+                delete processedData.selectedClassName;
+                delete processedData.modulePath;
+            } else {
+                console.warn(`Skipping TaskImportNode ${node.id} due to missing modulePath or selectedClassName.`);
+                // Consider how to handle incomplete import nodes - skip or error?
+                // For now, let's keep it but it might cause issues downstream if className isn't set.
+            }
+        }
+        // --- End Handle TaskImportNode ---
+
+        // Remove frontend-specific state like loading/error before sending
+        delete processedData.loading;
+        delete processedData.error;
+
+        return { ...node, data: processedData };
     });
 
     // Transform edges to use class names instead of node IDs
@@ -90,7 +125,7 @@ export function exportPythonCode(
     // --- End Transformation ---
 
     // Send transformed data
-    const graphData = { nodes, edges: exportedEdges }; // Use transformed edges
+    const graphData = { nodes: exportedNodes, edges: exportedEdges }; // Use transformed nodes and edges
     console.log('Exporting transformed graph:', graphData);
 
     socket.emit('export_graph', graphData);
@@ -115,26 +150,26 @@ export function clearNodeErrors(nodes: Node[]): Node[] {
 
 /**
  * Processes export results from the backend and updates nodes with any error information
- * @param data Export result data from the backend
+ * @param resultData Export result data from the backend
  * @param nodes Current graph nodes
  * @returns Object containing updated status and nodes with error flags if necessary
  */
 export function processExportResult(
-    data: { success: boolean; message?: string; error?: BackendError },
+    resultData: { success: boolean; message?: string; error?: BackendError },
     nodes: Node[]
 ): { status: ExportStatus; updatedNodes?: Node[] } {
     // First clear any existing errors
     const clearedNodes = clearNodeErrors([...nodes]);
 
-    if (data.success) {
+    if (resultData.success) {
         return {
             status: {
                 type: 'success',
-                message: data.message || 'Export successful!'
+                message: resultData.message || 'Export successful!'
             }
         };
     } else {
-        const errorInfo = data.error;
+        const errorInfo = resultData.error;
         if (!errorInfo) {
             return {
                 status: {
@@ -150,8 +185,10 @@ export function processExportResult(
             // Find the node by the name identified in the backend
             const targetNode = clearedNodes.find(
                 (n) =>
-                    n.data?.className === errorInfo.nodeName ||
-                    n.data?.workerName === errorInfo.nodeName
+                    (n.data as any)?.className === errorInfo.nodeName || // Check className
+                    (n.data as any)?.workerName === errorInfo.nodeName || // Check old workerName
+                    // Check type before asserting for TaskImportNodeData access
+                    (n.type === 'taskimport' && (n.data as unknown as TaskImportNodeData)?.selectedClassName === errorInfo.nodeName) // Cast via unknown
             );
 
             if (targetNode) {

@@ -4,6 +4,7 @@
 	import Brain from 'phosphor-svelte/lib/Brain';
 	import ArrowsIn from 'phosphor-svelte/lib/ArrowsIn';
 	import FileCode from 'phosphor-svelte/lib/FileCode';
+	import FileMagnifyingGlass from 'phosphor-svelte/lib/FileMagnifyingGlass';
 
 	let { onExport }: { onExport: () => void } = $props<{
 		onExport: () => void;
@@ -35,6 +36,21 @@
 			<div class="text-sm font-semibold">Task</div>
 		</div>
 		<div class="text-xs text-gray-500">Data Model</div>
+	</div>
+
+	<div
+		class="cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-md transition-shadow hover:shadow-lg"
+		role="button"
+		tabindex="0"
+		draggable="true"
+		ondragstart={(e) => onDragStart(e, 'taskimport')}
+		ondragend={() => console.log('Drag ended')}
+	>
+		<div class="flex items-center gap-1.5">
+			<FileMagnifyingGlass size={16} weight="fill" class="text-cyan-500" />
+			<div class="text-sm font-semibold">TaskImport</div>
+		</div>
+		<div class="text-xs text-gray-500">Import Task</div>
 	</div>
 
 	<div class="text-lg font-bold">Workers:</div>

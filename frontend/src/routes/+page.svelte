@@ -7,6 +7,7 @@
 	import TaskWorkerNode from '$lib/components/nodes/TaskWorkerNode.svelte';
 	import LLMTaskWorkerNode from '$lib/components/nodes/LLMTaskWorkerNode.svelte';
 	import JoinedTaskWorkerNode from '$lib/components/nodes/JoinedTaskWorkerNode.svelte';
+	import TaskImportNode from '$lib/components/nodes/TaskImportNode.svelte';
 	import type { BaseWorkerData } from '$lib/components/nodes/BaseWorkerNode.svelte';
 	import type { NodeData } from '$lib/components/nodes/TaskNode.svelte';
 	import { writable, get } from 'svelte/store';
@@ -22,7 +23,6 @@
 	import UploadSimple from 'phosphor-svelte/lib/UploadSimple'; // Icon for import
 	import Code from 'phosphor-svelte/lib/Code';
 	import ArrowsClockwise from 'phosphor-svelte/lib/ArrowsClockwise'; // Icon for layout
-	import { tick } from 'svelte'; // Import tick for timing
 
 	// Import utility for default method bodies
 	import { getDefaultMethodBody } from '$lib/utils/defaults';
@@ -32,7 +32,6 @@
 		isPythonFile,
 		readFileAsText,
 		importPythonCode,
-		type ImportResult,
 		type BackendError
 	} from '$lib/utils/pythonImport';
 	import {
@@ -47,6 +46,7 @@
 	// Define node types and pass stores as props
 	const nodeTypes: any = {
 		task: TaskNode,
+		taskimport: TaskImportNode,
 		taskworker: TaskWorkerNode,
 		cachedtaskworker: TaskWorkerNode,
 		llmtaskworker: LLMTaskWorkerNode,
@@ -214,6 +214,17 @@
 				nodeData = {
 					className: uniqueName,
 					fields: [],
+					nodeId: id
+				};
+				break;
+			}
+			case 'taskimport': {
+				nodeData = {
+					modulePath: '', // Initial empty module path
+					selectedClassName: null,
+					availableClasses: [],
+					taskFields: [],
+					loading: false,
 					nodeId: id
 				};
 				break;
