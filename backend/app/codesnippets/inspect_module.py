@@ -159,10 +159,7 @@ if __name__ == "__main__":
             task_classes = []
             for name, obj in inspect.getmembers(module):
                 if inspect.isclass(obj) and is_planai_task(obj):
-                    if (
-                        obj.__module__ == module.__name__
-                    ):  # Only classes defined directly in this module
-                        task_classes.append(name)
+                    task_classes.append(name)
             print(json.dumps({"success": True, "classes": sorted(task_classes)}))
 
         elif action == "get_fields" and class_name_arg:

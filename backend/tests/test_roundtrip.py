@@ -448,3 +448,150 @@ def test_releasenotes_roundtrip(temp_file):
     # Step 8: Compare Entry Edges (if implemented)
     # assert len(orig_entry_edges) == len(regen_entry_edges), "Entry edge count mismatch"
     # Compare entry edge details...
+
+
+def test_imported_task_roundtrip(temp_file):
+    """Test roundtrip involving imported Task nodes."""
+    original_code = """
+from planai import Task, TaskWorker, Graph
+from planai.patterns import SearchQuery, SearchResult # Allowed import
+from typing import List, Type
+
+# Local Task
+class ProcessedResult(Task):
+    processed_data: str
+
+# Worker using imported Task
+class SearchProcessor(TaskWorker):
+    output_types: List[Type[Task]] = [ProcessedResult]
+
+    def consume_work(self, task: SearchQuery):
+        # Dummy processing
+        print(f"Processing search query: {task.query_text}")
+        self.publish_work(ProcessedResult(processed_data=task.query_text.upper()))
+
+# Another worker using local task
+class ResultAggregator(TaskWorker):
+    def consume_work(self, task: ProcessedResult):
+        print(f"Aggregating: {task.processed_data}")
+
+# Graph setup function (simplified for test)
+def setup_graph():
+    graph = Graph(name="ImportTestGraph")
+    search_proc = SearchProcessor()
+    aggregator = ResultAggregator()
+
+    graph.add_workers(search_proc, aggregator)
+    graph.set_dependency(search_proc, aggregator)
+    graph.set_entry(search_proc)
+    return graph
+
+"""
+    original_file = temp_file(original_code)
+
+    # Step 1: Parse original file
+    print(f"\nParsing original file for imported task roundtrip: {original_file}")
+    definitions = get_definitions_from_file(original_file)
+    orig_task_defs = definitions.get("tasks", [])
+    orig_worker_defs = definitions.get("workers", [])
+    orig_edges = definitions.get("edges", [])
+    orig_imported_tasks = definitions.get("imported_tasks", [])
+
+    print(f"Parsed {len(orig_task_defs)} local tasks.")
+    print(f"Parsed {len(orig_imported_tasks)} imported tasks: {orig_imported_tasks}")
+    print(f"Parsed {len(orig_worker_defs)} workers.")
+    print(f"Parsed {len(orig_edges)} edges.")
+
+    # Verify initial parsing found the imported task
+    assert (
+        len(orig_imported_tasks) == 2
+    ), "Expected 2 imported tasks (SearchQuery, SearchResult)"
+    assert any(t["className"] == "SearchQuery" for t in orig_imported_tasks)
+    assert any(t["className"] == "SearchResult" for t in orig_imported_tasks)
+    assert any(t["modulePath"] == "planai.patterns" for t in orig_imported_tasks)
+
+    # Step 2: Create graph data for regeneration
+    task_nodes = []
+    for i, task_def in enumerate(orig_task_defs):
+        task_nodes.append({f"id": f"task_{i}", "type": "task", "data": task_def})
+
+    # Create taskimport nodes for the *parsed* imported tasks
+    imported_task_nodes = []
+    for i, imp_task_ref in enumerate(orig_imported_tasks):
+        imported_task_nodes.append(
+            {
+                "id": f"imp_task_{i}",
+                "type": "taskimport",  # Crucial: use taskimport type
+                "data": {
+                    "modulePath": imp_task_ref["modulePath"],
+                    "className": imp_task_ref["className"],
+                    "nodeId": f"imp_task_{i}",  # Match node ID
+                    "fields": [],  # Fields are fetched by frontend, not stored here
+                },
+            }
+        )
+
+    worker_nodes = []
+    for i, worker_def in enumerate(orig_worker_defs):
+        worker_nodes.append(
+            {
+                "id": f"worker_{i}",
+                "type": worker_def["workerType"],
+                "data": worker_def,
+            }
+        )
+
+    # Combine nodes and include original edges
+    all_nodes = task_nodes + imported_task_nodes + worker_nodes
+    graph_data = {"nodes": all_nodes, "edges": orig_edges}
+
+    # Step 3: Regenerate Python code
+    print("\nRegenerating Python code with imported tasks...")
+    python_code, _, error = generate_python_module(graph_data)
+    assert error is None, f"Error generating Python code: {error}"
+    assert python_code is not None, "No Python code generated"
+
+    # Check if the import statement was added correctly by python.py
+    assert "from planai.patterns import SearchQuery, SearchResult" in python_code
+
+    # Step 4: Write and parse regenerated code
+    regen_file = temp_file(python_code)
+    print(f"Parsing regenerated file: {regen_file}")
+    regen_definitions = get_definitions_from_file(regen_file)
+    regen_task_defs = regen_definitions.get("tasks", [])
+    regen_worker_defs = regen_definitions.get("workers", [])
+    regen_edges = regen_definitions.get("edges", [])
+    regen_imported_tasks = regen_definitions.get("imported_tasks", [])
+
+    print(f"Regenerated {len(regen_task_defs)} local tasks.")
+    print(
+        f"Regenerated {len(regen_imported_tasks)} imported tasks: {regen_imported_tasks}"
+    )
+    print(f"Regenerated {len(regen_worker_defs)} workers.")
+    print(f"Regenerated {len(regen_edges)} edges.")
+
+    # Step 5: Compare regenerated results with original
+    # Compare local tasks, workers, edges (basic counts and names for brevity)
+    assert len(orig_task_defs) == len(regen_task_defs), "Local task count mismatch"
+    assert {t["className"] for t in orig_task_defs} == {
+        t["className"] for t in regen_task_defs
+    }
+
+    assert len(orig_worker_defs) == len(regen_worker_defs), "Worker count mismatch"
+    assert {w["className"] for w in orig_worker_defs} == {
+        w["className"] for w in regen_worker_defs
+    }
+
+    assert len(orig_edges) == len(regen_edges), "Edge count mismatch"
+    # Could add detailed edge comparison if needed
+
+    # *** Crucial: Compare the list of IMPORTED tasks ***
+    def imported_task_to_tuple(imp_task):
+        return (imp_task["modulePath"], imp_task["className"])
+
+    orig_imported_set = {imported_task_to_tuple(t) for t in orig_imported_tasks}
+    regen_imported_set = {imported_task_to_tuple(t) for t in regen_imported_tasks}
+
+    assert (
+        orig_imported_set == regen_imported_set
+    ), f"Imported task definitions mismatch.\nOriginal: {orig_imported_set}\nRegenerated: {regen_imported_set}"

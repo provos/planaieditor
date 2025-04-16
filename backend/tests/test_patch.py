@@ -562,3 +562,68 @@ def build_graph_with_entry():
     expected_entry = {"sourceTask": "EntryTask", "targetWorker": "EntryWorker"}
     assert entry_edges[0]["sourceTask"] == expected_entry["sourceTask"]
     assert entry_edges[0]["targetWorker"] == expected_entry["targetWorker"]
+
+
+def test_extract_imported_tasks(temp_python_file):
+    """Test extraction of imported Task definitions based on allow list."""
+    code = """
+from planai import Task, TaskWorker
+# Allowed imports
+from planai.patterns import SearchQuery, SearchResult
+from planai.patterns.planner import FinalPlan as FP # Aliased
+
+# Disallowed import (assuming not in allow list)
+from external_module import ExternalTask
+
+# Local task
+class LocalTask(Task):
+    data: str
+
+# Worker using imported task
+class QueryProcessor(TaskWorker):
+    def consume_work(self, task: SearchQuery):
+        # Process SearchQuery
+        pass
+
+# Worker using aliased imported task
+class PlanFinalizer(TaskWorker):
+    def consume_work(self, task: FP):
+        # Process FinalPlan
+        pass
+"""
+    file_path = temp_python_file(code)
+    # Note: get_definitions_from_file uses the ALLOWED_TASK_IMPORTS defined in patch.py
+    definitions = get_definitions_from_file(str(file_path))
+
+    assert "imported_tasks" in definitions
+    imported_tasks = definitions["imported_tasks"]
+    print(f"Extracted Imported Tasks: {imported_tasks}")
+
+    expected_imported = [
+        {"modulePath": "planai.patterns", "className": "SearchQuery"},
+        {"modulePath": "planai.patterns", "className": "SearchResult"},
+        {
+            "modulePath": "planai.patterns.planner",
+            "className": "FP",
+        },  # Check aliased name
+    ]
+
+    # Convert lists of dicts to sets of tuples for easier comparison (order doesn't matter)
+    expected_set = {tuple(sorted(d.items())) for d in expected_imported}
+    actual_set = {tuple(sorted(d.items())) for d in imported_tasks}
+
+    assert (
+        actual_set == expected_set
+    ), f"Imported tasks mismatch.\nExpected: {expected_set}\nGot: {actual_set}"
+
+    # Ensure ExternalTask was not included
+    assert not any(t["className"] == "ExternalTask" for t in imported_tasks)
+
+    # Ensure local task wasn't included in imported_tasks
+    assert not any(t["className"] == "LocalTask" for t in imported_tasks)
+    assert any(t["className"] == "LocalTask" for t in definitions["tasks"])
+
+    # Ensure workers are still parsed correctly
+    assert len(definitions["workers"]) == 2
+    assert any(w["className"] == "QueryProcessor" for w in definitions["workers"])
+    assert any(w["className"] == "PlanFinalizer" for w in definitions["workers"])

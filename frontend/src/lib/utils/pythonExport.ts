@@ -75,14 +75,8 @@ export function exportPythonCode(
             // Explicitly check type before asserting
             const importData = data as { modulePath?: string, className?: string }; // Use inline type
             if (importData.modulePath && importData.className) {
-                processedData.importDetails = {
-                    modulePath: importData.modulePath,
-                    className: importData.className
-                };
-                // Set the className for dependency mapping
+                processedData.modulePath = importData.modulePath;
                 processedData.className = importData.className;
-                // Remove fields that are not needed by the backend generator for this type
-                delete processedData.modulePath;
             } else {
                 console.warn(`Skipping TaskImportNode ${node.id} due to missing modulePath or className.`);
                 // Consider how to handle incomplete import nodes - skip or error?

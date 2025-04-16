@@ -79,26 +79,38 @@ def generate_python_module(
     # Add imports for TaskImportNodes first
     import_statements = []
     for node in task_import_nodes:
+        node_id = node["id"]
         data = node.get("data", {})
-        import_details = data.get("importDetails")
-        if import_details:
-            module_path = import_details.get("modulePath")
-            class_name = import_details.get("className")
-            if module_path and class_name and is_valid_python_class_name(class_name):
-                if class_name not in imported_tasks:  # Avoid duplicate imports
-                    import_statements.append(f"from {module_path} import {class_name}")
-                    imported_tasks[class_name] = module_path
-                else:
-                    # Handle potential name collision or duplicate import?
-                    print(
-                        f"Warning: Task '{class_name}' already imported or name collision."
-                    )
+        # Read modulePath and className directly from data for taskimport nodes
+        module_path = data.get("modulePath")
+        class_name = data.get("className")
+
+        if module_path and class_name and is_valid_python_class_name(class_name):
+            # Group imports by module path
+            if module_path not in imported_tasks:
+                imported_tasks[module_path] = set()
+            if class_name not in imported_tasks[module_path]:
+                imported_tasks[module_path].add(class_name)
                 # Store mapping for dependency resolution later
-                task_class_names[node["id"]] = class_name
+                task_class_names[node_id] = class_name  # Map node ID to class name
             else:
                 print(
-                    f"Warning: Invalid or missing import details for node {node['id']}."
+                    f"Warning: Task '{class_name}' from module '{module_path}' already imported or name collision."
                 )
+                # Still map the ID even if duplicate import detected
+                task_class_names[node_id] = class_name
+        else:
+            print(
+                f"Warning: Invalid or missing import details for node {node['id']}. Module: '{module_path}', Class: '{class_name}'"
+            )
+
+    # Generate the import statements from the grouped dictionary
+    for module_path, class_names in imported_tasks.items():
+        if class_names:
+            sorted_class_names = sorted(list(class_names))
+            import_statements.append(
+                f"from {module_path} import {', '.join(sorted_class_names)}"
+            )
 
     # Add locally defined Task nodes
     if not task_nodes:
@@ -202,13 +214,19 @@ def generate_python_module(
     # Helper to map frontend type names (like 'TaskA') to generated Task class names
     def get_task_class_name(type_name: str) -> str:
         # Find the task node whose className matches type_name
-        for _, task_name in task_class_names.items():
+        for node_id, task_name in task_class_names.items():
             if task_name == type_name:
                 return task_name
 
         # If not found by mapping (shouldn't happen if graph is consistent)
         # Check if it was an imported task by name
-        if type_name in imported_tasks:
+        if type_name in imported_tasks:  # imported_tasks maps className -> modulePath
+            return type_name
+
+        # Check against the task_class_names generated from TaskImportNodes as well
+        # The key in task_class_names is the node ID, the value is the className
+        # We need to check if the type_name matches any value in task_class_names
+        if type_name in task_class_names.values():
             return type_name
 
         raise ValueError(
