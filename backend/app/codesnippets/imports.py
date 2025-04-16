@@ -20,6 +20,8 @@ from pydantic import ConfigDict, Field, PrivateAttr
 
 # Add any other necessary imports based on worker code (e.g., planai.patterns)
 
+# {import_statements}
+
 # Task Definitions
 
 # {task_definitions}

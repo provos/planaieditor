@@ -31,7 +31,7 @@ export function exportPythonCode(
     const nodeIdToNameMap = new Map<string, string>();
     nodes.forEach(node => {
         const data = node.data as any; // Use any for broader compatibility during processing
-        const name: string | undefined = data?.className || data?.workerName || (node.type === 'taskimport' ? data?.selectedClassName : undefined);
+        const name: string | undefined = data?.className || data?.workerName;
         if (name) {
             nodeIdToNameMap.set(node.id, name);
         }
@@ -73,19 +73,18 @@ export function exportPythonCode(
 
         if (node.type === 'taskimport') {
             // Explicitly check type before asserting
-            const importData = data as { modulePath?: string, selectedClassName?: string }; // Use inline type
-            if (importData.modulePath && importData.selectedClassName) {
+            const importData = data as { modulePath?: string, className?: string }; // Use inline type
+            if (importData.modulePath && importData.className) {
                 processedData.importDetails = {
                     modulePath: importData.modulePath,
-                    className: importData.selectedClassName
+                    className: importData.className
                 };
                 // Set the className for dependency mapping
-                processedData.className = importData.selectedClassName;
+                processedData.className = importData.className;
                 // Remove fields that are not needed by the backend generator for this type
-                delete processedData.selectedClassName;
                 delete processedData.modulePath;
             } else {
-                console.warn(`Skipping TaskImportNode ${node.id} due to missing modulePath or selectedClassName.`);
+                console.warn(`Skipping TaskImportNode ${node.id} due to missing modulePath or className.`);
                 // Consider how to handle incomplete import nodes - skip or error?
                 // For now, let's keep it but it might cause issues downstream if className isn't set.
             }
@@ -178,9 +177,7 @@ export function processExportResult(
             const targetNode = clearedNodes.find(
                 (n) =>
                     (n.data as any)?.className === errorInfo.nodeName || // Check className
-                    (n.data as any)?.workerName === errorInfo.nodeName || // Check old workerName
-                    // Check type before asserting for TaskImportNodeData access
-                    (n.type === 'taskimport' && (n.data as any)?.selectedClassName === errorInfo.nodeName) // Use direct access
+                    (n.data as any)?.workerName === errorInfo.nodeName
             );
 
             if (targetNode) {

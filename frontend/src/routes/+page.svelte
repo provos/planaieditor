@@ -221,10 +221,7 @@
 			case 'taskimport': {
 				nodeData = {
 					modulePath: '', // Initial empty module path
-					selectedClassName: null,
-					availableClasses: [],
-					taskFields: [],
-					loading: false,
+					className: null,
 					nodeId: id
 				};
 				break;

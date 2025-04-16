@@ -100,10 +100,6 @@ def generate_python_module(
                     f"Warning: Invalid or missing import details for node {node['id']}."
                 )
 
-    if import_statements:
-        tasks.extend(import_statements)
-        tasks.append("")  # Add a blank line after imports
-
     # Add locally defined Task nodes
     if not task_nodes:
         tasks.append("# No Task nodes defined in the graph.")
@@ -458,7 +454,7 @@ def generate_python_module(
                 )  # Marker end
                 worker_setup.append("  sys.exit(1)")  # Exit after reporting error
 
-    worker_setup.append(f"graph.add_workers([{', '.join(worker_names)}])")
+    worker_setup.append(f"graph.add_workers({', '.join(worker_names)})")
 
     dep_code_lines = []
 
@@ -512,6 +508,7 @@ def generate_python_module(
 
     final_code = custom_format(
         code_to_format,
+        import_statements="\n".join(import_statements),
         task_definitions="\n".join(tasks),
         worker_definitions="\n".join(workers),
         worker_instantiation=indent(dedent("\n".join(worker_setup)), "    ")[4:],
