@@ -1,17 +1,12 @@
 <script lang="ts">
-	import { Handle, Position, NodeResizer } from '@xyflow/svelte';
 	import TaskNode from './TaskNode.svelte';
 	import type { NodeData as TaskNodeData } from './TaskNode.svelte';
 	import Spinner from 'phosphor-svelte/lib/Spinner';
 	import DownloadSimple from 'phosphor-svelte/lib/DownloadSimple';
 
 	// Interface for this node's specific data
-	export interface TaskImportNodeData {
-		modulePath: string;
-		selectedClassName: string | null;
-		nodeId: string; // The node's ID
-		error?: string | null; // Error state is now local
-		loading?: boolean; // Loading state is now local
+	export interface TaskImportNodeData extends TaskNodeData {
+		modulePath?: string;
 	}
 
 	let { id, data } = $props<{
@@ -21,15 +16,15 @@
 
 	// Initialize data if needed
 	if (!data.modulePath) data.modulePath = '';
-	if (!data.selectedClassName) data.selectedClassName = null;
+	if (!data.className) data.className = null;
 
 	// Internal state
 	let internalModulePath = $state(data.modulePath);
 	let error = $state<string | null>(null);
 	let loading = $state(false);
-	let localSelectedClassName = $state<string | null>(data.selectedClassName); // Local reactive state
+	let localSelectedClassName = $state<string | null>(data.className); // Local reactive state
 	let availableClasses = $state<string[]>([]); // Local state for classes
-	let taskFields = $state<TaskNodeData['fields']>([]); // Local state for fields
+
 
 	// Placeholder functions for backend interaction
 	async function fetchTaskClasses() {
@@ -55,13 +50,6 @@
 				error = result.error || `HTTP error ${response.status}`;
 				availableClasses = []; // Clear local state on error
 			}
-
-			// --- Mock Data ---
-			// data.availableClasses = ['ImportedTaskA', 'ImportedTaskB'];
-			// data.modulePath = internalModulePath;
-			// data.selectedClassName = null;
-			// data.taskFields = [];
-			// --- End Mock Data ---
 		} catch (err: any) {
 			error = err.message || 'Failed to fetch task classes.';
 		} finally {
@@ -90,15 +78,21 @@
 			console.log('[fetchTaskFields] API Result:', result);
 			if (response.ok && result.success) {
 				// Check response.ok too
-				taskFields = result.fields; // Update local state
-				console.log('[fetchTaskFields] Success, updating taskFields.');
+				data = {
+					...data,
+					fields: result.fields
+				};
+				console.log('[fetchTaskFields] Success, updating fields.');
 			} else {
 				console.error(
 					'[fetchTaskFields] API Error or non-success:',
 					result.error || `HTTP ${response.status}`
 				);
 				error = result.error || `HTTP error ${response.status}`;
-				taskFields = []; // Clear local state on error
+				data = {
+					...data,
+					fields: []
+				};
 			}
 
 			// --- Mock Data ---
@@ -113,7 +107,7 @@
 			//         { name: 'items', type: 'integer', isList: true, required: true, description: 'List of items' }
 			//     ];
 			// }
-			// data.selectedClassName = className;
+			// data.className = className;
 			// --- End Mock Data ---
 		} catch (err: any) {
 			console.error('[fetchTaskFields] Catch block error:', err);
@@ -126,44 +120,21 @@
 
 	// Effect 2: Sync local changes UP to prop & trigger fetch
 	$effect(() => {
-		const currentLocalSelection = localSelectedClassName; // Capture current value
-		console.log('[Effect 2] Triggered. currentLocalSelection:', currentLocalSelection);
+		if (data.className !== localSelectedClassName) {
+			data.className = localSelectedClassName;
 
-		// Sync local state change UP to the data prop if they differ
-		if (data.selectedClassName !== currentLocalSelection) {
-			console.log(
-				'[Effect 2] Updating data.selectedClassName from:',
-				data.selectedClassName,
-				'to:',
-				currentLocalSelection
-			);
-			data.selectedClassName = currentLocalSelection;
+			// Fetch fields based on the current local state
+			if (localSelectedClassName) {
+				console.log('[Effect 2] Calling fetchTaskFields with:', localSelectedClassName);
+				fetchTaskFields(localSelectedClassName);
+			}
 		}
-
-		// Fetch fields based on the current local state
-		if (currentLocalSelection) {
-			console.log('[Effect 2] Calling fetchTaskFields with:', currentLocalSelection);
-			fetchTaskFields(currentLocalSelection);
-		}
-	});
-
-	// Create data structure needed for the embedded TaskNode (read-only view)
-	// Use $derived for reactive computation based on other state
-	let taskNodeViewData: TaskNodeData = $derived({
-		className: localSelectedClassName || 'Select Class',
-		fields: taskFields || [],
-		nodeId: data.nodeId + '-view',
-		error: undefined // Explicitly include optional property
 	});
 </script>
 
-<div
-	class="task-import-node flex h-full flex-col rounded-md border border-gray-300 bg-white shadow-md"
->
-	<NodeResizer minWidth={250} minHeight={200} />
-
-	<!-- Header Section -->
-	<div class="flex-none border-b border-gray-200 bg-gray-50 p-1.5">
+{#snippet ImportHeader()}
+	<!-- Snippet Content: Import Header -->
+	<div class="import-controls w-full">
 		<div class="mb-1 text-center text-xs font-medium text-gray-700">Import Task from Module</div>
 		<div class="flex items-center gap-1">
 			<input
@@ -213,36 +184,37 @@
 				</select>
 			</div>
 		{/if}
-	</div>
 
-	<!-- Embedded TaskNode for Read-Only View -->
-	<div class="relative h-full min-h-0 flex-grow overflow-hidden p-0">
-		{#if localSelectedClassName}
-			<TaskNode id={taskNodeViewData.nodeId} data={taskNodeViewData} readOnly={true} />
-		{:else if !error}
-			<div class="text-2xs flex h-full items-center justify-center p-2 italic text-gray-400">
-				Enter a Python module path (e.g., `path.to.your.module`) and click Load.
+		<!-- Loading Indicator for Field Fetch -->
+		{#if loading && localSelectedClassName}
+			<div
+				class="absolute left-0 top-full z-10 mt-px flex w-full items-center justify-center bg-white/70 py-1"
+			>
+				<Spinner size={16} class="animate-spin text-blue-500" />
+			</div>
+		{/if}
+
+		<!-- Error Display Area -->
+		{#if error}
+			<div class="mt-1.5 border-t border-red-200 bg-red-50 p-1.5">
+				<p class="text-2xs font-semibold text-red-700">Error:</p>
+				<p class="text-2xs text-red-600">{error}</p>
 			</div>
 		{/if}
 	</div>
+{/snippet}
 
-	<!-- Loading Indicator for Field Fetch -->
-	{#if loading && localSelectedClassName}
-		<div class="absolute inset-0 z-10 flex items-center justify-center bg-white/70">
-			<Spinner size={24} class="animate-spin text-blue-500" />
-		</div>
-	{/if}
-
-	<!-- Error Display Area -->
-	{#if error}
-		<div class="mt-auto flex-none border-t border-red-200 bg-red-50 p-1.5">
-			<p class="text-2xs font-semibold text-red-700">Error:</p>
-			<p class="text-2xs text-red-600">{error}</p>
-		</div>
-	{/if}
-</div>
+<TaskNode {id} {data}>
+	{@render ImportHeader()}
+</TaskNode>
 
 <style>
+	/* Ensure child snippet takes full width and specific styling */
+	:global(.task-node > div:first-child > .import-controls) {
+		padding: 0.375rem; /* p-1.5 */
+		width: 100%;
+	}
+	/* You might need additional styles here or in TaskNode */
 	.text-2xs {
 		font-size: 0.65rem; /* 10.4px */
 		line-height: 1rem; /* 16px */
