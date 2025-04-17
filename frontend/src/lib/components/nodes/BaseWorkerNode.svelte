@@ -155,10 +155,6 @@
 			nameError = 'Invalid Python class name';
 			return false;
 		}
-		if (!name.endsWith('Worker')) {
-			nameError = 'Worker name must end with "Worker"';
-			return false;
-		}
 		nameError = '';
 		return true;
 	}
