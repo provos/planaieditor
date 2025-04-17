@@ -4,7 +4,7 @@ import os
 import re
 from pathlib import Path
 from textwrap import dedent, indent
-from typing import Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import black
 from app.utils import is_valid_python_class_name
@@ -40,6 +40,239 @@ def return_code_snippet(name):
     """
     with Path(CODE_SNIPPETS_DIR, f"{name}.py").open("r", encoding="utf-8") as f:
         return f.read() + "\n\n"
+
+
+def create_worker_class(node: Dict[str, Any]) -> Optional[str]:
+    # Determine base class based on node type, including cached variants
+    node_type = node.get("type")
+    data = node.get("data", {})
+
+    if data.get("factoryFunction"):
+        return None
+
+    code = []
+
+    worker_name = data.get("className")
+    if not is_valid_python_class_name(worker_name):
+        raise ValueError(f"Invalid worker class name: {worker_name}")
+
+    base_class = "TaskWorker"  # Default
+    if node_type == "llmtaskworker":
+        base_class = "LLMTaskWorker"
+    elif node_type == "joinedtaskworker":
+        base_class = "JoinedTaskWorker"
+    elif node_type == "cachedtaskworker":
+        base_class = "CachedTaskWorker"
+    elif node_type == "cachedllmtaskworker":
+        base_class = "CachedLLMTaskWorker"
+
+    code.append(f"\nclass {worker_name}({base_class}):")
+    class_body = []  # Store lines for the current class body
+
+    # --- Process Class Variables ---
+    class_vars = data.get("classVars", {})
+    # Read output_types from class_vars, not the top-level data
+    output_types = class_vars.get("output_types", [])
+    # Retrieve specific class variables from the classVars dict
+    llm_input_type = class_vars.get("llm_input_type")
+    llm_output_type = class_vars.get("llm_output_type")
+    join_type = class_vars.get("join_type")
+    prompt = class_vars.get("prompt")
+    system_prompt = class_vars.get("system_prompt")
+
+    # Handle Output Types
+    if output_types:
+        types_str = ", ".join(get_task_class_name(t) for t in output_types)
+        class_body.append(f"    output_types: List[Type[Task]] = [{types_str}]")
+
+    # Handle LLM Input Type
+    if llm_input_type:
+        input_type_class = get_task_class_name(llm_input_type)
+        class_body.append(f"    llm_input_type: Type[Task] = {input_type_class}")
+
+    # Handle LLM Output Type
+    if llm_output_type:
+        output_type_class = get_task_class_name(llm_output_type)
+        class_body.append(f"    llm_output_type: Type[Task] = {output_type_class}")
+
+    # Handle Join Type
+    if join_type:
+        class_body.append(f"    join_type: Type[TaskWorker] = {join_type}")
+
+    # Handle Prompts
+    if prompt:
+        dedented_prompt = dedent(prompt).strip()
+        class_body.append(f'    prompt: str = """{dedented_prompt}"""')
+    if system_prompt:
+        dedented_sys_prompt = dedent(system_prompt).strip()
+        class_body.append(f'    system_prompt: str = """{dedented_sys_prompt}"""')
+
+    # Handle Boolean Flags (use_xml, debug_mode)
+    if class_vars.get("use_xml") is True:
+        class_body.append("    use_xml: bool = True")
+    if class_vars.get("debug_mode") is True:
+        class_body.append("    debug_mode: bool = True")
+
+    # --- Process Methods ---
+    methods = data.get("methods", {})
+    if methods:
+        # Determine input type hint for consume_work/consume_work_joined
+        input_type_hint = "Task"  # Default
+        input_types = data.get("inputTypes", [])
+        if input_types:
+            input_type_hint = get_task_class_name(input_types[0])
+
+        for method_name, method_source in methods.items():
+            # Handle signatures for known methods
+            if method_name == "consume_work":
+                signature = f"def consume_work(self, task: {input_type_hint}):"
+            elif method_name == "consume_work_joined":
+                signature = (
+                    f"def consume_work_joined(self, tasks: List[{input_type_hint}]):"
+                )
+            # Add signatures for other known methods if needed
+            elif method_name == "post_process":
+                # Ensure correct signature, potentially needs input_task too?
+                # Assuming it processes the output task type for now.
+                output_type_hint = "Task"  # Default
+                if base_class == "LLMTaskWorker" or base_class == "CachedLLMTaskWorker":
+                    # Try to get llm_output_type
+                    llm_output_type_name = class_vars.get("llm_output_type")
+                    if llm_output_type_name and isinstance(llm_output_type_name, str):
+                        output_type_hint = get_task_class_name(llm_output_type_name)
+
+                signature = f"def post_process(self, task: {output_type_hint}):"
+            elif method_name == "extra_cache_key":
+                signature = (
+                    f"def extra_cache_key(self, task: {input_type_hint}) -> str:"
+                )
+            # Add more method signatures as needed
+            else:
+                # Fallback: try to extract signature from source (simple cases)
+                match = re.match(r"^\s*def\s+(\w+)\s*\((.*?)\):", method_source)
+                if match:
+                    signature = f"def {match.group(1)}({match.group(2)}):"
+                else:
+                    signature = f"def {method_name}(self, ...):"  # Generic fallback
+
+            # Dedent and prepare the body code lines
+            dedented_code = dedent(method_source).strip()
+            body_lines = dedented_code.splitlines()
+
+            # Remove the signature line if it exists in the source already
+            if body_lines and body_lines[0].strip().startswith(
+                signature.split("(")[0].strip()
+            ):
+                body_lines = body_lines[1:]
+
+            # Ensure body is not empty
+            if not body_lines or all(not line.strip() for line in body_lines):
+                body_lines = ["pass"]
+
+            class_body.append(f"\n    {signature}")
+            # Indent each line of the body correctly
+            for line in body_lines:
+                class_body.append(f"        {line.rstrip()}")  # Indent with 8 spaces
+
+    # --- Process Other Members Source ---
+    other_source = data.get("otherMembersSource", None)
+    if other_source:
+        dedented_other = dedent(other_source).strip()
+        if dedented_other:
+            indented_other = indent(dedented_other, "    ").strip()
+            class_body.append("\n    # --- Other Class Members ---")
+            class_body.append(f"    {indented_other}")
+
+    # Add pass if class body is empty
+    if not class_body:
+        class_body.append("    pass")
+
+    code.extend(class_body)
+
+    return "\n".join(code)
+
+
+def wrap_instantiation_in_try_except(
+    injected_code: str, worker_class_name: str, error_message: str
+) -> str:
+    code = []
+    code.append(f"\n# Instantiate: {worker_class_name}")
+    code.append("try:")
+    code.append(indent(injected_code, "    "))
+    code.append("except Exception as e:")
+    code.append(
+        f'  error_info_dict = {{ "success": False, "error": {{ "message": f"{error_message}: {{repr(str(e))}}", "nodeName": "{worker_class_name}", "fullTraceback": traceback.format_exc() }} }}'
+    )
+    code.append('  print("##ERROR_JSON_START##", flush=True)')
+    code.append("  print(json.dumps(error_info_dict), flush=True)")
+    code.append('  print("##ERROR_JSON_END##", flush=True)')
+    code.append("  sys.exit(1)")
+    return "\n".join(code)
+
+
+def create_factory_worker_instance(
+    node: Dict[str, Any], factories_used: Set[str]
+) -> str:
+    data = node.get("data", {})
+    worker_class_name = data.get("className")
+    factory_function = data.get("factoryFunction")
+    instance_name = worker_to_instance_name(worker_class_name)
+
+    # Handle factory-created SubGraphWorker
+    factories_used.add(factory_function)  # Track factory usage for imports
+
+    # Retrieve pre-unparsed arguments from the data
+    factory_args_strings = data.get("factoryArgsStrings", [])
+    factory_keywords_strings = data.get("factoryKeywordsStrings", {})
+
+    # Combine arguments for the call string
+    all_args = list(factory_args_strings)
+    all_args.extend([f"{k}={v}" for k, v in factory_keywords_strings.items()])
+    combined_args_string = ", ".join(all_args)
+
+    code = []
+
+    # Wrap instantiation in try-except
+    code.append(f"\n# Create SubGraphWorker using {factory_function}")
+    # Use the directly reconstructed argument string
+    code.append(f"{instance_name} = {factory_function}({combined_args_string})")
+    code.append(f"workers_dict['{instance_name}'] = {instance_name}")
+
+    return wrap_instantiation_in_try_except(
+        "\n".join(code),
+        worker_class_name,
+        f"Failed to create {worker_class_name} using {factory_function}",
+    )
+
+
+def create_worker_instance(node: Dict[str, Any]) -> str:
+    data = node.get("data", {})
+    worker_class_name = data.get("className")
+    instance_name = worker_to_instance_name(worker_class_name)
+    worker_type = node.get("type")
+
+    # Basic LLM assignment - needs refinement based on node config/needs
+    llm_arg = ""
+    if worker_type == "llmtaskworker":
+        llm_arg = "llm=llm_code"  # Default to code llm for LLM workers
+    elif worker_type == "joinedtaskworker":
+        pass  # Joined workers don't take LLM directly
+    else:  # Basic taskworker might sometimes need an LLM? Defaulting to none.
+        pass
+
+    code = []
+    # Wrap instantiation in try-except
+    code.append(f"\n# Instantiate: {worker_class_name}")
+    code.append(f"{instance_name} = {worker_class_name}({llm_arg})")
+    code.append(f"workers_dict['{instance_name}'] = {instance_name}")
+
+    return wrap_instantiation_in_try_except(
+        "\n".join(code), worker_class_name, f"Failed to instantiate {worker_class_name}"
+    )
+
+
+def get_task_class_name(type_name: str) -> str:
+    return type_name
 
 
 def generate_python_module(
@@ -211,32 +444,7 @@ def generate_python_module(
                         f"    {field_name}: {py_type} = Field({field_args_str})"
                     )
 
-    # Helper to map frontend type names (like 'TaskA') to generated Task class names
-    def get_task_class_name(type_name: str) -> str:
-        # Find the task node whose className matches type_name
-        for node_id, task_name in task_class_names.items():
-            if task_name == type_name:
-                return task_name
-
-        # If not found by mapping (shouldn't happen if graph is consistent)
-        # Check if it was an imported task by name
-        # imported_tasks is a list of dicts with 'className' and 'modulePath'
-        imported_task_names = [task["className"] for task in imported_tasks]
-        if type_name in imported_task_names:
-            return type_name
-
-        # Check against the task_class_names generated from TaskImportNodes as well
-        # The key in task_class_names is the node ID, the value is the className
-        # We need to check if the type_name matches any value in task_class_names
-        if type_name in task_class_names.values():
-            return type_name
-
-        raise ValueError(
-            f"Could not find Task definition or import for type '{type_name}'"
-        )
-
     # 3. Worker Definitions (from worker nodes)
-    workers = []
     worker_nodes = [
         n
         for n in nodes
@@ -250,306 +458,49 @@ def generate_python_module(
             "subgraphworker",
         )
     ]
-    worker_classes = {}  # Map node ID to worker class name
+
     # Instance names will be generated later
-    if not worker_nodes:
+    workers = []
+    for node in worker_nodes:
+        code = create_worker_class(node)
+        if code:
+            workers.append(code)
+
+    if not workers:
         workers.append("# No Worker nodes defined in the graph.")
-    else:
-        for node in worker_nodes:
-            node_id = node["id"]
-            node_type = node["type"]
-            data = node.get("data", {})
-            worker_name = data.get("className")
-            factory_function = data.get("factoryFunction")
-
-            if not is_valid_python_class_name(worker_name):
-                raise ValueError(f"Invalid worker name: {worker_name}")
-
-            worker_classes[node_id] = worker_name  # Store class name
-
-            # Only generate class definition if it's NOT a factory worker
-            if not factory_function:
-                # Determine base class based on node type, including cached variants
-                base_class = "TaskWorker"  # Default
-                if node_type == "llmtaskworker":
-                    base_class = "LLMTaskWorker"
-                elif node_type == "joinedtaskworker":
-                    base_class = "JoinedTaskWorker"
-                elif node_type == "cachedtaskworker":
-                    base_class = "CachedTaskWorker"
-                elif node_type == "cachedllmtaskworker":
-                    base_class = "CachedLLMTaskWorker"
-
-                workers.append(f"\nclass {worker_name}({base_class}):")
-                class_body = []  # Store lines for the current class body
-
-                # --- Process Class Variables ---
-                class_vars = data.get("classVars", {})
-                # Read output_types from class_vars, not the top-level data
-                output_types = class_vars.get("output_types", [])
-                # Retrieve specific class variables from the classVars dict
-                llm_input_type = class_vars.get("llm_input_type")
-                llm_output_type = class_vars.get("llm_output_type")
-                join_type = class_vars.get("join_type")
-                prompt = class_vars.get("prompt")
-                system_prompt = class_vars.get("system_prompt")
-
-                # Handle Output Types
-                if output_types:
-                    types_str = ", ".join(get_task_class_name(t) for t in output_types)
-                    class_body.append(
-                        f"    output_types: List[Type[Task]] = [{types_str}]"
-                    )
-
-                # Handle LLM Input Type
-                if llm_input_type:
-                    try:
-                        input_type_class = get_task_class_name(llm_input_type)
-                        class_body.append(
-                            f"    llm_input_type: Type[Task] = {input_type_class}"
-                        )
-                    except ValueError:
-                        print(
-                            f"Warning: Could not find Task definition for llm_input_type '{llm_input_type}' in {worker_name}. Skipping."
-                        )
-
-                # Handle LLM Output Type
-                if llm_output_type:
-                    try:
-                        output_type_class = get_task_class_name(llm_output_type)
-                        class_body.append(
-                            f"    llm_output_type: Type[Task] = {output_type_class}"
-                        )
-                    except ValueError:
-                        print(
-                            f"Warning: Could not find Task definition for llm_output_type '{llm_output_type}' in {worker_name}. Skipping."
-                        )
-
-                # Handle Join Type
-                if join_type:
-                    class_body.append(f"    join_type: Type[TaskWorker] = {join_type}")
-
-                # Handle Prompts
-                if prompt:
-                    dedented_prompt = dedent(prompt).strip()
-                    class_body.append(f'    prompt: str = """{dedented_prompt}"""')
-                if system_prompt:
-                    dedented_sys_prompt = dedent(system_prompt).strip()
-                    class_body.append(
-                        f'    system_prompt: str = """{dedented_sys_prompt}"""'
-                    )
-
-                # Handle Boolean Flags (use_xml, debug_mode)
-                if class_vars.get("use_xml") is True:
-                    class_body.append("    use_xml: bool = True")
-                if class_vars.get("debug_mode") is True:
-                    class_body.append("    debug_mode: bool = True")
-
-                # --- Process Methods ---
-                methods = data.get("methods", {})
-                if methods:
-                    # Determine input type hint for consume_work/consume_work_joined
-                    input_type_hint = "Task"  # Default
-                    input_types = data.get("inputTypes", [])
-                    if input_types:
-                        try:
-                            input_type_hint = get_task_class_name(input_types[0])
-                        except ValueError:
-                            print(
-                                f"Warning: Could not find Task definition for input type '{input_types[0]}' in {worker_name}. Using default 'Task'."
-                            )
-
-                    for method_name, method_source in methods.items():
-                        # Handle signatures for known methods
-                        if method_name == "consume_work":
-                            signature = (
-                                f"def consume_work(self, task: {input_type_hint}):"
-                            )
-                        elif method_name == "consume_work_joined":
-                            signature = f"def consume_work_joined(self, tasks: List[{input_type_hint}]):"
-                        # Add signatures for other known methods if needed
-                        elif method_name == "post_process":
-                            # Ensure correct signature, potentially needs input_task too?
-                            # Assuming it processes the output task type for now.
-                            output_type_hint = "Task"  # Default
-                            if (
-                                base_class == "LLMTaskWorker"
-                                or base_class == "CachedLLMTaskWorker"
-                            ):
-                                # Try to get llm_output_type
-                                llm_output_type_name = class_vars.get("llm_output_type")
-                                if llm_output_type_name and isinstance(
-                                    llm_output_type_name, str
-                                ):
-                                    try:
-                                        output_type_hint = get_task_class_name(
-                                            llm_output_type_name
-                                        )
-                                    except ValueError:
-                                        pass  # Keep default if task not found
-                            signature = (
-                                f"def post_process(self, task: {output_type_hint}):"
-                            )
-                        elif method_name == "extra_cache_key":
-                            signature = f"def extra_cache_key(self, task: {input_type_hint}) -> str:"
-                        # Add more method signatures as needed
-                        else:
-                            # Fallback: try to extract signature from source (simple cases)
-                            match = re.match(
-                                r"^\s*def\s+(\w+)\s*\((.*?)\):", method_source
-                            )
-                            if match:
-                                signature = f"def {match.group(1)}({match.group(2)}):"
-                            else:
-                                signature = (
-                                    f"def {method_name}(self, ...):"  # Generic fallback
-                                )
-
-                        # Dedent and prepare the body code lines
-                        dedented_code = dedent(method_source).strip()
-                        body_lines = dedented_code.splitlines()
-
-                        # Remove the signature line if it exists in the source already
-                        if body_lines and body_lines[0].strip().startswith(
-                            signature.split("(")[0].strip()
-                        ):
-                            body_lines = body_lines[1:]
-
-                        # Ensure body is not empty
-                        if not body_lines or all(
-                            not line.strip() for line in body_lines
-                        ):
-                            body_lines = ["pass"]
-
-                        class_body.append(f"\n    {signature}")
-                        # Indent each line of the body correctly
-                        for line in body_lines:
-                            class_body.append(
-                                f"        {line.rstrip()}"
-                            )  # Indent with 8 spaces
-
-                # --- Process Other Members Source ---
-                other_source = data.get("otherMembersSource", None)
-                if other_source:
-                    dedented_other = dedent(other_source).strip()
-                    if dedented_other:
-                        indented_other = indent(dedented_other, "    ").strip()
-                        class_body.append("\n    # --- Other Class Members ---")
-                        class_body.append(f"    {indented_other}")
-
-                # Add pass if class body is empty
-                if not class_body:
-                    class_body.append("    pass")
-
-                workers.extend(class_body)
 
     # 4. Graph Creation Function
     worker_setup = []
-
     worker_names = []
 
     # Track factory-created workers for special handling and imports
-    factory_created_workers = {}
     factories_used = set()  # Track factory function names used
 
-    if not worker_classes:
-        worker_setup.append("# No workers to instantiate")
-    else:
-        # Iterate through all worker nodes, not just the classes map
-        for node in worker_nodes:
-            node_id = node["id"]
-            data = node.get("data", {})
-            worker_class_name = data.get("className")
-            factory_function = data.get("factoryFunction")
-            worker_type = node.get("type")
+    for node in worker_nodes:
+        node_id = node["id"]
+        data = node.get("data", {})
+        worker_class_name = data.get("className")
+        factory_function = data.get("factoryFunction")
 
-            if not worker_class_name:
-                print(f"Warning: Skipping node {node_id} due to missing className.")
-                continue
+        if not worker_class_name:
+            print(f"Warning: Skipping node {node_id} due to missing className.")
+            continue
 
-            instance_name = worker_to_instance_name(worker_class_name)
-            worker_names.append(instance_name)  # Keep track of all instance names
+        instance_name = worker_to_instance_name(worker_class_name)
+        worker_names.append(instance_name)  # Keep track of all instance names
 
-            # Check if this is a factory-created worker
-            if factory_function and worker_type == "subgraphworker":
-                # Handle factory-created SubGraphWorker
-                factory_created_workers[worker_class_name] = {
-                    "factoryFunction": factory_function,
-                    "instanceName": instance_name,
-                    "node": node,
-                }
-                factories_used.add(factory_function)  # Track factory usage for imports
-
-                # Retrieve pre-unparsed arguments from the data
-                factory_args_strings = data.get("factoryArgsStrings", [])
-                factory_keywords_strings = data.get("factoryKeywordsStrings", {})
-
-                # Combine arguments for the call string
-                all_args = list(factory_args_strings)
-                all_args.extend(
-                    [f"{k}={v}" for k, v in factory_keywords_strings.items()]
-                )
-                combined_args_string = ", ".join(all_args)
-
-                # Wrap instantiation in try-except
-                worker_setup.append(
-                    f"\n# Create SubGraphWorker using {factory_function}"
-                )
-                worker_setup.append("try:")
-                # Use the directly reconstructed argument string
-                worker_setup.append(
-                    f"  {instance_name} = {factory_function}({combined_args_string})"
-                )
-                worker_setup.append(
-                    f"  workers_dict['{instance_name}'] = {instance_name}"
-                )
-                worker_setup.append("except Exception as e:")
-                worker_setup.append(
-                    f'  error_info_dict = {{ "success": False, "error": {{ "message": f"Failed to create {worker_class_name} using {factory_function}: {{repr(str(e))}}", "nodeName": "{worker_class_name}", "fullTraceback": traceback.format_exc() }} }}'
-                )
-                worker_setup.append('  print("##ERROR_JSON_START##", flush=True)')
-                worker_setup.append("  print(json.dumps(error_info_dict), flush=True)")
-                worker_setup.append('  print("##ERROR_JSON_END##", flush=True)')
-                worker_setup.append("  sys.exit(1)")
-            elif not factory_function:  # Only process regular workers here
-                # Basic LLM assignment - needs refinement based on node config/needs
-                llm_arg = ""
-                if worker_type == "llmtaskworker":
-                    llm_arg = "llm=llm_code"  # Default to code llm for LLM workers
-                elif worker_type == "joinedtaskworker":
-                    pass  # Joined workers don't take LLM directly
-                else:  # Basic taskworker might sometimes need an LLM? Defaulting to none.
-                    pass
-
-                # Wrap instantiation in try-except
-                worker_setup.append(f"\n# Instantiate: {worker_class_name}")
-                worker_setup.append("try:")
-                worker_setup.append(
-                    f"  {instance_name} = {worker_class_name}({llm_arg})"
-                )
-                worker_setup.append(
-                    f"  workers_dict['{instance_name}'] = {instance_name}"
-                )
-                worker_setup.append("except Exception as e:")
-                # Format error JSON including the worker_class_name which failed
-                # We construct the Python code that will *create* the dictionary string
-                # Use repr(str(e)) to safely embed the exception message
-                worker_setup.append(
-                    f'  error_info_dict = {{ "success": False, "error": {{ "message": f"Failed to instantiate {worker_class_name}: {{repr(str(e))}}", "nodeName": "{worker_class_name}", "fullTraceback": traceback.format_exc() }} }}'
-                )
-                worker_setup.append(
-                    '  print("##ERROR_JSON_START##", flush=True)'
-                )  # Marker start
-                worker_setup.append("  print(json.dumps(error_info_dict), flush=True)")
-                worker_setup.append(
-                    '  print("##ERROR_JSON_END##", flush=True)'
-                )  # Marker end
-                worker_setup.append("  sys.exit(1)")  # Exit after reporting error
+        # Check if this is a factory-created worker
+        if factory_function:
+            # Handle factory-created SubGraphWorker
+            worker_setup.append(create_factory_worker_instance(node, factories_used))
+        else:  # Only process regular workers here
+            worker_setup.append(create_worker_instance(node))
 
     # Make sure all worker names are included in add_workers
-    if worker_names:  # Only add if there are workers
+    if worker_nodes:  # Only add if there are workers
         worker_setup.append(f"graph.add_workers({', '.join(worker_names)})")
-    else:
+
+    if not worker_setup:
         worker_setup.append("# No workers instantiated.")
 
     # --- Generate Code for Dependencies and Entry Point *inside* create_graph ---
@@ -563,7 +514,7 @@ def generate_python_module(
         for node in worker_nodes:
             data = node.get("data", {})
             class_name = data.get("className")
-            # Node ID mapping to class name should already exist in worker_classes
+
             if class_name:
                 instance_name = worker_to_instance_name(class_name)
                 worker_instance_by_class_name[class_name] = instance_name
