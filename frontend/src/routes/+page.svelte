@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { SvelteFlow, Background, Controls, ControlButton, useSvelteFlow } from '@xyflow/svelte';
-	import { getColorForType } from '$lib/utils/colorUtils';
+	import { getEdgeStyleProps } from '$lib/utils/edgeUtils';
 	import type { Node, Edge, Connection } from '@xyflow/svelte';
 	import '@xyflow/svelte/dist/style.css';
 	import ToolShelf from '$lib/components/ToolShelf.svelte';
@@ -657,29 +657,12 @@ Analyze the following information and provide a response.`,
 			console.error('sourceNode not found');
 			return;
 		}
-		let taskType: string | undefined = undefined;
-		if (sourceNode.type === 'task') {
-			taskType = (sourceNode.data as any)?.className;
-		} else if (newEdge.sourceHandle && newEdge.sourceHandle.startsWith('output-')) {
-			taskType = newEdge.sourceHandle.split('-')[1];
-		} else if (
-			sourceNode.data &&
-			Array.isArray(sourceNode.data.outputTypes) &&
-			sourceNode.data.outputTypes.length === 1
-		) {
-			taskType = sourceNode.data.outputTypes[0];
-		}
 
-		let styleString = 'stroke-width:3;'; // Default thickness
-		if (taskType) {
-			const color = getColorForType(taskType);
-			styleString += `stroke:${color};`; // Add color if type found
-		}
-		newEdge.style = styleString;
+		// Use the utility function to get edge style properties
+		const styleProps = getEdgeStyleProps(sourceNode, newEdge);
+		newEdge.style = styleProps.style;
+		newEdge.animated = styleProps.animated;
 
-		if (sourceNode?.type === 'task' || sourceNode?.type === 'taskimport') {
-			newEdge.animated = true;
-		}
 		edges.update((eds) => {
 			const index = eds.findIndex((edge) => edge.id === newEdge.id);
 			if (index !== -1) {
