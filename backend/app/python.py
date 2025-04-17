@@ -196,7 +196,6 @@ def wrap_instantiation_in_try_except(
     injected_code: str, worker_class_name: str, error_message: str
 ) -> str:
     code = []
-    code.append(f"\n# Instantiate: {worker_class_name}")
     code.append("try:")
     code.append(indent(injected_code, "    "))
     code.append("except Exception as e:")
@@ -262,7 +261,7 @@ def create_worker_instance(node: Dict[str, Any]) -> str:
 
     code = []
     # Wrap instantiation in try-except
-    code.append(f"\n# Instantiate: {worker_class_name}")
+    code.append(f"# Instantiate: {worker_class_name}")
     code.append(f"{instance_name} = {worker_class_name}({llm_arg})")
     code.append(f"workers_dict['{instance_name}'] = {instance_name}")
 
