@@ -12,6 +12,7 @@ WORKER_BASE_CLASSES = [
     "CachedTaskWorker",
     "LLMTaskWorker",
     "JoinedTaskWorker",  # Keep for potential future use
+    "SubGraphWorker",  # Add SubGraphWorker itself if it can be directly subclassed
     "TaskWorker",
 ]
 # Map to frontend types
@@ -20,6 +21,7 @@ WORKER_TYPE_MAP = {
     "LLMTaskWorker": "llmtaskworker",
     "CachedTaskWorker": "cachedtaskworker",
     "JoinedTaskWorker": "joinedtaskworker",
+    "SubGraphWorker": "subgraphworker",  # Map SubGraphWorker
     "TaskWorker": "taskworker",
 }
 
@@ -51,6 +53,23 @@ ALLOWED_TASK_IMPORTS: Dict[str, List[str]] = {
         "SearchQuery",
         "SearchResult",
     ],
+    # Add modules that might contain Tasks used by subgraphs if needed
+}
+
+# --- Configuration for Subgraph Factory Functions ---
+SUBGRAPH_FACTORIES: Dict[str, Dict[str, Any]] = {
+    "create_planning_worker": {
+        "workerType": "subgraphworker",
+        "inputTypes": ["PlanRequest"],
+        "outputTypes": ["FinalPlan"],
+        "defaultClassName": "PlanningWorkerSubgraph",
+    },
+    "create_search_fetch_worker": {
+        "workerType": "subgraphworker",
+        "inputTypes": ["SearchQuery"],
+        "outputTypes": ["ConsolidatedPages"],
+        "defaultClassName": "SearchFetchWorker",
+    },
 }
 
 
@@ -646,6 +665,8 @@ def find_graph_builder_function(parsed_ast: ast.Module) -> Optional[ast.Function
     for node in ast.walk(parsed_ast):
         if isinstance(node, ast.FunctionDef):
             # Look for graph instantiation or specific method calls
+            # More robust check: look for graph = Graph(...) assignment specifically
+            graph_assigned = False
             for stmt in node.body:
                 if isinstance(stmt, ast.Assign):
                     # Check for graph = Graph(...)
@@ -656,17 +677,57 @@ def find_graph_builder_function(parsed_ast: ast.Module) -> Optional[ast.Function
                         and len(stmt.targets) == 1
                         and isinstance(stmt.targets[0], ast.Name)
                         and stmt.targets[0].id == "graph"
-                    ):  # Common pattern
-                        return node
-                # Could add checks for graph.add_workers, graph.set_dependency etc.
+                    ):
+                        graph_assigned = True
+                        break  # Found graph assignment in this function
+
+            # Also check if common graph methods are called
+            calls_graph_methods = False
+            if graph_assigned:  # Only check methods if graph is assigned here
+                for sub_node in ast.walk(node):
+                    if isinstance(sub_node, ast.Call) and isinstance(
+                        sub_node.func, ast.Attribute
+                    ):
+                        # Check if the call is on an object named 'graph' (or 'g')
+                        if isinstance(
+                            sub_node.func.value, ast.Name
+                        ) and sub_node.func.value.id in ("graph", "g"):
+                            if sub_node.func.attr in (
+                                "add_workers",
+                                "set_dependency",
+                                "set_entry",
+                                "set_sink",
+                                "run",
+                            ):
+                                calls_graph_methods = True
+                                break  # Found a relevant graph method call
+
+            if graph_assigned and calls_graph_methods:
+                return node  # Found a likely candidate
+
     return None  # Function not found
 
 
 def get_worker_assignments(
     func_node: ast.FunctionDef, worker_classes: Set[str]
-) -> Dict[str, str]:
-    """Extracts variable assignments for worker instances within a function.
+) -> Dict[str, Dict[str, Any]]:
+    """
+    Extracts variable assignments for worker instances within a function,
+    including direct class instantiations and calls to known factory functions.
     Looks inside try blocks as well.
+
+    Returns:
+        A dictionary mapping variable names to details about the worker instance:
+        {
+            var_name: {
+                'type': 'direct' | 'factory',
+                'class_name': str | None,      # For 'direct' type
+                'factory_name': str | None,    # For 'factory' type
+                'args': List[ast.expr],        # Positional args from the call
+                'keywords': Dict[str, ast.expr] # Keyword args from the call
+            },
+            ...
+        }
     """
     assignments = {}
 
@@ -680,21 +741,57 @@ def get_worker_assignments(
             elif isinstance(stmt, ast.Try):
                 # Recursively search within the try block's body
                 find_assignments_in_body(stmt.body)
-                # Optionally, could also check stmt.handlers or stmt.finalbody if needed
+                # Optionally, could also check stmt.handlers or stmt.finalbody
+                continue  # Continue to next statement after processing try block
 
             # Process the assignment statement if found
             if (
                 target_stmt
                 and len(target_stmt.targets) == 1
                 and isinstance(target_stmt.targets[0], ast.Name)
+                and isinstance(target_stmt.value, ast.Call)  # Must be a call
+                # Allow simple function/class name or attribute access like planai.patterns.create_planning_worker
+                # We only care about the final name called
             ):
                 var_name = target_stmt.targets[0].id
-                if isinstance(target_stmt.value, ast.Call) and isinstance(
-                    target_stmt.value.func, ast.Name
-                ):
-                    class_name = target_stmt.value.func.id
-                    if class_name in worker_classes:
-                        assignments[var_name] = class_name
+                call_node = target_stmt.value
+                func_name = None
+                if isinstance(
+                    call_node.func, ast.Name
+                ):  # Simple name like MyWorker() or create_planning_worker()
+                    func_name = call_node.func.id
+                elif isinstance(
+                    call_node.func, ast.Attribute
+                ):  # Attribute like patterns.create_planning_worker()
+                    # We might only need the final attribute name
+                    func_name = call_node.func.attr
+                    # TODO: Consider if we need the full path (e.g., planai.patterns.create_planning_worker)
+                    # For now, assume the final name is unique enough or configured in SUBGRAPH_FACTORIES
+
+                if func_name:
+                    args = call_node.args
+                    keywords = {
+                        kw.arg: kw.value for kw in call_node.keywords if kw.arg
+                    }  # Store keyword args
+
+                    if func_name in worker_classes:
+                        # Direct instantiation of a known worker class
+                        assignments[var_name] = {
+                            "type": "direct",
+                            "class_name": func_name,
+                            "factory_name": None,
+                            "args": args,
+                            "keywords": keywords,
+                        }
+                    elif func_name in SUBGRAPH_FACTORIES:
+                        # Call to a known factory function
+                        assignments[var_name] = {
+                            "type": "factory",
+                            "class_name": None,
+                            "factory_name": func_name,
+                            "args": args,
+                            "keywords": keywords,
+                        }
 
     # Start search from the main function body
     find_assignments_in_body(func_node.body)
@@ -708,7 +805,10 @@ def parse_edge_statement(
         str, Dict[str, Any]
     ],  # Map className to its full details dict
 ) -> List[Dict[str, str]]:
-    """Parses a statement to extract PlanAI graph edges."""
+    """Parses a statement to extract PlanAI graph edges.
+
+    Edges source/target use the worker's className.
+    """
     edges = []
     call_node = None
 
@@ -793,7 +893,10 @@ def parse_set_entry_statement(
     worker_assignments: Dict[str, str],
     worker_details_map: Dict[str, Dict[str, Any]],
 ) -> Optional[Dict[str, str]]:
-    """Parses a graph.set_entry(worker) statement."""
+    """Parses a graph.set_entry(worker) statement.
+
+    Target worker will be the worker's className.
+    """
     if isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call):
         call_node = stmt.value
         # Check for graph.set_entry(worker_var)
@@ -825,7 +928,10 @@ def parse_graph_run_entry_points(
     worker_assignments: Dict[str, str],
     func_node: ast.FunctionDef,  # Pass the function node for scope lookup
 ) -> List[Dict[str, str]]:
-    """Parses a graph.run(initial_tasks=[...]) call to extract entry points."""
+    """Parses a graph.run(initial_tasks=[...]) call to extract entry points.
+
+    Target worker will be the worker's className.
+    """
     entry_edges = []
     if not (isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call)):
         return entry_edges
@@ -943,29 +1049,100 @@ def get_definitions_from_file(filename: str) -> Dict[str, List[Dict[str, Any]]]:
         # Add worker details including its assigned variable name if found later
         worker_results.append(details)
 
-    # --- Extract Edges --- #
+    # --- Extract Edges & Process Assignments --- #
     edges = []
     entry_edges = []  # Initialize list for entry point edges
     graph_func_node = find_graph_builder_function(parsed_ast)
+
+    # Combined list of all worker definitions including factory-created ones
+    all_worker_defs = list(worker_results)  # Start with directly defined workers
+
+    # Map className -> worker details (will include factory workers)
+    worker_details_map = {w["className"]: w for w in worker_results}
+
+    # Map to store variable name -> className for all workers
+    var_to_class_map = {}
+
     if graph_func_node:
         print(f"Found graph builder function: {graph_func_node.name}")
-        # Get all worker class names defined in the file
-        worker_class_names = {w["className"] for w in worker_results}
-        worker_details_map = {w["className"]: w for w in worker_results}  # Create map
-        assignments = get_worker_assignments(graph_func_node, worker_class_names)
-        print(f"Worker assignments: {assignments}")
+        # Get all worker class names defined in the file (needed for get_worker_assignments)
+        directly_defined_worker_classes = {w["className"] for w in worker_results}
 
-        # Add assigned variable name back to worker details for potential frontend use?
-        var_to_class = {v: k for k, v in assignments.items()}  # class:var
-        for worker in worker_results:
-            worker["variableName"] = var_to_class.get(worker["className"])
+        # Find all relevant assignments (direct instantiations and factory calls)
+        worker_instances = get_worker_assignments(
+            graph_func_node, directly_defined_worker_classes
+        )
+        print(f"Worker instances found: {worker_instances}")
 
+        # Process directly defined workers first
+        for var_name, instance_info in worker_instances.items():
+            if instance_info["type"] == "direct":
+                class_name = instance_info["class_name"]
+                # Store the variable name -> class name mapping
+                var_to_class_map[var_name] = class_name
+
+                # Also set variableName on the worker details for completeness
+                # (but className remains the primary identifier)
+                worker_entry = worker_details_map.get(class_name)
+                if worker_entry:
+                    worker_entry["variableName"] = var_name
+
+        # Process factory-created workers - add these to the combined worker definitions
+        for var_name, instance_info in worker_instances.items():
+            if instance_info["type"] == "factory":
+                factory_name = instance_info["factory_name"]
+                factory_config = SUBGRAPH_FACTORIES.get(factory_name)
+                if factory_config:
+                    # Extract 'name' keyword argument if present
+                    name_kw_node = instance_info["keywords"].get("name")
+                    explicit_name = None
+                    if isinstance(name_kw_node, ast.Constant) and isinstance(
+                        name_kw_node.value, str
+                    ):
+                        explicit_name = name_kw_node.value
+
+                    # Determine className - priority to explicit name provided in factory call
+                    factory_class_name = (
+                        explicit_name
+                        or factory_config.get("defaultClassName")
+                        or f"{factory_name}_worker"
+                    )
+
+                    # Store the variable name -> class name mapping
+                    var_to_class_map[var_name] = factory_class_name
+
+                    # Create new worker definition
+                    factory_worker_def = {
+                        "className": factory_class_name,  # Use this as the primary identifier
+                        "variableName": var_name,
+                        "workerType": factory_config.get(
+                            "workerType", "subgraphworker"
+                        ),
+                        "inputTypes": factory_config.get("inputTypes", []),
+                        "outputTypes": factory_config.get("outputTypes", []),
+                        "factoryFunction": factory_name,
+                    }
+
+                    # Add to combined list and details map
+                    all_worker_defs.append(factory_worker_def)
+                    worker_details_map[factory_class_name] = factory_worker_def
+                else:
+                    print(
+                        f"Warning: Factory function '{factory_name}' assigned to '{var_name}' not found in SUBGRAPH_FACTORIES configuration."
+                    )
+
+        # --- Parse Edges using the variable -> className Map ---
+        print(f"Parsing edges with var_to_class_map: {var_to_class_map}")
         for stmt in graph_func_node.body:
-            edges.extend(parse_edge_statement(stmt, assignments, worker_details_map))
+            # Pass the var -> class map to parse edges
+            edges.extend(
+                parse_edge_statement(stmt, var_to_class_map, worker_details_map)
+            )
+
             # --- Combine entry point detection ---
             # Check for graph.set_entry(...)
-            entry_edge_set = parse_set_entry_statement(  # Use renamed function
-                stmt, assignments, worker_details_map
+            entry_edge_set = parse_set_entry_statement(
+                stmt, var_to_class_map, worker_details_map
             )
             if entry_edge_set:
                 entry_edges.append(entry_edge_set)
@@ -973,7 +1150,7 @@ def get_definitions_from_file(filename: str) -> Dict[str, List[Dict[str, Any]]]:
             # Check for graph.run(initial_tasks=...)
             # Pass the graph_func_node for scope analysis
             entry_edges_run = parse_graph_run_entry_points(
-                stmt, assignments, graph_func_node
+                stmt, var_to_class_map, graph_func_node
             )
             entry_edges.extend(entry_edges_run)
             # --- End combine entry point detection ---
@@ -1027,10 +1204,10 @@ def get_definitions_from_file(filename: str) -> Dict[str, List[Dict[str, Any]]]:
 
     return {
         "tasks": task_results,
-        "workers": worker_results,
+        "workers": all_worker_defs,
         "edges": edges,
         "entryEdges": entry_edges,
-        "imported_tasks": imported_tasks,  # Add the new list
+        "imported_tasks": imported_tasks,
     }
 
 

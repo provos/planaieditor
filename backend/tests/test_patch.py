@@ -627,3 +627,171 @@ class PlanFinalizer(TaskWorker):
     assert len(definitions["workers"]) == 2
     assert any(w["className"] == "QueryProcessor" for w in definitions["workers"])
     assert any(w["className"] == "PlanFinalizer" for w in definitions["workers"])
+
+
+def test_extract_factory_workers_and_edges(temp_python_file):
+    """Test detection of workers created via factory functions and their edges."""
+    code = """
+from planai import Graph, TaskWorker, Task
+from planai.patterns import PlanRequest, FinalPlan, ConsolidatedPages, SearchQuery
+from planai.patterns import create_planning_worker  # Factory function
+from planai.patterns import create_search_fetch_worker  # Factory function
+
+class InputPreprocessor(TaskWorker):
+    def consume_work(self, task: PlanRequest):
+        # Process PlanRequest
+        pass
+
+class PlanProcessor(TaskWorker):
+    def consume_work(self, task: FinalPlan):
+        # Process FinalPlan
+        pass
+
+def build_graph_with_factory():
+    graph = Graph()
+
+    # Regular worker instantiation
+    preprocessor = InputPreprocessor()
+    processor = PlanProcessor()
+
+    # Worker created via factory function - gets default className
+    planner = create_planning_worker(llm="my_llm", num_variations=2)
+    searcher = create_search_fetch_worker(llm="my_llm")
+
+    # Worker with explicit name
+    simple_planner = create_planning_worker(
+        llm="my_llm",
+        num_variations=0,
+        name="SimplePlanningWorker"
+    )
+
+    graph.add_workers(preprocessor, planner, simple_planner, processor, searcher)
+
+    # Connect regular worker to factory worker
+    graph.set_dependency(preprocessor, planner)
+
+    # Connect factory worker to another factory worker
+    graph.set_dependency(planner, simple_planner)
+
+    # Connect factory worker to regular worker
+    graph.set_dependency(simple_planner, processor)
+
+    graph.set_dependency(processor, searcher)
+
+    # Set entry point
+    graph.set_entry(preprocessor)
+
+    return graph
+"""
+    file_path = temp_python_file(code)
+    definitions = get_definitions_from_file(str(file_path))
+
+    # Check if workers were correctly extracted
+    workers = definitions["workers"]
+    print(f"Extracted Workers: {workers}")
+
+    # We now need to find workers by className (primary identifier) AND check variableName
+    input_preprocessor = next(
+        (w for w in workers if w["className"] == "InputPreprocessor"), None
+    )
+    plan_processor = next(
+        (w for w in workers if w["className"] == "PlanProcessor"), None
+    )
+
+    # Factory workers should have their respective class names
+    planner = next(
+        (
+            w
+            for w in workers
+            if "factoryFunction" in w and w["className"] == "PlanningWorkerSubgraph"
+        ),
+        None,
+    )
+    simple_planner = next(
+        (
+            w
+            for w in workers
+            if "factoryFunction" in w and w["className"] == "SimplePlanningWorker"
+        ),
+        None,
+    )
+    searcher = next(
+        (w for w in workers if w["className"] == "SearchFetchWorker"),
+        None,
+    )
+    # Verify all workers were found
+    assert input_preprocessor is not None, "InputPreprocessor not found"
+    assert plan_processor is not None, "PlanProcessor not found"
+    assert planner is not None, "Factory-created PlanningWorkerSubgraph not found"
+    assert simple_planner is not None, "Factory-created SimplePlanningWorker not found"
+    assert searcher is not None, "Factory-created SearchFetchWorker not found"
+    # Verify variable names are still tracked
+    assert input_preprocessor.get("variableName") == "preprocessor"
+    assert plan_processor.get("variableName") == "processor"
+    assert planner.get("variableName") == "planner"
+    assert simple_planner.get("variableName") == "simple_planner"
+    assert searcher.get("variableName") == "searcher"
+    # Verify factory worker details
+    assert planner["workerType"] == "subgraphworker"
+    assert "factoryFunction" in planner
+    assert planner["factoryFunction"] == "create_planning_worker"
+    assert planner["inputTypes"] == ["PlanRequest"]  # From factory config
+    assert planner["outputTypes"] == ["FinalPlan"]  # From factory config
+
+    # Verify factory search fetch worker
+    assert searcher["workerType"] == "subgraphworker"
+    assert "factoryFunction" in searcher
+    assert searcher["factoryFunction"] == "create_search_fetch_worker"
+    assert searcher["inputTypes"] == ["SearchQuery"]
+    assert searcher["outputTypes"] == ["ConsolidatedPages"]
+
+    # Verify factory worker with explicit name
+    assert simple_planner["workerType"] == "subgraphworker"
+    assert (
+        simple_planner["className"] == "SimplePlanningWorker"
+    )  # Explicit name from keyword arg
+    assert "factoryFunction" in simple_planner
+    assert simple_planner["factoryFunction"] == "create_planning_worker"
+
+    # Check edges - now definitely use class names, not variable names
+    edges = definitions["edges"]
+    print(f"Extracted Edges: {edges}")
+
+    # Expected edges should now use class names
+    expected_edges = [
+        {
+            "source": "InputPreprocessor",
+            "target": "PlanningWorkerSubgraph",
+            "targetInputType": "PlanRequest",
+        },
+        {
+            "source": "PlanningWorkerSubgraph",
+            "target": "SimplePlanningWorker",
+            "targetInputType": "PlanRequest",
+        },
+        {
+            "source": "SimplePlanningWorker",
+            "target": "PlanProcessor",
+            "targetInputType": "FinalPlan",
+        },
+        {
+            "source": "PlanProcessor",
+            "target": "SearchFetchWorker",
+            "targetInputType": "SearchQuery",
+        },
+    ]
+
+    # Verify all expected edges are present
+    for expected in expected_edges:
+        assert any(
+            e["source"] == expected["source"]
+            and e["target"] == expected["target"]
+            and e.get("targetInputType") == expected.get("targetInputType")
+            for e in edges
+        ), f"Expected edge {expected} not found in {edges}"
+
+    # Check entry point - should use class name
+    entry_edges = definitions["entryEdges"]
+    assert len(entry_edges) == 1
+    assert entry_edges[0]["sourceTask"] == "PlanRequest"
+    assert entry_edges[0]["targetWorker"] == "InputPreprocessor"
