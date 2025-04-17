@@ -6,7 +6,7 @@
 	import type { Node, Edge } from '@xyflow/svelte';
 	import { tick } from 'svelte';
 	export interface TaskWorkerData extends BaseWorkerData {
-		consumeWork: string;
+		consume_work: string;
 	}
 
 	let { id, data } = $props<{
@@ -21,16 +21,6 @@
 	// Use $state for the title and code content to ensure reactivity
 	const defaultTitle = 'def consume_work(self, task):';
 	let reactiveTitle = $state(defaultTitle);
-
-	// Default code for consume_work
-	const defaultConsumeWork = `    # Process the input task and produce output
-    # self.publish_work(output_task, input_task=task)
-    pass`;
-
-	// Initialize if not already set
-	if (!data.consumeWork) {
-		data.consumeWork = defaultConsumeWork;
-	}
 
 	$effect(() => {
 		let currentNodes: Node[] = [];

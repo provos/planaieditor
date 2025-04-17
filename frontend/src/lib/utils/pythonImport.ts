@@ -326,7 +326,7 @@ export async function importPythonCode(
                 nodeId: id,
                 // Initialize common fields, specific nodes might override
                 inputTypes: worker.inputTypes || [], // Use parsed inputTypes from backend if available
-                outputTypes: worker.classVars.output_types || [], // Map output_types
+                output_types: worker.classVars.output_types || [], // Map output_types
                 // Store unparsed methods and members for potential display/editing later
                 methods: worker.methods,
                 otherMembersSource: worker.otherMembersSource, // Store consolidated source

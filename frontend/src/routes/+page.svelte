@@ -259,7 +259,7 @@
 				nodeData = {
 					workerName: uniqueName, // Assign the unique name
 					inputTypes: [],
-					outputTypes: [],
+					output_types: [],
 					methods: {
 						consume_work: `# Process the input task and produce output\n# self.publish_work(output_task, input_task=task)\npass`
 					},
@@ -273,7 +273,7 @@
 				nodeData = {
 					workerName: uniqueName, // Assign the unique name
 					inputTypes: [],
-					outputTypes: [],
+					output_types: [],
 					prompt: `# Process the task using an LLM
 Analyze the following information and provide a response.`,
 					system_prompt: `You are a helpful task processing assistant.`,
@@ -297,7 +297,7 @@ Analyze the following information and provide a response.`,
 				nodeData = {
 					workerName: uniqueName, // Assign the unique name
 					inputTypes: [],
-					outputTypes: [],
+					output_types: [],
 					joinMethod: 'merge',
 					nodeId: id
 				};

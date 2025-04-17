@@ -15,7 +15,7 @@
 		workerName: string;
 		nodeId: string;
 		inputTypes: string[];
-		outputTypes: string[];
+		output_types: string[]; // we are exporting this back to python and are using python naming convention
 		requiredMembers: string[];
 		// Derived components can extend this
 		[key: string]: any;
@@ -57,7 +57,7 @@
 	let manuallySelectedInputType = $state<string>(
 		data.inputTypes.length > 0 ? data.inputTypes[0] : ''
 	);
-	let currentOutputTypes = $state<string[]>([...(data.outputTypes || [])]);
+	let currentOutputTypes = $state<string[]>([...(data.output_types || [])]);
 	let nodeRef: HTMLElement | null = $state(null);
 	let currentHeight = $state(minHeight); // State for reactive height
 
@@ -178,7 +178,7 @@
 
 	// --- Output Type Handling Logic ---
 	function startEditingOutputType(index: number = -1) {
-		tempType = index >= 0 ? data.outputTypes[index] : '';
+		tempType = index >= 0 ? data.output_types[index] : '';
 		editingOutputType = index;
 		typeError = '';
 	}
@@ -198,19 +198,19 @@
 
 	function saveOutputType() {
 		if (!validateType(tempType)) return;
-		currentOutputTypes = [...data.outputTypes];
+		currentOutputTypes = [...data.output_types];
 		if (editingOutputType === -1) {
 			currentOutputTypes.push(tempType);
 		} else if (editingOutputType !== null) {
 			currentOutputTypes[editingOutputType] = tempType;
 		}
-		data.outputTypes = currentOutputTypes;
+		data.output_types = currentOutputTypes;
 		cancelTypeEditing();
 	}
 
 	function deleteOutputType(index: number) {
-		data.outputTypes = data.outputTypes.filter((_: string, i: number) => i !== index);
-		currentOutputTypes = [...data.outputTypes];
+		data.output_types = data.output_types.filter((_: string, i: number) => i !== index);
+		currentOutputTypes = [...data.output_types];
 		typeError = '';
 	}
 
@@ -249,9 +249,9 @@
 		const select = event.target as HTMLSelectElement;
 		if (select && select.value) {
 			const newType = select.value;
-			if (!data.outputTypes.includes(newType)) {
-				data.outputTypes = [...data.outputTypes, newType];
-				currentOutputTypes = [...data.outputTypes];
+			if (!data.output_types.includes(newType)) {
+				data.output_types = [...data.output_types, newType];
+				currentOutputTypes = [...data.output_types];
 			}
 			select.value = ''; // Reset select
 		}

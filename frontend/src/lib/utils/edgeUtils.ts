@@ -35,10 +35,10 @@ export function getEdgeStyleProps(
     } else if (
         // Fallback for workers with a single output type declared in data
         sourceNode.data &&
-        Array.isArray(sourceNode.data.outputTypes) &&
-        sourceNode.data.outputTypes.length === 1
+        Array.isArray(sourceNode.data.output_types) &&
+        sourceNode.data.output_types.length === 1
     ) {
-        taskType = sourceNode.data.outputTypes[0];
+        taskType = sourceNode.data.output_types[0];
     }
 
     let styleString = 'stroke-width:3;'; // Default thickness
