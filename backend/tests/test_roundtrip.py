@@ -595,3 +595,316 @@ def setup_graph():
     assert (
         orig_imported_set == regen_imported_set
     ), f"Imported task definitions mismatch.\nOriginal: {orig_imported_set}\nRegenerated: {regen_imported_set}"
+
+
+def test_subgraph_factory_roundtrip(temp_file):
+    """Test roundtrip conversion of factory-created SubGraphWorkers between Python and JSON."""
+    original_code = """
+from pydantic import Field
+from typing import List, Type
+from planai import Task, TaskWorker, Graph, LLMTaskWorker
+from planai.patterns import PlanRequest, FinalPlan, SearchQuery, ConsolidatedPages
+from planai.patterns import create_planning_worker, create_search_fetch_worker
+
+# --- Task Definitions ---
+class InitialRequest(Task):
+    query: str
+
+class ProcessedResult(Task):
+    processed_data: str
+
+class FinalOutput(Task):
+    summary: str
+
+# --- Worker Definitions ---
+class InputProcessor(TaskWorker):
+    output_types: List[Type[Task]] = [PlanRequest]
+
+    def consume_work(self, task: InitialRequest):
+        # Convert to PlanRequest
+        plan_req = PlanRequest(query_text=task.query)
+        self.publish_work(plan_req, input_task=task)
+
+class OutputProcessor(LLMTaskWorker):
+    llm_input_type = FinalPlan
+    output_types = [FinalOutput]
+    prompt: str = "Summarize the final plan: {task.plan_text}"
+
+    def consume_work(self, task: FinalPlan):
+        # Process final plan
+        summary = f"Summary of: {task.plan_text}"
+        self.publish_work(FinalOutput(summary=summary), input_task=task)
+
+# Simple function to build graph
+def build_graph():
+    graph = Graph(name="FactoryWorkerGraph")
+
+    # Regular workers
+    input_proc = InputProcessor()
+    output_proc = OutputProcessor(llm=get_llm())
+
+    # Factory-created SubGraphWorkers
+    planner = create_planning_worker(
+        llm=get_llm(),
+        num_variations=2
+    )
+
+    # Factory with explicit name
+    searcher = create_search_fetch_worker(
+        llm=get_llm(),
+        name="CustomSearchFetcher"
+    )
+
+    # Add workers
+    graph.add_workers(input_proc, planner, searcher, output_proc)
+
+    # Connect regular worker to factory worker
+    graph.set_dependency(input_proc, planner)
+
+    # Connect factory worker to another factory worker
+    graph.set_dependency(planner, searcher)
+
+    # Connect factory worker to regular worker
+    graph.set_dependency(searcher, output_proc)
+
+    # Set entry point
+    graph.set_entry(input_proc)
+
+    return graph
+
+def get_llm():
+    # Dummy function for the test
+    return "dummy_llm"
+"""
+    original_file = temp_file(original_code)
+
+    # Step 1: Parse original file
+    definitions = get_definitions_from_file(original_file)
+    task_defs = definitions["tasks"]
+    worker_defs = definitions["workers"]
+    edges = definitions["edges"]
+    imported_tasks = definitions.get("imported_tasks", [])  # Important for this test
+
+    print("\nParsed Task definitions:")
+    print(f"  Local tasks: {len(task_defs)}")
+    for task in task_defs:
+        print(f"    {task['className']}")
+
+    print(f"  Imported tasks: {len(imported_tasks)}")
+    for task in imported_tasks:
+        print(f"    {task['className']} from {task['modulePath']}")
+
+    print("\nParsed Worker definitions:")
+    for worker in worker_defs:
+        worker_type = worker.get("workerType", "unknown")
+        factory_fn = worker.get("factoryFunction", "")
+        print(
+            f"  {worker['className']} ({worker_type}{': ' + factory_fn if factory_fn else ''})"
+        )
+
+    print("\nParsed Edges:")
+    for edge in edges:
+        print(f"  {edge.get('source', '?')} -> {edge.get('target', '?')}")
+
+    # Verify imported tasks
+    assert (
+        len(imported_tasks) >= 4
+    ), f"Expected at least 4 imported tasks, got {len(imported_tasks)}"
+    imported_task_names = {task["className"] for task in imported_tasks}
+    for name in ["PlanRequest", "FinalPlan", "SearchQuery", "ConsolidatedPages"]:
+        assert (
+            name in imported_task_names
+        ), f"Imported task '{name}' not found in {imported_task_names}"
+
+    # Verify we found the factory-created workers
+    # Find workers by class name
+    planner = next(
+        (
+            w
+            for w in worker_defs
+            if w.get("factoryFunction") == "create_planning_worker"
+        ),
+        None,
+    )
+    searcher = next(
+        (
+            w
+            for w in worker_defs
+            if w.get("factoryFunction") == "create_search_fetch_worker"
+        ),
+        None,
+    )
+
+    assert planner is not None, "Factory-created planning worker not found"
+    assert searcher is not None, "Factory-created search worker not found"
+    assert (
+        planner["workerType"] == "subgraphworker"
+    ), "Planner should be a subgraphworker"
+    assert (
+        searcher["workerType"] == "subgraphworker"
+    ), "Searcher should be a subgraphworker"
+    assert (
+        searcher["className"] == "CustomSearchFetcher"
+    ), "Custom name not preserved for searcher"
+
+    # Verify we have the expected edges
+    assert len(edges) == 3, f"Expected 3 edges, got {len(edges)}"
+
+    # Find edges by matching source and target
+    edge1 = next(
+        (
+            e
+            for e in edges
+            if e.get("source") == "InputProcessor"
+            and e.get("target") == planner["className"]
+        ),
+        None,
+    )
+    edge2 = next(
+        (
+            e
+            for e in edges
+            if e.get("source") == planner["className"]
+            and e.get("target") == searcher["className"]
+        ),
+        None,
+    )
+    edge3 = next(
+        (
+            e
+            for e in edges
+            if e.get("source") == searcher["className"]
+            and e.get("target") == "OutputProcessor"
+        ),
+        None,
+    )
+
+    assert edge1 is not None, "Edge from InputProcessor to Planner not found"
+    assert edge2 is not None, "Edge from Planner to Searcher not found"
+    assert edge3 is not None, "Edge from Searcher to OutputProcessor not found"
+
+    # Step 2: Create graph data for code generation
+    nodes = []
+
+    # Add task nodes for local tasks
+    for i, task_def in enumerate(task_defs):
+        nodes.append({"id": f"task_{i}", "type": "task", "data": task_def})
+
+    # Add nodes for imported tasks
+    for i, imp_task in enumerate(imported_tasks):
+        nodes.append(
+            {
+                "id": f"imported_task_{i}",
+                "type": "taskimport",
+                "data": {
+                    "className": imp_task["className"],
+                    "modulePath": imp_task["modulePath"],
+                    "nodeId": f"imported_task_{i}",
+                },
+            }
+        )
+
+    # Add worker nodes (both regular and factory-created)
+    for i, worker_def in enumerate(worker_defs):
+        worker_type = worker_def["workerType"]
+        nodes.append({"id": f"worker_{i}", "type": worker_type, "data": worker_def})
+
+    graph_data = {"nodes": nodes, "edges": edges}
+
+    # Step 3: Generate Python code
+    python_code, _, error = generate_python_module(graph_data)
+    assert error is None, f"Error generating Python code: {error}"
+    assert python_code is not None, "No Python code generated"
+
+    print("\nGenerated Python code:")
+    print(python_code)
+
+    # Check if imported tasks are included in the imports
+    assert (
+        "from planai.patterns import " in python_code
+    ), "Imported tasks not included in imports"
+    for name in ["PlanRequest", "FinalPlan", "SearchQuery", "ConsolidatedPages"]:
+        assert (
+            name in python_code
+        ), f"Imported task '{name}' not included in the generated code"
+
+    # Check if factory functions are called correctly with exact arguments
+
+    # remove all whitespace includign newlines
+    expected_planner_call = (
+        "create_planning_worker(llm=get_llm(), num_variations=2)"
+    ).replace(" ", "")
+    replaced_python_code = python_code.replace(" ", "").replace("\n", "")
+    assert (
+        expected_planner_call in replaced_python_code
+    ), f'Expected call "{expected_planner_call}" not found or incorrect in generated code.'
+
+    # Check search fetcher call with name
+    expected_searcher_call = (
+        'create_search_fetch_worker(llm=get_llm(), name="CustomSearchFetcher")'
+    ).replace(" ", "")
+    assert (
+        expected_searcher_call in replaced_python_code
+    ), f'Expected call "{expected_searcher_call}" not found or incorrect in generated code.'
+
+    # Step 4: Write and parse the regenerated code
+    regen_file = temp_file(python_code)
+    regen_definitions = get_definitions_from_file(regen_file)
+    regen_worker_defs = regen_definitions["workers"]
+    regen_edges = regen_definitions["edges"]
+    regen_imported_tasks = regen_definitions.get("imported_tasks", [])
+
+    print("\nRegenparsed Worker definitions:")
+    for worker in regen_worker_defs:
+        worker_type = worker.get("workerType", "unknown")
+        factory_fn = worker.get("factoryFunction", "")
+        print(
+            f"  {worker['className']} ({worker_type}{': ' + factory_fn if factory_fn else ''})"
+        )
+
+    print("\nRegenparsed Imported Tasks:")
+    for task in regen_imported_tasks:
+        print(f"  {task['className']} from {task['modulePath']}")
+
+    # Verify imported tasks were preserved
+    assert (
+        len(regen_imported_tasks) >= 4
+    ), f"Expected at least 4 imported tasks in regenerated code, got {len(regen_imported_tasks)}"
+    regen_imported_task_names = {task["className"] for task in regen_imported_tasks}
+    for name in ["PlanRequest", "FinalPlan", "SearchQuery", "ConsolidatedPages"]:
+        assert (
+            name in regen_imported_task_names
+        ), f"Imported task '{name}' not found in regenerated code"
+
+    # Verify regenerated code contains factory workers
+    regen_planner = next(
+        (
+            w
+            for w in regen_worker_defs
+            if w.get("factoryFunction") == "create_planning_worker"
+        ),
+        None,
+    )
+    regen_searcher = next(
+        (
+            w
+            for w in regen_worker_defs
+            if w.get("factoryFunction") == "create_search_fetch_worker"
+        ),
+        None,
+    )
+
+    assert (
+        regen_planner is not None
+    ), "Factory-created planning worker not in regenerated code"
+    assert (
+        regen_searcher is not None
+    ), "Factory-created search worker not in regenerated code"
+    assert (
+        regen_searcher["className"] == "CustomSearchFetcher"
+    ), "Custom name not preserved in regenerated code"
+
+    # Verify edges were preserved
+    assert (
+        len(regen_edges) == 3
+    ), f"Expected 3 edges in regenerated code, got {len(regen_edges)}"

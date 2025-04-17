@@ -1111,6 +1111,15 @@ def get_definitions_from_file(filename: str) -> Dict[str, List[Dict[str, Any]]]:
                     # Store the variable name -> class name mapping
                     var_to_class_map[var_name] = factory_class_name
 
+                    # Unparse arguments for direct use in regeneration
+                    factory_args_strings = [
+                        ast.unparse(arg) for arg in instance_info["args"]
+                    ]
+                    factory_keywords_strings = {
+                        kw_name: ast.unparse(kw_value)
+                        for kw_name, kw_value in instance_info["keywords"].items()
+                    }
+
                     # Create new worker definition
                     factory_worker_def = {
                         "className": factory_class_name,  # Use this as the primary identifier
@@ -1121,6 +1130,8 @@ def get_definitions_from_file(filename: str) -> Dict[str, List[Dict[str, Any]]]:
                         "inputTypes": factory_config.get("inputTypes", []),
                         "outputTypes": factory_config.get("outputTypes", []),
                         "factoryFunction": factory_name,
+                        "factoryArgsStrings": factory_args_strings,  # Store unparsed args
+                        "factoryKeywordsStrings": factory_keywords_strings,  # Store unparsed kwargs
                     }
 
                     # Add to combined list and details map
