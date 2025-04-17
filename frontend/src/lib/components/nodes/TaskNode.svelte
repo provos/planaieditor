@@ -343,7 +343,7 @@
 		{#if children}
 			<!-- Render children snippet if provided -->
 			<div
-				class="w-full cursor-pointer rounded px-1 py-0.5 text-center text-xs font-medium hover:bg-gray-100"
+				class="w-full cursor-pointer rounded px-1 py-0.5 text-center text-xs font-medium bg-blue-200"
 			>
 				{data.className || 'Unnamed Task'}
 			</div>
