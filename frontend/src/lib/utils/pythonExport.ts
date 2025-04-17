@@ -71,6 +71,15 @@ export function exportPythonCode(
             }
         }
 
+        // Handle factory function details for subgraphworkers
+        if (node.type === 'subgraphworker' && data?.isFactoryCreated) {
+            processedData.factoryFunction = data.factoryFunction;
+            processedData.factoryArgsStrings = data.factoryArgsStrings;
+            processedData.factoryKeywordsStrings = data.factoryKeywordsStrings;
+            // Remove isFactoryCreated flag as it's frontend-specific
+            delete processedData.isFactoryCreated;
+        }
+
         if (node.type === 'taskimport') {
             // Explicitly check type before asserting
             const importData = data as { modulePath?: string, className?: string }; // Use inline type

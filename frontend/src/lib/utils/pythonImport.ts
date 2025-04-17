@@ -50,11 +50,15 @@ export interface ImportedOtherMember {
 
 export interface ImportedWorker {
     className: string;
-    workerType: string; // e.g., "taskworker", "llmtaskworker"
+    workerType: string; // e.g., "taskworker", "llmtaskworker", "subgraphworker"
     classVars: Record<string, any>; // Dictionary of known parsed class vars
     inputTypes?: string[]; // Optional: Parsed from consume_work type hint
     methods: Record<string, string>; // Dictionary of known method sources
     otherMembersSource: string; // Consolidated source code of other members
+    variableName?: string; // Optional: Variable name assigned in graph func
+    factoryFunction?: string; // Name of the factory function if applicable
+    factoryArgsStrings?: string[]; // Unparsed positional args
+    factoryKeywordsStrings?: Record<string, string>; // Unparsed keyword args
 }
 
 // Result type for the Python import operation
@@ -328,9 +332,9 @@ export async function importPythonCode(
                 inputTypes: worker.inputTypes || [], // Use parsed inputTypes from backend if available
                 output_types: worker.classVars.output_types || [], // Map output_types
                 // Store unparsed methods and members for potential display/editing later
-                methods: worker.methods,
-                otherMembersSource: worker.otherMembersSource, // Store consolidated source
-                classVars: worker.classVars // Store the rest of class vars for now
+                methods: worker.methods || {}, // Ensure methods exists
+                otherMembersSource: worker.otherMembersSource || '', // Store consolidated source
+                classVars: worker.classVars || {}, // Store the rest of class vars for now
             };
 
             // Type-specific mappings
@@ -355,6 +359,13 @@ export async function importPythonCode(
                     // Map the join_type from class variables
                     nodeData.join_type = worker.classVars.join_type || ''; // Use extracted join_type or default to empty
                     nodeData.requiredMembers = ['consume_work_joined'];
+                    break;
+                case 'subgraphworker':
+                    // Store factory details if present
+                    nodeData.isFactoryCreated = !!worker.factoryFunction;
+                    nodeData.factoryFunction = worker.factoryFunction;
+                    nodeData.factoryArgsStrings = worker.factoryArgsStrings;
+                    nodeData.factoryKeywordsStrings = worker.factoryKeywordsStrings;
                     break;
                 // Add other worker types if needed
             }

@@ -59,15 +59,17 @@ ALLOWED_TASK_IMPORTS: Dict[str, List[str]] = {
 # --- Configuration for Subgraph Factory Functions ---
 SUBGRAPH_FACTORIES: Dict[str, Dict[str, Any]] = {
     "create_planning_worker": {
-        "workerType": "subgraphworker",
         "inputTypes": ["PlanRequest"],
-        "outputTypes": ["FinalPlan"],
+        "classVars": {
+            "output_types": ["FinalPlan"],
+        },
         "defaultClassName": "PlanningWorkerSubgraph",
     },
     "create_search_fetch_worker": {
-        "workerType": "subgraphworker",
         "inputTypes": ["SearchQuery"],
-        "outputTypes": ["ConsolidatedPages"],
+        "classVars": {
+            "output_types": ["ConsolidatedPages"],
+        },
         "defaultClassName": "SearchFetchWorker",
     },
 }
@@ -1124,11 +1126,9 @@ def get_definitions_from_file(filename: str) -> Dict[str, List[Dict[str, Any]]]:
                     factory_worker_def = {
                         "className": factory_class_name,  # Use this as the primary identifier
                         "variableName": var_name,
-                        "workerType": factory_config.get(
-                            "workerType", "subgraphworker"
-                        ),
+                        "workerType": "subgraphworker",
                         "inputTypes": factory_config.get("inputTypes", []),
-                        "outputTypes": factory_config.get("outputTypes", []),
+                        "classVars": factory_config.get("classVars", {}),
                         "factoryFunction": factory_name,
                         "factoryArgsStrings": factory_args_strings,  # Store unparsed args
                         "factoryKeywordsStrings": factory_keywords_strings,  # Store unparsed kwargs

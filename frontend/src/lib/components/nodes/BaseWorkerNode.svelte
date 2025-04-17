@@ -16,7 +16,11 @@
 		nodeId: string;
 		inputTypes: string[];
 		output_types: string[]; // we are exporting this back to python and are using python naming convention
-		requiredMembers: string[];
+		requiredMembers?: string[];
+		isCached?: boolean;
+		methods?: Record<string, string>;
+		otherMembersSource?: string;
+		classVars?: Record<string, any>;
 		// Derived components can extend this
 		[key: string]: any;
 	}
@@ -29,7 +33,8 @@
 		minWidth = 250,
 		minHeight = 200,
 		defaultName = 'BaseWorker',
-		isCached
+		isCached,
+		outputTypesEditable
 	} = $props<{
 		id: string;
 		data: BaseWorkerData;
@@ -39,6 +44,7 @@
 		minHeight?: number;
 		defaultName?: string;
 		isCached?: boolean;
+		outputTypesEditable?: boolean;
 	}>();
 
 	// Access the SvelteFlow store and internals update hook
@@ -402,15 +408,17 @@
 			<h3 class="text-2xs mb-1 font-semibold text-gray-600">Output Types</h3>
 			{#if availableTaskClasses.length > 0}
 				<div class="mb-1">
-					<select
-						class="text-2xs w-full rounded border border-gray-200 px-1 py-0.5"
-						onchange={addOutputTypeFromSelect}
-					>
-						<option value="">Add output type...</option>
-						{#each availableTaskClasses as className}
-							<option value={className}>{className}</option>
-						{/each}
-					</select>
+					{#if outputTypesEditable}
+						<select
+							class="text-2xs w-full rounded border border-gray-200 px-1 py-0.5"
+							onchange={addOutputTypeFromSelect}
+						>
+							<option value="">Add output type...</option>
+							{#each availableTaskClasses as className}
+								<option value={className}>{className}</option>
+							{/each}
+						</select>
+					{/if}
 				</div>
 			{/if}
 			{#if currentOutputTypes.length === 0}
@@ -452,18 +460,20 @@
 							style={`background-color: ${color}20; border-left: 3px solid ${color};`}
 						>
 							<span class="font-mono">{type}</span>
-							<div class="flex">
-								<button
-									class="ml-1 flex h-3 w-3 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-gray-200 hover:text-blue-500 group-hover:opacity-100"
-									onclick={() => startEditingOutputType(index)}
-									title="Edit type"><PencilSimple size={8} weight="bold" /></button
-								>
-								<button
-									class="ml-1 flex h-3 w-3 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
-									onclick={() => deleteOutputType(index)}
-									title="Remove type"><Trash size={8} weight="bold" /></button
-								>
-							</div>
+							{#if outputTypesEditable}
+								<div class="flex">
+									<button
+										class="ml-1 flex h-3 w-3 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-gray-200 hover:text-blue-500 group-hover:opacity-100"
+										onclick={() => startEditingOutputType(index)}
+										title="Edit type"><PencilSimple size={8} weight="bold" /></button
+									>
+									<button
+										class="ml-1 flex h-3 w-3 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
+										onclick={() => deleteOutputType(index)}
+										title="Remove type"><Trash size={8} weight="bold" /></button
+									>
+								</div>
+							{/if}
 						</div>
 					{/if}
 				{/each}

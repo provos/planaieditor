@@ -736,14 +736,14 @@ def build_graph_with_factory():
     assert "factoryFunction" in planner
     assert planner["factoryFunction"] == "create_planning_worker"
     assert planner["inputTypes"] == ["PlanRequest"]  # From factory config
-    assert planner["outputTypes"] == ["FinalPlan"]  # From factory config
+    assert planner["classVars"]["output_types"] == ["FinalPlan"]  # From factory config
 
     # Verify factory search fetch worker
     assert searcher["workerType"] == "subgraphworker"
     assert "factoryFunction" in searcher
     assert searcher["factoryFunction"] == "create_search_fetch_worker"
     assert searcher["inputTypes"] == ["SearchQuery"]
-    assert searcher["outputTypes"] == ["ConsolidatedPages"]
+    assert searcher["classVars"]["output_types"] == ["ConsolidatedPages"]
 
     # Verify factory worker with explicit name
     assert simple_planner["workerType"] == "subgraphworker"

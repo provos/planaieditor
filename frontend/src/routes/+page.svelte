@@ -9,6 +9,7 @@
 	import LLMTaskWorkerNode from '$lib/components/nodes/LLMTaskWorkerNode.svelte';
 	import JoinedTaskWorkerNode from '$lib/components/nodes/JoinedTaskWorkerNode.svelte';
 	import TaskImportNode from '$lib/components/nodes/TaskImportNode.svelte';
+	import SubGraphWorkerNode from '$lib/components/nodes/SubGraphWorkerNode.svelte';
 	import type { BaseWorkerData } from '$lib/components/nodes/BaseWorkerNode.svelte';
 	import type { NodeData } from '$lib/components/nodes/TaskNode.svelte';
 	import { writable, get } from 'svelte/store';
@@ -53,7 +54,8 @@
 		cachedtaskworker: TaskWorkerNode,
 		llmtaskworker: LLMTaskWorkerNode,
 		cachedllmtaskworker: LLMTaskWorkerNode,
-		joinedtaskworker: JoinedTaskWorkerNode
+		joinedtaskworker: JoinedTaskWorkerNode,
+		subgraphworker: SubGraphWorkerNode
 	};
 
 	// Use SvelteFlow hook
@@ -299,6 +301,15 @@ Analyze the following information and provide a response.`,
 					inputTypes: [],
 					output_types: [],
 					joinMethod: 'merge',
+					nodeId: id
+				};
+				break;
+			}
+			case 'subgraphworker': {
+				nodeData = {
+					workerName: '',
+					inputTypes: [],
+					output_types: [],
 					nodeId: id
 				};
 				break;
