@@ -9,7 +9,7 @@ import pytest
 # Add app directory to path for import
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from app.patch import _get_consume_work_input_type, get_definitions_from_file
+from planaieditor.patch import _get_consume_work_input_type, get_definitions_from_file
 
 # --- Fixtures ---
 

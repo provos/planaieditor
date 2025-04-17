@@ -7,7 +7,7 @@ from textwrap import dedent, indent
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import black
-from app.utils import is_valid_python_class_name
+from planaieditor.utils import is_valid_python_class_name
 
 CODE_SNIPPETS_DIR = os.path.join(os.path.dirname(__file__), "codesnippets")
 

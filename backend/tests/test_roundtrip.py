@@ -8,8 +8,8 @@ import pytest
 # Add the parent directory to sys.path to import our modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.patch import get_definitions_from_file
-from app.python import generate_python_module
+from planaieditor.patch import get_definitions_from_file
+from planaieditor.python import generate_python_module
 
 
 @pytest.fixture
@@ -340,7 +340,7 @@ def test_releasenotes_roundtrip(temp_file):
     """Test roundtrip conversion of a complex example with multiple workers and edges."""
     # Define the path to the original releasenotes example
     original_file_path = (
-        Path(__file__).parent.parent / "app" / "codesnippets" / "releasenotes.py"
+        Path(__file__).parent.parent / "planaieditor" / "codesnippets" / "releasenotes.py"
     )
     assert original_file_path.exists(), f"Original file not found: {original_file_path}"
 

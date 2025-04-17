@@ -58,26 +58,7 @@ The backend is powered by Python using Flask and Flask-SocketIO to handle graph 
 
 There are two main ways to run the application:
 
-### 1. Production Mode (Recommended for Distribution/Usage)
-
-This mode builds the frontend into static files and serves them directly from the Python backend. Users only need to run the Python application.
-
-1.  **Build the Frontend:**
-    ```bash
-    cd frontend
-    npm run build
-    cd ..
-    ```
-2.  **Run the Backend Server:**
-    ```bash
-    cd backend
-    # FLASK_ENV=production (default)
-    poetry run python app.py
-    ```
-
-    Navigate to `http://localhost:5001` (or the address shown in the console) in your web browser.
-
-### 2. Development Mode
+### 1. Development Mode
 
 This mode runs the frontend and backend separately, allowing for hot-reloading during development.
 
@@ -102,6 +83,43 @@ This mode runs the frontend and backend separately, allowing for hot-reloading d
         *(Keep this terminal running)*
 
     This will usually open your browser automatically to `http://localhost:5173`. Changes to the frontend code will trigger automatic updates.
+
+### 2. Building and Running the Packaged Application (Distribution/Usage)
+
+This mode builds the frontend into static files, bundles them with the Python backend into a standard Python package (wheel), and provides a command-line entry point to run the application.
+
+1.  **Build the Frontend:**
+    *   Make sure you have Node.js and npm installed.
+    *   Navigate to the `frontend` directory and build the static assets:
+        ```bash
+        cd frontend
+        npm install  # If you haven't already
+        npm run build
+        cd ..
+        ```
+2.  **Build the Python Package:**
+    *   Navigate to the `backend` directory.
+    *   Use Poetry to build the wheel file. This will trigger the `setup.py` script, which copies the frontend build into the package.
+        ```bash
+        cd backend
+        poetry build
+        ```
+    *   This creates a `.whl` file in the `backend/dist/` directory (e.g., `backend/dist/planaieditor-0.1.0-py3-none-any.whl`).
+
+3.  **Install the Package:**
+    *   You can install the built wheel file using pip (ideally in a virtual environment):
+        ```bash
+        # Example: Install from the dist directory
+        pip install backend/dist/planaieditor-*.whl
+        ```
+
+4.  **Run the Application:**
+    *   Once installed, you can run the application using the command defined in `pyproject.toml`:
+        ```bash
+        planaieditor
+        ```
+    *   This will start the backend server, serving the bundled frontend.
+    *   Navigate to `http://localhost:5001` (or the address shown in the console) in your web browser.
 
 ## Disclaimer
 

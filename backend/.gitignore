@@ -136,3 +136,6 @@ examples/social/config-*.yaml
 
 # node
 node_modules/
+
+# frontend build
+planaieditor/static_frontend/

@@ -1,10 +1,9 @@
 [project]
-name = "backend"
+name = "planaieditor"
 version = "0.1.0"
-description = ""
-authors = [
-    {name = "Your Name",email = "you@example.com"}
-]
+description = "PlanAI Editor Backend and UI Server"
+authors = [{name = "Niels Provos", email = "niels@provos.com"}]
+license = "Apache-2.0"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -16,11 +15,24 @@ dependencies = [
     "flask-cors (>=5.0.1) ; python_version >= \"3.10\" and python_version < \"4.0\""
 ]
 
+# Correct single definition of packages
+[project.packages]
+include = ["planaieditor"]
 
+[project.scripts]
+planaieditor = "planaieditor.app:main"
+
+# Revert build-system to poetry default
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
+requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
+# Add configuration for the custom build script
+[tool.poetry.build]
+script = "build.py"
+generate-setup-file = false
+
+# Keep dev dependencies if needed
 [tool.poetry.group.dev.dependencies]
 flake8 = "^7.2.0"
 pytest = "^8.3.5"
