@@ -32,7 +32,7 @@ The backend is powered by Python using Flask and Flask-SocketIO to handle graph 
 **Prerequisites:**
 
 *   Python 3.10+
-*   Node.js and npm
+*   Node.js and [npm](https://www.npmjs.com/) (Node Package Manager)
 
 **Installation:**
 
@@ -54,20 +54,54 @@ The backend is powered by Python using Flask and Flask-SocketIO to handle graph 
     cd ..
     ```
 
-## Usage (Preliminary)
+## Usage
 
-1.  **Run the Backend:**
-    ```bash
-    cd backend
-    poetru run python app.py
-    ```
-2.  **Run the Frontend:**
+There are two main ways to run the application:
+
+### 1. Production Mode (Recommended for Distribution/Usage)
+
+This mode builds the frontend into static files and serves them directly from the Python backend. Users only need to run the Python application.
+
+1.  **Build the Frontend:**
     ```bash
     cd frontend
-    npm run dev -- --open
+    npm run build
+    cd ..
+    ```
+2.  **Run the Backend Server:**
+    ```bash
+    cd backend
+    # FLASK_ENV=production (default)
+    poetry run python app.py
     ```
 
-Navigate to the URL provided by the SvelteKit development server (usually `http://localhost:5173`).
+    Navigate to `http://localhost:5001` (or the address shown in the console) in your web browser.
+
+### 2. Development Mode
+
+This mode runs the frontend and backend separately, allowing for hot-reloading during development.
+
+1.  **Run the Backend (Development Mode):**
+    *   Open a terminal in the `backend` directory.
+    *   Set the `FLASK_ENV` environment variable to `development`.
+      *   On Linux/macOS: `export FLASK_ENV=development`
+      *   On Windows (Command Prompt): `set FLASK_ENV=development`
+      *   On Windows (PowerShell): `$env:FLASK_ENV = "development"`
+    *   Run the backend:
+        ```bash
+        poetry run python app.py
+        ```
+        *(Keep this terminal running)*
+
+2.  **Run the Frontend Development Server:**
+    *   Open *another* terminal in the `frontend` directory.
+    *   Run the development server:
+        ```bash
+        npm run dev -- --open
+        ```
+        *(Keep this terminal running)*
+
+    This will usually open your browser automatically to `http://localhost:5173`. Changes to the frontend code will trigger automatic updates.
 
 ## Disclaimer
 

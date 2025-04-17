@@ -1,3 +1,14 @@
+# Try to import and monkey patch eventlet FIRST
+try:
+    import eventlet
+
+    eventlet.monkey_patch()
+    print("Eventlet monkey patch applied successfully.")
+except ImportError:
+    print("Eventlet not found. Proceeding without monkey patching.")
+    # Optionally, you could force a non-eventlet server if needed
+    pass
+
 import json
 import os
 import re
@@ -10,20 +21,35 @@ from typing import Dict, List, Optional, Union
 
 from app.patch import get_definitions_from_file
 from app.python import generate_python_module
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 
-app = Flask(__name__)
+# Determine mode and configure paths/CORS
+FLASK_ENV = os.environ.get("FLASK_ENV", "production")  # Default to production
+is_development = FLASK_ENV == "development"
+
+# Define the build directory relative to the app.py file
+# backend/app.py -> ../frontend/build
+build_dir = os.path.join(os.path.dirname(__file__), "..", "frontend", "build")
+
+# Initialize Flask differently based on mode
+if is_development:
+    print("Running in DEVELOPMENT mode. Enabling CORS for *")
+    app = Flask(__name__)
+    # Allow requests from frontend dev server origin
+    CORS(app, resources={r"/*": {"origins": "*"}})
+    socketio = SocketIO(app, cors_allowed_origins="*")
+else:
+    print(f"Running in PRODUCTION mode. Serving static files from: {build_dir}")
+    # Serve static files from the build directory in production
+    app = Flask(__name__, static_folder=build_dir, static_url_path="/")
+    socketio = SocketIO(app)  # No CORS needed when served from same origin
+
 app.config["SECRET_KEY"] = "secret!"  # Change this in production!
 app.config["SELECTED_VENV_PATH"] = (
     None  # Will store the selected Python interpreter path
 )
-# Enable CORS for the Flask app
-CORS(app, resources={r"/api/*": {"origins": "*"}})
-socketio = SocketIO(
-    app, cors_allowed_origins="*"
-)  # Allow requests from frontend dev server
 
 
 # Function to discover Python environments
@@ -453,9 +479,7 @@ def run_inspection_script(
             "error": f"Selected Python interpreter not found: {python_executable}",
         }
 
-    script_path = (
-        Path(__file__).parent / "app" / "codesnippets" / "inspect_module.py"
-    )
+    script_path = Path(__file__).parent / "app" / "codesnippets" / "inspect_module.py"
     if not script_path.exists():
         return {
             "success": False,
@@ -558,9 +582,69 @@ def get_task_fields():
     return jsonify(result), status_code
 
 
+# Serve Svelte static files - ONLY add this route if NOT in development
+if not is_development:
+
+    @app.route("/", defaults={"path": ""})
+    @app.route("/<path:path>")
+    def serve(path):
+        if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+            # Serve the specific file if it exists (e.g., CSS, JS, images)
+            return send_from_directory(app.static_folder, path)
+        # Check if the path looks like a file extension, if not, serve index.html
+        elif "." not in path:
+            # Serve index.html for SPA routing (handles page reloads and paths like /about)
+            return send_from_directory(app.static_folder, "index.html")
+        else:
+            # If it looks like a file but doesn't exist, return 404
+            # Serve index.html for SPA routing (handles page reloads)
+            return send_from_directory(app.static_folder, "index.html")
+
+
+# Main execution block
 if __name__ == "__main__":
-    print("Starting Flask-SocketIO server...")
-    # Use eventlet for better performance if available
-    socketio.run(
-        app, debug=True, port=5001, use_reloader=True
-    )  # Use a different port than SvelteKit dev server
+    print(f"Starting Flask-SocketIO server in {FLASK_ENV} mode...")
+    # Use different settings for development vs production
+    run_config = {
+        "app": app,
+        "host": "0.0.0.0",  # Listen on all interfaces
+        "port": 5001,
+    }
+    if is_development:
+        run_config["debug"] = True
+        run_config["use_reloader"] = True
+    else:
+        # Production recommendations: use a proper WSGI server like gunicorn or eventlet
+        # For simplicity here, just disable debug and reloader
+        run_config["debug"] = False
+        run_config["use_reloader"] = False
+        print(
+            f"Serving application on http://{run_config['host']}:{run_config['port']}"
+        )
+
+    # Use eventlet for better performance if available (pip install eventlet)
+    # Try importing eventlet and use it if available, otherwise fall back
+    # The actual import and patching is now done at the top of the file
+    try:
+        # Verify if eventlet was successfully imported and patched earlier
+        import eventlet  # Re-import shouldn't hurt, just checks if it's available
+
+        print("Using eventlet WSGI server for socketio.run().")
+        # Note: eventlet doesn't use use_reloader argument directly in socketio.run
+        # It handles reloading differently if needed (usually managed externally)
+        if is_development:
+            run_config["use_reloader"] = (
+                True  # Still useful for Flask's dev reloader with eventlet
+            )
+        else:
+            # Eventlet handles production serving; Flask's reloader is not for production
+            run_config.pop("use_reloader", None)
+        socketio.run(**run_config)
+    except ImportError:
+        print(
+            "Eventlet not found, using Flask's default development server for socketio.run()."
+        )
+        # Add back use_reloader=False explicitly for production if not using eventlet
+        if not is_development:
+            run_config["use_reloader"] = False
+        socketio.run(**run_config)

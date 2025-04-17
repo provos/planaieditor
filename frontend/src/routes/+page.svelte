@@ -27,6 +27,9 @@
 	import Code from 'phosphor-svelte/lib/Code';
 	import ArrowsClockwise from 'phosphor-svelte/lib/ArrowsClockwise'; // Icon for layout
 
+	// Import SvelteKit environment helper
+	import { dev } from '$app/environment';
+
 	// Import utility for default method bodies
 	import { getDefaultMethodBody } from '$lib/utils/defaults';
 
@@ -82,9 +85,11 @@
 	// Ref for the hidden file input
 	let fileInputRef: HTMLInputElement;
 
+	// Determine backend URL based on environment
+	const backendUrl = dev ? 'http://localhost:5001' : ''; // Use explicit URL in dev
 	onMount(() => {
-		// Connect to the backend Socket.IO server
-		socket = io('http://localhost:5001');
+		// Connect to the Socket.IO server using the determined URL
+		socket = io(backendUrl);
 
 		socket.on('connect', async () => {
 			console.log('Connected to backend:', socket?.id);
@@ -95,7 +100,8 @@
 			if (currentPath) {
 				console.log('Re-setting interpreter on backend reconnect:', currentPath);
 				try {
-					const response = await fetch('http://localhost:5001/api/set-venv', {
+					// Use the dynamic backendUrl for the API call
+					const response = await fetch(`${backendUrl}/api/set-venv`, {
 						method: 'POST',
 						headers: {
 							'Content-Type': 'application/json'
