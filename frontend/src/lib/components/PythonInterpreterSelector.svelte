@@ -5,6 +5,7 @@
 	import Database from 'phosphor-svelte/lib/Database';
 	import X from 'phosphor-svelte/lib/X';
 	import Check from 'phosphor-svelte/lib/Check';
+	import { selectedInterpreterPath } from '$lib/stores/pythonInterpreterStore.svelte';
 
 	// Interpreter data structure
 	interface PythonEnvironment {
@@ -13,11 +14,11 @@
 	}
 
 	// Props
-	let { socket } = $props<{ socket: Socket | null }>();
+	// let { socket } = $props<{ socket: Socket | null }>(); // Removed socket prop
 
 	// Component state
 	let environments = $state<PythonEnvironment[]>([]);
-	let selectedPath = $state<string | null>(null);
+	// let selectedPath = $state<string | null>(null); // Removed local state, using store now
 	let isLoading = $state(true);
 	let error = $state<string | null>(null);
 	let isOpen = $state(false);
@@ -50,7 +51,8 @@
 			const data = await response.json();
 
 			if (data.success && data.path) {
-				selectedPath = data.path;
+				// selectedPath = data.path; // Update store instead
+				selectedInterpreterPath.value = data.path;
 			}
 		} catch (err) {
 			console.error('Error fetching current interpreter:', err);
@@ -71,12 +73,14 @@
 			const data = await response.json();
 
 			if (data.success) {
-				selectedPath = path;
+				// selectedPath = path; // Update store instead
+				selectedInterpreterPath.value = path;
 				error = null;
 				isOpen = false; // Close the dropdown after selection
 			} else {
 				error = data.error || 'Failed to set Python interpreter';
-				selectedPath = null;
+				// selectedPath = null; // Update store instead
+				selectedInterpreterPath.value = null;
 			}
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Network error';
@@ -108,6 +112,7 @@
 	// Setup on component mount
 	onMount(() => {
 		// On backend disconnect, let's try to reset the interpreter
+		/* // Removed socket logic - will be handled in +page.svelte
 		if (socket) {
 			socket.on('connect', () => {
 				if (selectedPath) {
@@ -116,6 +121,7 @@
 				}
 			});
 		}
+		*/
 
 		fetchCurrentInterpreter();
 		document.addEventListener('click', handleClickOutside);
@@ -133,16 +139,17 @@
 		type="button"
 		class="inline-flex items-center justify-center gap-x-1.5 rounded-md bg-white px-3 py-1.5 text-xs font-medium text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
 		class:ring-red-300={error}
-		class:ring-yellow-300={!selectedPath}
-		class:bg-yellow-50={!selectedPath}
+		class:ring-yellow-300={!selectedInterpreterPath.value}
+		class:bg-yellow-50={!selectedInterpreterPath.value}
 		onclick={toggleDropdown}
 	>
-		<span class={!selectedPath ? 'text-yellow-600' : 'text-gray-500'}>
+		<span class={!selectedInterpreterPath.value ? 'text-yellow-600' : 'text-gray-500'}>
 			<Database class="h-4 w-4" />
 		</span>
-		{#if selectedPath}
+		{#if selectedInterpreterPath.value}
 			<span class="max-w-[150px] truncate">
-				{environments.find((env) => env.path === selectedPath)?.name || selectedPath}
+				{environments.find((env) => env.path === selectedInterpreterPath.value)?.name ||
+					selectedInterpreterPath.value}
 			</span>
 		{:else}
 			<span class="text-yellow-700">Select Python Interpreter</span>
@@ -183,14 +190,14 @@
 						{#each environments as env (env.path)}
 							<button
 								class="flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm hover:bg-gray-100"
-								class:bg-blue-50={selectedPath === env.path}
+								class:bg-blue-50={selectedInterpreterPath.value === env.path}
 								onclick={() => selectInterpreter(env.path)}
 							>
 								<div class="flex-1 truncate">
 									<div class="font-medium">{env.name}</div>
 									<div class="truncate text-xs text-gray-500">{env.path}</div>
 								</div>
-								{#if selectedPath === env.path}
+								{#if selectedInterpreterPath.value === env.path}
 									<Check class="h-4 w-4 text-blue-500" />
 								{/if}
 							</button>

@@ -4,6 +4,7 @@
 	import Spinner from 'phosphor-svelte/lib/Spinner';
 	import DownloadSimple from 'phosphor-svelte/lib/DownloadSimple';
 	import { onMount } from 'svelte';
+	import { selectedInterpreterPath } from '$lib/stores/pythonInterpreterStore.svelte'; // Import the store
 
 	// Interface for this node's specific data
 	export interface TaskImportNodeData extends TaskNodeData {
@@ -25,6 +26,7 @@
 	let loading = $state(false);
 	let localSelectedClassName = $state<string | null>(data.className); // Local reactive state
 	let availableClasses = $state<string[]>(data.className ? [data.className] : []); // Local state for classes
+	let hasFetchedFields = $state(false); // Track if fields have been fetched for the current class
 
 	// Placeholder functions for backend interaction
 	async function fetchTaskClasses() {
@@ -114,26 +116,41 @@
 			error = err.message || 'Failed to fetch task fields.';
 		} finally {
 			console.log('[fetchTaskFields] Setting loading to false.');
+			hasFetchedFields = !error; // Mark as fetched if no error
 			loading = false;
 		}
 	}
 
+	// Effect 1: Fetch fields when component mounts AND interpreter is selected AND class is selected
 	onMount(() => {
-		if (data.className) {
+		if (selectedInterpreterPath.value && data.className && !hasFetchedFields) {
 			fetchTaskFields(data.className);
 		}
 	});
 
-	// Effect 2: Sync local changes UP to prop & trigger fetch
+	// Effect 2: Sync local changes UP to prop & potentially trigger fetch
 	$effect(() => {
 		if (data.className !== localSelectedClassName) {
 			data.className = localSelectedClassName;
+			hasFetchedFields = false; // Reset fetch status when class changes
 
-			// Fetch fields based on the current local state
-			if (localSelectedClassName) {
+			// Fetch fields based on the current local state IF interpreter is selected
+			if (localSelectedClassName && selectedInterpreterPath.value && !hasFetchedFields) {
 				console.log('[Effect 2] Calling fetchTaskFields with:', localSelectedClassName);
 				fetchTaskFields(localSelectedClassName);
 			}
+		}
+	});
+
+	// Effect 3: Trigger fetch when interpreter becomes available AND class is already selected
+	$effect(() => {
+		const currentPath = selectedInterpreterPath.value;
+		if (currentPath && localSelectedClassName && !hasFetchedFields) {
+			console.log(
+				'[Effect 3] Interpreter selected, calling fetchTaskFields with:',
+				localSelectedClassName
+			);
+			fetchTaskFields(localSelectedClassName);
 		}
 	});
 </script>
@@ -179,7 +196,8 @@
 						);
 					}}
 					class="text-2xs w-full rounded border border-gray-200 px-1.5 py-1"
-					disabled={loading}
+					disabled={loading || !selectedInterpreterPath.value}
+					title={!selectedInterpreterPath.value ? 'Select a Python interpreter first' : ''}
 				>
 					<option value={null} disabled selected={!localSelectedClassName}
 						>Select a Task Class...</option

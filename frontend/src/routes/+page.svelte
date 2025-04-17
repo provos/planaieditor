@@ -20,6 +20,7 @@
 	import { io, Socket } from 'socket.io-client';
 	import { onMount } from 'svelte';
 	import PythonInterpreterSelector from '$lib/components/PythonInterpreterSelector.svelte';
+	import { selectedInterpreterPath } from '$lib/stores/pythonInterpreterStore.svelte';
 	import UploadSimple from 'phosphor-svelte/lib/UploadSimple'; // Icon for import
 	import Code from 'phosphor-svelte/lib/Code';
 	import ArrowsClockwise from 'phosphor-svelte/lib/ArrowsClockwise'; // Icon for layout
@@ -82,9 +83,34 @@
 		// Connect to the backend Socket.IO server
 		socket = io('http://localhost:5001');
 
-		socket.on('connect', () => {
+		socket.on('connect', async () => {
 			console.log('Connected to backend:', socket?.id);
 			isConnected = true;
+
+			// Re-set interpreter on reconnect if one was selected
+			const currentPath = selectedInterpreterPath.value;
+			if (currentPath) {
+				console.log('Re-setting interpreter on backend reconnect:', currentPath);
+				try {
+					const response = await fetch('http://localhost:5001/api/set-venv', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify({ path: currentPath })
+					});
+					const data = await response.json();
+					if (!data.success) {
+						console.error('Failed to re-set interpreter:', data.error);
+						// Optionally clear the store value or show an error
+						// selectedInterpreterPath.value = null;
+					}
+				} catch (err) {
+					console.error('Error re-setting interpreter:', err);
+					// Optionally clear the store value or show an error
+					// selectedInterpreterPath.value = null;
+				}
+			}
 		});
 
 		socket.on('disconnect', () => {
@@ -643,7 +669,7 @@ Analyze the following information and provide a response.`,
 				Import Python
 			</button>
 
-			<PythonInterpreterSelector {socket} />
+			<PythonInterpreterSelector />
 
 			{#if !isConnected}
 				<span class="rounded bg-red-100 px-1.5 py-0.5 text-red-700">Disconnected</span>
