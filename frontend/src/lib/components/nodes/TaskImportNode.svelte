@@ -158,7 +158,7 @@
 {#snippet ImportHeader()}
 	<!-- Snippet Content: Import Header -->
 	<div class="import-controls w-full">
-		<div class="mb-1 text-center text-xs font-medium text-gray-700">Import Task from Module</div>
+		<div class="mb-1 text-center text-2xs text-gray-700">Import Task from Module</div>
 		<div class="flex items-center gap-1">
 			<input
 				type="text"

@@ -342,6 +342,11 @@
 	<div class="flex-none border-b border-gray-200 bg-gray-50 p-1">
 		{#if children}
 			<!-- Render children snippet if provided -->
+			<div
+				class="w-full cursor-pointer rounded px-1 py-0.5 text-center text-xs font-medium hover:bg-gray-100"
+			>
+				{data.className || 'Unnamed Task'}
+			</div>
 			{@render children()}
 		{:else}
 			<!-- Default header: Editable class name -->
