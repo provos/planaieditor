@@ -2,6 +2,9 @@
 	import BaseWorkerNode from '$lib/components/nodes/BaseWorkerNode.svelte';
 	import type { BaseWorkerData } from '$lib/components/nodes/BaseWorkerNode.svelte';
 	import CodeSimple from 'phosphor-svelte/lib/CodeSimple';
+	import EditableCodeSection from '../EditableCodeSection.svelte';
+	import { useUpdateNodeInternals } from '@xyflow/svelte';
+	import { tick } from 'svelte';
 
 	export interface SubGraphWorkerData extends BaseWorkerData {
 		isFactoryCreated?: boolean;
@@ -13,6 +16,17 @@
 		id: string;
 		data: SubGraphWorkerData;
 	}>();
+
+	const updateNodeInternals = useUpdateNodeInternals();
+
+	function handleInvocationUpdate(newCode: string) {
+		data.factoryInvocation = newCode;
+	}
+
+	async function handleCollapse() {
+		await tick();
+		updateNodeInternals(id);
+	}
 
 	// Factory workers have fixed types, so no editing allowed in the UI
 	// Pass necessary props to BaseWorkerNode but override editability
@@ -38,9 +52,16 @@
 				<CodeSimple size={10} weight="bold" class="mr-1 flex-none" />
 				<span class="font-mono font-semibold">Factory: {data.factoryFunction}</span>
 			</div>
-			{#if data.factoryInvocation}
-				<div class="ml-2 font-mono">
-					<span class="text-2xs text-blue-600">({data.factoryInvocation})</span>
+			{#if data.factoryInvocation !== undefined}
+				<div class="mt-1">
+					<EditableCodeSection
+						title="Arguments"
+						code={data.factoryInvocation}
+						language="python"
+						onUpdate={handleInvocationUpdate}
+						onCollapseToggle={handleCollapse}
+						initialCollapsed={true}
+					/>
 				</div>
 			{/if}
 		</div>
