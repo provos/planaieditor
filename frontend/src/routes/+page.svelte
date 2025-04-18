@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { persisted } from 'svelte-persisted-store';
+	import { backendUrl } from '$lib/utils/backendUrl';
 
 	import { SvelteFlow, Background, Controls, ControlButton, useSvelteFlow } from '@xyflow/svelte';
 	import { getEdgeStyleProps } from '$lib/utils/edgeUtils';
@@ -26,9 +27,6 @@
 	import { selectedInterpreterPath } from '$lib/stores/pythonInterpreterStore.svelte';
 	import Code from 'phosphor-svelte/lib/Code';
 	import ArrowsClockwise from 'phosphor-svelte/lib/ArrowsClockwise'; // Icon for layout
-
-	// Import SvelteKit environment helper
-	import { dev } from '$app/environment';
 
 	// Import utility for default method bodies
 	import { getDefaultMethodBody } from '$lib/utils/defaults';
@@ -64,7 +62,7 @@
 	// Use SvelteFlow hook
 	const { screenToFlowPosition, getNodes, fitView } = useSvelteFlow();
 
-	// Use Svelte stores for nodes and edges
+	// Use persisted Svelte stores for nodes and edges
 	const nodes = persisted<Node[]>('nodes', []);
 	const edges = persisted<Edge[]>('edges', []);
 
@@ -85,8 +83,6 @@
 	// Ref for the hidden file input
 	let fileInputRef: HTMLInputElement;
 
-	// Determine backend URL based on environment
-	const backendUrl = dev ? 'http://localhost:5001' : ''; // Use explicit URL in dev
 	onMount(() => {
 		// Connect to the Socket.IO server using the determined URL
 		socket = io(backendUrl);

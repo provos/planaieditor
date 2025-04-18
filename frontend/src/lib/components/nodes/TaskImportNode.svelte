@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { backendUrl } from '$lib/utils/backendUrl';
 	import TaskNode from './TaskNode.svelte';
 	import type { NodeData as TaskNodeData } from './TaskNode.svelte';
 	import Spinner from 'phosphor-svelte/lib/Spinner';
@@ -37,7 +38,7 @@
 			// Simulating API call
 			// await new Promise(resolve => setTimeout(resolve, 1000));
 			// Replace with actual fetch:
-			const response = await fetch('http://localhost:5001/api/import-task-classes', {
+			const response = await fetch(`${backendUrl}/api/import-task-classes`, {
 				// Use actual endpoint
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -70,7 +71,7 @@
 			// Simulating API call
 			// await new Promise(resolve => setTimeout(resolve, 1000));
 			// Replace with actual fetch:
-			const response = await fetch('http://localhost:5001/api/get-task-fields', {
+			const response = await fetch(`${backendUrl}/api/get-task-fields`, {
 				// Use actual endpoint
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },

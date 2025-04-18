@@ -1,6 +1,6 @@
 <script lang="ts">
+	import { backendUrl } from '$lib/utils/backendUrl';
 	import { onMount } from 'svelte';
-	import { Socket } from 'socket.io-client';
 	import GearSix from 'phosphor-svelte/lib/GearSix';
 	import Database from 'phosphor-svelte/lib/Database';
 	import X from 'phosphor-svelte/lib/X';
@@ -28,7 +28,7 @@
 		isLoading = true;
 		error = null;
 		try {
-			const response = await fetch('http://localhost:5001/api/venvs');
+			const response = await fetch(`${backendUrl}/api/venvs`);
 			const data = await response.json();
 
 			if (data.success) {
@@ -47,7 +47,7 @@
 	// Fetch current interpreter
 	async function fetchCurrentInterpreter() {
 		try {
-			const response = await fetch('http://localhost:5001/api/current-venv');
+			const response = await fetch(`${backendUrl}/api/current-venv`);
 			const data = await response.json();
 
 			if (data.success && data.path) {
@@ -62,7 +62,7 @@
 	// Select an interpreter
 	async function selectInterpreter(path: string) {
 		try {
-			const response = await fetch('http://localhost:5001/api/set-venv', {
+			const response = await fetch(`${backendUrl}/api/set-venv`, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'

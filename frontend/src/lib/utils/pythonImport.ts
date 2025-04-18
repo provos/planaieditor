@@ -1,3 +1,4 @@
+import { backendUrl } from '$lib/utils/backendUrl';
 import type { Node, Edge } from '@xyflow/svelte';
 import { taskClassNamesStore } from '$lib/stores/taskClassNamesStore';
 import { allClassNames } from '$lib/stores/classNameStore';
@@ -194,7 +195,7 @@ export async function importPythonCode(
     getNodes: () => Node[]
 ): Promise<ImportResult> {
     try {
-        const response = await fetch('http://localhost:5001/api/import-python', {
+        const response = await fetch(`${backendUrl}/api/import-python`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
