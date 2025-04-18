@@ -7,6 +7,7 @@
 	import FileMagnifyingGlass from 'phosphor-svelte/lib/FileMagnifyingGlass';
 	import Eraser from 'phosphor-svelte/lib/Eraser';
 	import UploadSimple from 'phosphor-svelte/lib/UploadSimple';
+	import Network from 'phosphor-svelte/lib/Network';
 	import PythonInterpreterSelector from '$lib/components/PythonInterpreterSelector.svelte';
 	import Export from 'phosphor-svelte/lib/Export';
 
@@ -101,6 +102,19 @@
 			<div class="flex items-center gap-1.5">
 				<ArrowsIn size={16} weight="fill" class="text-orange-500" />
 				<div class="text-sm font-semibold">JoinedTaskWorker</div>
+			</div>
+		</div>
+		<!-- SubGraphWorker Node -->
+		<div
+			class="cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
+			role="button"
+			tabindex="0"
+			draggable="true"
+			ondragstart={(e) => onDragStart(e, 'subgraphworker')}
+		>
+			<div class="flex items-center gap-1.5">
+				<Network size={16} weight="fill" class="text-teal-500" />
+				<div class="text-sm font-semibold">SubGraphWorker</div>
 			</div>
 		</div>
 	</div>

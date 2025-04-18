@@ -57,8 +57,7 @@ export interface ImportedWorker {
     otherMembersSource: string; // Consolidated source code of other members
     variableName?: string; // Optional: Variable name assigned in graph func
     factoryFunction?: string; // Name of the factory function if applicable
-    factoryArgsStrings?: string[]; // Unparsed positional args
-    factoryKeywordsStrings?: Record<string, string>; // Unparsed keyword args
+    factoryInvocation?: string; // Combined invocation string
 }
 
 // Result type for the Python import operation
@@ -361,11 +360,11 @@ export async function importPythonCode(
                     nodeData.requiredMembers = ['consume_work_joined'];
                     break;
                 case 'subgraphworker':
+                    console.log('SubGraphWorker found:', worker);
                     // Store factory details if present
                     nodeData.isFactoryCreated = !!worker.factoryFunction;
                     nodeData.factoryFunction = worker.factoryFunction;
-                    nodeData.factoryArgsStrings = worker.factoryArgsStrings;
-                    nodeData.factoryKeywordsStrings = worker.factoryKeywordsStrings;
+                    nodeData.factoryInvocation = worker.factoryInvocation;
                     break;
                 // Add other worker types if needed
             }

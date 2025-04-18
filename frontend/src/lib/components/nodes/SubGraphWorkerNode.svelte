@@ -6,6 +6,7 @@
 	export interface SubGraphWorkerData extends BaseWorkerData {
 		isFactoryCreated?: boolean;
 		factoryFunction?: string; // Name of the factory function
+		factoryInvocation?: string; // Combined invocation string
 	}
 
 	let { id, data } = $props<{
@@ -32,9 +33,16 @@
 	outputTypesEditable={false}
 >
 	{#if data.factoryFunction}
-		<div class="text-2xs mt-1 flex flex-none items-center rounded bg-blue-50 p-1 text-blue-700">
-			<CodeSimple size={10} weight="bold" class="mr-1 flex-none" />
-			<span class="font-mono font-semibold">Factory: {data.factoryFunction}</span>
+		<div class="mt-1 flex flex-col rounded bg-blue-50 p-1 text-blue-700">
+			<div class="text-2xs mb-1 flex flex-none items-center">
+				<CodeSimple size={10} weight="bold" class="mr-1 flex-none" />
+				<span class="font-mono font-semibold">Factory: {data.factoryFunction}</span>
+			</div>
+			{#if data.factoryInvocation}
+				<div class="ml-2 font-mono">
+					<span class="text-2xs text-blue-600">({data.factoryInvocation})</span>
+				</div>
+			{/if}
 		</div>
 	{/if}
 	<!-- Any additional content specific to SubGraphWorker can go here -->

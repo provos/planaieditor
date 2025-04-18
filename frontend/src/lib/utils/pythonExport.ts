@@ -74,8 +74,7 @@ export function exportPythonCode(
         // Handle factory function details for subgraphworkers
         if (node.type === 'subgraphworker' && data?.isFactoryCreated) {
             processedData.factoryFunction = data.factoryFunction;
-            processedData.factoryArgsStrings = data.factoryArgsStrings;
-            processedData.factoryKeywordsStrings = data.factoryKeywordsStrings;
+            processedData.factoryInvocation = data.factoryInvocation;
             // Remove isFactoryCreated flag as it's frontend-specific
             delete processedData.isFactoryCreated;
         }

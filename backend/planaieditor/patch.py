@@ -1122,6 +1122,16 @@ def get_definitions_from_file(filename: str) -> Dict[str, List[Dict[str, Any]]]:
                         for kw_name, kw_value in instance_info["keywords"].items()
                     }
 
+                    # Combine args and kwargs into a single invocation string
+                    all_args_list = list(factory_args_strings)
+                    all_args_list.extend(
+                        [
+                            f"{kw_name}={kw_value}"
+                            for kw_name, kw_value in factory_keywords_strings.items()
+                        ]
+                    )
+                    factory_invocation_string = ", ".join(all_args_list)
+
                     # Create new worker definition
                     factory_worker_def = {
                         "className": factory_class_name,  # Use this as the primary identifier
@@ -1130,8 +1140,7 @@ def get_definitions_from_file(filename: str) -> Dict[str, List[Dict[str, Any]]]:
                         "inputTypes": factory_config.get("inputTypes", []),
                         "classVars": factory_config.get("classVars", {}),
                         "factoryFunction": factory_name,
-                        "factoryArgsStrings": factory_args_strings,  # Store unparsed args
-                        "factoryKeywordsStrings": factory_keywords_strings,  # Store unparsed kwargs
+                        "factoryInvocation": factory_invocation_string,  # Store combined invocation string
                     }
 
                     # Add to combined list and details map

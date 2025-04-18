@@ -735,6 +735,11 @@ def build_graph_with_factory():
     assert planner["workerType"] == "subgraphworker"
     assert "factoryFunction" in planner
     assert planner["factoryFunction"] == "create_planning_worker"
+    # Check for the combined invocation string
+    assert "factoryInvocation" in planner
+    assert (
+        planner["factoryInvocation"] == "llm='my_llm', num_variations=2"
+    )  # Check combined string (using single quotes)
     assert planner["inputTypes"] == ["PlanRequest"]  # From factory config
     assert planner["classVars"]["output_types"] == ["FinalPlan"]  # From factory config
 
@@ -752,6 +757,12 @@ def build_graph_with_factory():
     )  # Explicit name from keyword arg
     assert "factoryFunction" in simple_planner
     assert simple_planner["factoryFunction"] == "create_planning_worker"
+    # Check invocation string for simple_planner
+    assert "factoryInvocation" in simple_planner
+    assert (
+        simple_planner["factoryInvocation"]
+        == "llm='my_llm', num_variations=0, name='SimplePlanningWorker'"
+    )
 
     # Check edges - now definitely use class names, not variable names
     edges = definitions["edges"]

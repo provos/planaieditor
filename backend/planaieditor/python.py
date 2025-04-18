@@ -215,26 +215,18 @@ def create_factory_worker_instance(
     data = node.get("data", {})
     worker_class_name = data.get("className")
     factory_function = data.get("factoryFunction")
+    factory_invocation = data.get("factoryInvocation", "")
     instance_name = worker_to_instance_name(worker_class_name)
 
     # Handle factory-created SubGraphWorker
     factories_used.add(factory_function)  # Track factory usage for imports
 
-    # Retrieve pre-unparsed arguments from the data
-    factory_args_strings = data.get("factoryArgsStrings", [])
-    factory_keywords_strings = data.get("factoryKeywordsStrings", {})
-
-    # Combine arguments for the call string
-    all_args = list(factory_args_strings)
-    all_args.extend([f"{k}={v}" for k, v in factory_keywords_strings.items()])
-    combined_args_string = ", ".join(all_args)
-
     code = []
 
     # Wrap instantiation in try-except
     code.append(f"\n# Create SubGraphWorker using {factory_function}")
-    # Use the directly reconstructed argument string
-    code.append(f"{instance_name} = {factory_function}({combined_args_string})")
+    # Use the directly retrieved invocation string
+    code.append(f"{instance_name} = {factory_function}({factory_invocation})")
     code.append(f"workers_dict['{instance_name}'] = {instance_name}")
 
     return wrap_instantiation_in_try_except(
