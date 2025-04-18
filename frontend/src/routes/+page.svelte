@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { persisted } from 'svelte-persisted-store';
+
 	import { SvelteFlow, Background, Controls, ControlButton, useSvelteFlow } from '@xyflow/svelte';
 	import { getEdgeStyleProps } from '$lib/utils/edgeUtils';
 	import type { Node, Edge, Connection } from '@xyflow/svelte';
@@ -65,8 +67,8 @@
 	const { screenToFlowPosition, getNodes, fitView } = useSvelteFlow();
 
 	// Use Svelte stores for nodes and edges
-	const nodes = writable<Node[]>([]);
-	const edges = writable<Edge[]>([]);
+	const nodes = persisted<Node[]>('nodes', []);
+	const edges = persisted<Edge[]>('edges', []);
 
 	// Socket.IO connection state
 	let socket: Socket | null = $state(null);
@@ -493,6 +495,16 @@ Analyze the following information and provide a response.`,
 		}
 	}
 
+	// --- Clear Graph Function ---
+	function handleClearGraph() {
+		// Ask for confirmation before clearing
+		if (confirm('Are you sure you want to clear the entire graph? This action cannot be undone.')) {
+			nodes.set([]);
+			edges.set([]);
+			console.log('Graph cleared.');
+		}
+	}
+
 	// --- Python Export Function ---
 
 	// Function to handle the export button click
@@ -692,7 +704,7 @@ Analyze the following information and provide a response.`,
 
 <div class="flex h-screen w-screen flex-col">
 	<div class="w-full border-b border-gray-300 bg-gray-100 p-4">
-		<ToolShelf onExport={handleExport} />
+		<ToolShelf onExport={handleExport} onClearGraph={handleClearGraph} />
 
 		<!-- File input (hidden) -->
 		<input

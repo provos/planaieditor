@@ -5,9 +5,17 @@
 	import ArrowsIn from 'phosphor-svelte/lib/ArrowsIn';
 	import FileCode from 'phosphor-svelte/lib/FileCode';
 	import FileMagnifyingGlass from 'phosphor-svelte/lib/FileMagnifyingGlass';
+	import Eraser from 'phosphor-svelte/lib/Eraser';
 
-	let { onExport }: { onExport: () => void } = $props<{
+	let {
+		onExport,
+		onClearGraph
+	}: {
 		onExport: () => void;
+		onClearGraph: () => void;
+	} = $props<{
+		onExport: () => void;
+		onClearGraph: () => void;
 	}>();
 
 	// Handles the start of dragging a new node
@@ -107,6 +115,16 @@
 		>
 			<FileCode size={18} class="mr-1.5" />
 			Export to Python
+		</button>
+	</div>
+	<div class="flex items-center">
+		<button
+			onclick={onClearGraph}
+			class="flex items-center rounded bg-red-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-red-700"
+			title="Clear the entire graph"
+		>
+			<Eraser size={18} class="mr-1.5" />
+			Clear Graph
 		</button>
 	</div>
 </div>
