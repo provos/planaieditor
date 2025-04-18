@@ -14,7 +14,7 @@
 	import SubGraphWorkerNode from '$lib/components/nodes/SubGraphWorkerNode.svelte';
 	import type { BaseWorkerData } from '$lib/components/nodes/BaseWorkerNode.svelte';
 	import type { NodeData } from '$lib/components/nodes/TaskNode.svelte';
-	import { writable, get } from 'svelte/store';
+	import { get } from 'svelte/store';
 	import { allClassNames } from '$lib/stores/classNameStore';
 	import { taskClassNamesStore } from '$lib/stores/taskClassNamesStore';
 	import ContextMenu from '$lib/components/ContextMenu.svelte';
