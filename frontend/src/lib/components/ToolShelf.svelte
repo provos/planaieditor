@@ -6,16 +6,21 @@
 	import FileCode from 'phosphor-svelte/lib/FileCode';
 	import FileMagnifyingGlass from 'phosphor-svelte/lib/FileMagnifyingGlass';
 	import Eraser from 'phosphor-svelte/lib/Eraser';
+	import UploadSimple from 'phosphor-svelte/lib/UploadSimple';
+	import PythonInterpreterSelector from '$lib/components/PythonInterpreterSelector.svelte';
 
 	let {
 		onExport,
-		onClearGraph
+		onClearGraph,
+		onImport
 	}: {
 		onExport: () => void;
 		onClearGraph: () => void;
+		onImport: () => void;
 	} = $props<{
 		onExport: () => void;
 		onClearGraph: () => void;
+		onImport: () => void;
 	}>();
 
 	// Handles the start of dragging a new node
@@ -106,6 +111,21 @@
 			<div class="text-sm font-semibold">JoinedTaskWorker</div>
 		</div>
 		<div class="text-xs text-gray-500">Multi-input Worker</div>
+	</div>
+
+	<div class="flex items-center">
+		<button
+			onclick={onImport}
+			class="flex items-center rounded bg-blue-500 px-2 py-1 text-sm text-white hover:bg-blue-600 disabled:opacity-50"
+			title="Import Task definitions from Python file"
+		>
+			<UploadSimple size={16} weight="bold" class="mr-1" />
+			Import Python
+		</button>
+	</div>
+
+	<div class="flex items-center">
+		<PythonInterpreterSelector />
 	</div>
 
 	<div class="flex items-center">

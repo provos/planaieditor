@@ -23,9 +23,7 @@
 	import Scissors from 'phosphor-svelte/lib/Scissors';
 	import { io, Socket } from 'socket.io-client';
 	import { onMount } from 'svelte';
-	import PythonInterpreterSelector from '$lib/components/PythonInterpreterSelector.svelte';
 	import { selectedInterpreterPath } from '$lib/stores/pythonInterpreterStore.svelte';
-	import UploadSimple from 'phosphor-svelte/lib/UploadSimple'; // Icon for import
 	import Code from 'phosphor-svelte/lib/Code';
 	import ArrowsClockwise from 'phosphor-svelte/lib/ArrowsClockwise'; // Icon for layout
 
@@ -704,7 +702,7 @@ Analyze the following information and provide a response.`,
 
 <div class="flex h-screen w-screen flex-col">
 	<div class="w-full border-b border-gray-300 bg-gray-100 p-4">
-		<ToolShelf onExport={handleExport} onClearGraph={handleClearGraph} />
+		<ToolShelf onExport={handleExport} onClearGraph={handleClearGraph} onImport={triggerImport} />
 
 		<!-- File input (hidden) -->
 		<input
@@ -717,19 +715,6 @@ Analyze the following information and provide a response.`,
 
 		<!-- Display Connection and Export/Import Status -->
 		<div class="mt-2 flex items-center justify-end space-x-2 text-xs">
-			<!-- Import Button -->
-			<button
-				class="flex items-center rounded bg-blue-500 px-2 py-1 text-white hover:bg-blue-600 disabled:opacity-50"
-				onclick={triggerImport}
-				disabled={importStatus.type === 'loading'}
-				title="Import Task definitions from Python file"
-			>
-				<UploadSimple size={12} weight="bold" class="mr-1" />
-				Import Python
-			</button>
-
-			<PythonInterpreterSelector />
-
 			{#if !isConnected}
 				<span class="rounded bg-red-100 px-1.5 py-0.5 text-red-700">Disconnected</span>
 			{/if}
