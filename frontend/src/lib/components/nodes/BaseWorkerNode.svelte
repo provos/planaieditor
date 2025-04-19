@@ -34,7 +34,7 @@
 		minHeight = 200,
 		defaultName = 'BaseWorker',
 		isCached,
-		outputTypesEditable
+		outputTypesEditable = true
 	} = $props<{
 		id: string;
 		data: BaseWorkerData;
@@ -59,11 +59,11 @@
 	let tempType = $state('');
 	let typeError = $state('');
 	let availableTaskClasses = $state<string[]>([]);
-	let inferredInputTypes = $state<string[]>([]);
-	let manuallySelectedInputType = $state<string>(
+	let inferredInputTypes = $derived<string[]>(data.inputTypes);
+	let manuallySelectedInputType = $derived<string>(
 		data.inputTypes.length > 0 ? data.inputTypes[0] : ''
 	);
-	let currentOutputTypes = $state<string[]>([...(data.output_types || [])]);
+	let currentOutputTypes = $derived<string[]>([...(data.output_types || [])]);
 	let nodeRef: HTMLElement | null = $state(null);
 	let currentHeight = $state(minHeight); // State for reactive height
 
@@ -204,19 +204,22 @@
 
 	function saveOutputType() {
 		if (!validateType(tempType)) return;
-		currentOutputTypes = [...data.output_types];
+		let tmpOutputTypes = [...data.output_types];
 		if (editingOutputType === -1) {
-			currentOutputTypes.push(tempType);
+			tmpOutputTypes.push(tempType);
 		} else if (editingOutputType !== null) {
-			currentOutputTypes[editingOutputType] = tempType;
+			tmpOutputTypes[editingOutputType] = tempType;
 		}
-		data.output_types = currentOutputTypes;
+		data.output_types = tmpOutputTypes;
+		currentOutputTypes = tmpOutputTypes;
 		cancelTypeEditing();
 	}
 
 	function deleteOutputType(index: number) {
-		data.output_types = data.output_types.filter((_: string, i: number) => i !== index);
-		currentOutputTypes = [...data.output_types];
+		let tmpOutputTypes = [...data.output_types];
+		tmpOutputTypes = tmpOutputTypes.filter((_: string, i: number) => i !== index);
+		data.output_types = tmpOutputTypes;
+		currentOutputTypes = tmpOutputTypes;
 		typeError = '';
 	}
 
