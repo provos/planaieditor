@@ -100,10 +100,14 @@
 	let useXml = $state(data.use_xml);
 	let debugMode = $state(data.debug_mode);
 
+	// Local reactive state for the LLM config name selection
+	let selectedLLMConfigName = $state(data.llmConfigName);
+
 	// Derived state for selected config visuals
 	let selectedConfigVisuals = $derived.by(() => {
-		if (data.llmConfigName) {
-			const config = getLLMConfigByName(data.llmConfigName);
+		if (selectedLLMConfigName) {
+			// Depend on the local reactive state
+			const config = getLLMConfigByName(selectedLLMConfigName);
 			if (config) {
 				return getProviderVisuals(config.provider);
 			}
@@ -136,14 +140,14 @@
 	$effect(() => {
 		data.use_xml = useXml;
 	});
+
 	$effect(() => {
 		data.debug_mode = debugMode;
 	});
 
-	// Sync data prop changes to local state (e.g., on import)
+	// Sync local state back to the data prop when the user changes the selection
 	$effect(() => {
-		useXml = data.use_xml;
-		debugMode = data.debug_mode;
+		data.llmConfigName = selectedLLMConfigName;
 	});
 
 	// Handle code updates
@@ -218,26 +222,28 @@
 	isCached={data.isCached}
 >
 	<!-- LLM Configuration Selector -->
-	<div class="input-item flex items-center gap-2">
+	<div class="mb-2 flex-none">
 		<label for="llm-config-{id}" class="label flex-none">LLM Config</label>
-		{#if selectedConfigVisuals}
-			<div class="flex-none" title={data.llmConfigName}>
-				<selectedConfigVisuals.icon size={18} class={selectedConfigVisuals.colorClass} />
-			</div>
-		{/if}
-		<select
-			id="llm-config-{id}"
-			class="nodrag select select-bordered select-sm w-full flex-grow"
-			bind:value={data.llmConfigName}
-		>
-			<option value={undefined}>-- Select --</option>
-			{#if $llmConfigs.length === 0}
-				<option disabled>No configs defined</option>
+		<div class="mt-1 flex items-center gap-2">
+			{#if selectedConfigVisuals}
+				<div class="flex-none" title={data.llmConfigName}>
+					<selectedConfigVisuals.icon size={12} class={selectedConfigVisuals.colorClass} />
+				</div>
 			{/if}
-			{#each $llmConfigs as config (config.id)}
-				<option value={config.name}>{config.name}</option>
-			{/each}
-		</select>
+			<select
+				id="llm-config-{id}"
+				class="text-2xs nodrag select select-bordered select-sm w-full flex-grow"
+				bind:value={selectedLLMConfigName}
+			>
+				<option value={undefined}>-- Select --</option>
+				{#if $llmConfigs.length === 0}
+					<option disabled>No configs defined</option>
+				{/if}
+				{#each $llmConfigs as config (config.id)}
+					<option value={config.name}>{config.name}</option>
+				{/each}
+			</select>
+		</div>
 	</div>
 
 	<!-- LLM Output Type Section -->
@@ -349,6 +355,8 @@
 </BaseWorkerNode>
 
 <style>
+	@reference "tailwindcss";
+
 	.text-2xs {
 		font-size: 0.65rem; /* 10.4px */
 		line-height: 1rem; /* 16px */
