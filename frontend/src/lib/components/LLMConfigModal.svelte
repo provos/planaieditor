@@ -9,6 +9,7 @@
 		validLLMProviders,
 		type LLMConfig
 	} from '$lib/stores/llmConfigsStore';
+	import { getProviderVisuals } from '$lib/utils/providerVisuals';
 
 	// Props to control visibility
 	let { showModal = $bindable() } = $props<{ showModal: boolean }>();
@@ -142,7 +143,9 @@
 	<!-- Modal Backdrop -->
 	<div
 		class="fixed inset-0 z-40 bg-black bg-opacity-50 backdrop-blur-sm"
-		on:click={closeModal}
+		onclick={closeModal}
+		role="button"
+		tabindex="0"
 	></div>
 
 	<!-- Modal Content -->
@@ -151,7 +154,7 @@
 			<!-- Close Button -->
 			<button
 				class="absolute right-4 top-4 text-gray-500 hover:text-gray-800"
-				on:click={closeModal}
+				onclick={closeModal}
 				title="Close"
 			>
 				<X size={24} />
@@ -160,10 +163,14 @@
 			<h2 class="mb-6 text-xl font-semibold text-gray-800">Manage LLM Configurations</h2>
 
 			<!-- Configuration List -->
-			<div class="mb-6 max-h-60 overflow-y-auto rounded border border-gray-200 pr-2">
+			<div class="mb-6 max-h-60 overflow-y-auto rounded border border-gray-200">
 				<table class="min-w-full divide-y divide-gray-200">
 					<thead class="sticky top-0 bg-gray-50">
 						<tr>
+							<th
+								class="w-8 px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+								title="Provider"
+							></th>
 							<th
 								class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
 								>Name</th
@@ -185,13 +192,17 @@
 					<tbody class="divide-y divide-gray-200 bg-white">
 						{#if $llmConfigs.length === 0}
 							<tr>
-								<td colspan="4" class="px-4 py-3 text-center text-sm text-gray-500"
+								<td colspan="5" class="px-4 py-3 text-center text-sm text-gray-500"
 									>No configurations defined.</td
 								>
 							</tr>
 						{/if}
 						{#each $llmConfigs as config (config.id)}
+							{@const visuals = getProviderVisuals(config.provider)}
 							<tr class:bg-blue-50={editingConfigId === config.id}>
+								<td class="whitespace-nowrap px-3 py-2 text-sm">
+									<visuals.icon size={18} class={visuals.colorClass} />
+								</td>
 								<td class="whitespace-nowrap px-4 py-2 text-sm font-medium text-gray-900"
 									>{config.name}</td
 								>
@@ -200,7 +211,7 @@
 								<td class="whitespace-nowrap px-4 py-2 text-sm font-medium">
 									<button
 										class="mr-2 text-blue-600 hover:text-blue-800"
-										on:click={() => startEdit(config)}
+										onclick={() => startEdit(config)}
 										title="Edit"
 										disabled={editingConfigId === config.id || isAddingNew}
 									>
@@ -208,7 +219,7 @@
 									</button>
 									<button
 										class="text-red-600 hover:text-red-800"
-										on:click={() => handleDelete(config.id)}
+										onclick={() => handleDelete(config.id)}
 										title="Delete"
 										disabled={editingConfigId === config.id || isAddingNew}
 									>
@@ -227,6 +238,12 @@
 					<h3 class="mb-4 text-lg font-medium text-gray-700">
 						{isAddingNew ? 'Add New Configuration' : 'Edit Configuration'}
 					</h3>
+					{#if formState.provider}
+						{@const formVisuals = getProviderVisuals(formState.provider)}
+						<div class="absolute right-4 top-4">
+							<formVisuals.icon size={24} class={formVisuals.colorClass} />
+						</div>
+					{/if}
 					<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
 						<!-- Name -->
 						<div>
@@ -355,14 +372,14 @@
 						<button
 							type="button"
 							class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-							on:click={cancelEdit}
+							onclick={cancelEdit}
 						>
 							Cancel
 						</button>
 						<button
 							type="button"
 							class="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-							on:click={saveConfig}
+							onclick={saveConfig}
 						>
 							<FloppyDisk size={18} class="-ml-1 mr-2" />
 							{editingConfigId ? 'Update' : 'Save'} Configuration
@@ -377,7 +394,7 @@
 					<button
 						type="button"
 						class="inline-flex items-center rounded-md border border-transparent bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-						on:click={startAddNew}
+						onclick={startAddNew}
 					>
 						Add New Configuration
 					</button>

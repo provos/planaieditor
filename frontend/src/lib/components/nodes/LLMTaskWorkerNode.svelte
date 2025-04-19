@@ -9,6 +9,8 @@
 	import { tick } from 'svelte';
 	import type { Action } from 'svelte/action';
 	import { llmConfigs } from '$lib/stores/llmConfigsStore';
+	import { getProviderVisuals } from '$lib/utils/providerVisuals';
+	import { getLLMConfigByName } from '$lib/stores/llmConfigsStore';
 
 	// Extend the base data interface
 	export interface LLMWorkerData extends BaseWorkerData {
@@ -97,6 +99,17 @@
 	// Local state for boolean flags
 	let useXml = $state(data.use_xml);
 	let debugMode = $state(data.debug_mode);
+
+	// Derived state for selected config visuals
+	let selectedConfigVisuals = $derived.by(() => {
+		if (data.llmConfigName) {
+			const config = getLLMConfigByName(data.llmConfigName);
+			if (config) {
+				return getProviderVisuals(config.provider);
+			}
+		}
+		return null;
+	});
 
 	// Subscribe to the taskClassNamesStore for output type selection
 	$effect(() => {
@@ -205,16 +218,21 @@
 	isCached={data.isCached}
 >
 	<!-- LLM Configuration Selector -->
-	<div class="input-item">
-		<label for="llm-config-{id}" class="label">LLM Configuration</label>
+	<div class="input-item flex items-center gap-2">
+		<label for="llm-config-{id}" class="label flex-none">LLM Config</label>
+		{#if selectedConfigVisuals}
+			<div class="flex-none" title={data.llmConfigName}>
+				<selectedConfigVisuals.icon size={18} class={selectedConfigVisuals.colorClass} />
+			</div>
+		{/if}
 		<select
 			id="llm-config-{id}"
-			class="nodrag select select-bordered select-sm w-full"
+			class="nodrag select select-bordered select-sm w-full flex-grow"
 			bind:value={data.llmConfigName}
 		>
-			<option value={undefined}>-- Select LLM Config --</option>
+			<option value={undefined}>-- Select --</option>
 			{#if $llmConfigs.length === 0}
-				<option disabled>No LLM configurations defined</option>
+				<option disabled>No configs defined</option>
 			{/if}
 			{#each $llmConfigs as config (config.id)}
 				<option value={config.name}>{config.name}</option>
