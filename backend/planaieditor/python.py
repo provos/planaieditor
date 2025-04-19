@@ -11,6 +11,15 @@ from planaieditor.utils import is_valid_python_class_name
 
 CODE_SNIPPETS_DIR = os.path.join(os.path.dirname(__file__), "codesnippets")
 
+VALID_LLM_PROVIDERS = [
+    "ollama",
+    "remote_ollama",
+    "openai",
+    "anthropic",
+    "gemini",
+    "openrouter",
+]
+
 
 def custom_format(template: str, **kwargs) -> str:
     """
@@ -242,24 +251,65 @@ def create_worker_instance(node: Dict[str, Any]) -> str:
     instance_name = worker_to_instance_name(worker_class_name)
     worker_type = node.get("type")
 
-    # Basic LLM assignment - needs refinement based on node config/needs
-    llm_arg = ""
-    if worker_type == "llmtaskworker":
-        llm_arg = "llm=llm_code"  # Default to code llm for LLM workers
-    elif worker_type == "joinedtaskworker":
-        pass  # Joined workers don't take LLM directly
-    else:  # Basic taskworker might sometimes need an LLM? Defaulting to none.
-        pass
-
     code = []
     # Wrap instantiation in try-except
     code.append(f"# Instantiate: {worker_class_name}")
-    code.append(f"{instance_name} = {worker_class_name}({llm_arg})")
+
+    # Basic LLM assignment - needs refinement based on node config/needs
+    if worker_type in ["llmtaskworker", "cachedllmtaskworker"]:
+        llm_arg = "llm=None"
+        llm_config = data.get("llmConfig")
+
+        if llm_config:
+            llm_args_list = create_llm_args(llm_config)
+
+            llm_args_str = ", ".join(llm_args_list)
+            llm_arg = (
+                f"llm=llm_from_config({llm_args_str})"  # Construct the llm argument
+            )
+
+        code.append(f"{instance_name} = {worker_class_name}({llm_arg})")
+    else:
+        code.append(f"{instance_name} = {worker_class_name}()")
+
     code.append(f"workers_dict['{instance_name}'] = {instance_name}")
 
     return wrap_instantiation_in_try_except(
         "\n".join(code), worker_class_name, f"Failed to instantiate {worker_class_name}"
     )
+
+
+def create_llm_args(llm_config: Dict[str, Any]) -> List[str]:
+    provider = llm_config.get("provider")
+    model_name = llm_config.get(
+        "modelId"
+    )  # Map frontend 'modelId' to backend 'model_name'
+    max_tokens = llm_config.get("max_tokens")  # Optional from frontend
+    base_url = llm_config.get("baseUrl")  # Optional baseUrl (used as 'host' for ollama)
+    remote_hostname = llm_config.get("remoteHostname")  # For remote_ollama
+    remote_username = llm_config.get("remoteUsername")  # For remote_ollama
+
+    llm_args_list = []
+    if provider:
+        if provider not in VALID_LLM_PROVIDERS:
+            # This should ideally be caught earlier, but as a safety check
+            raise ValueError(f"Invalid LLM provider specified in config: {provider}")
+        llm_args_list.append(f'provider="{provider}"')
+    if model_name:
+        llm_args_list.append(f'model_name="{model_name}"')
+    if max_tokens is not None:
+        llm_args_list.append(f"max_tokens={int(max_tokens)}")  # Ensure it's an int
+
+    # Add provider-specific args
+    if provider == "ollama":
+        if base_url:  # Map frontend 'baseUrl' to backend 'host' for ollama
+            llm_args_list.append(f'host="{base_url}"')
+    elif provider == "remote_ollama":
+        if remote_hostname:
+            llm_args_list.append(f'hostname="{remote_hostname}"')
+        if remote_username:
+            llm_args_list.append(f'username="{remote_username}"')
+    return llm_args_list
 
 
 def get_task_class_name(type_name: str) -> str:
@@ -536,12 +586,27 @@ def generate_python_module(
             f"from planai.patterns import {', '.join(sorted_factories)}"
         )
 
+    # Check if any LLM workers were instantiated to determine if llm_from_config import is needed
+    needs_llm_import = any(
+        n.get("type") in ["llmtaskworker", "cachedllmtaskworker"]
+        and n.get("data", {}).get("llmConfig")
+        for n in worker_nodes
+    )
+    llm_import_line = (
+        "from planai.llm import llm_from_config" if needs_llm_import else ""
+    )
+
     final_code = custom_format(
         code_to_format,
         import_statements="\n".join(
-            [*import_statements, factory_import_line]
-            if factory_import_line
-            else import_statements
+            filter(
+                None,
+                [  # Filter out empty strings
+                    *import_statements,
+                    factory_import_line,
+                    llm_import_line,
+                ],
+            )
         ),
         task_definitions="\n".join(tasks),
         worker_definitions="\n".join(workers),

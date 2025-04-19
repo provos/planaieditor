@@ -8,6 +8,7 @@
 	import { useUpdateNodeInternals } from '@xyflow/svelte';
 	import { tick } from 'svelte';
 	import type { Action } from 'svelte/action';
+	import { llmConfigs } from '$lib/stores/llmConfigsStore';
 
 	// Extend the base data interface
 	export interface LLMWorkerData extends BaseWorkerData {
@@ -30,6 +31,7 @@
 		// Add simple boolean flags
 		use_xml: boolean;
 		debug_mode: boolean;
+		llmConfigName?: string;
 	}
 
 	let { id, data } = $props<{
@@ -202,6 +204,24 @@
 	minHeight={400}
 	isCached={data.isCached}
 >
+	<!-- LLM Configuration Selector -->
+	<div class="input-item">
+		<label for="llm-config-{id}" class="label">LLM Configuration</label>
+		<select
+			id="llm-config-{id}"
+			class="nodrag select select-bordered select-sm w-full"
+			bind:value={data.llmConfigName}
+		>
+			<option value={undefined}>-- Select LLM Config --</option>
+			{#if $llmConfigs.length === 0}
+				<option disabled>No LLM configurations defined</option>
+			{/if}
+			{#each $llmConfigs as config (config.id)}
+				<option value={config.name}>{config.name}</option>
+			{/each}
+		</select>
+	</div>
+
 	<!-- LLM Output Type Section -->
 	<div class="mb-2 flex-none">
 		<h3 class="text-2xs mb-1 font-semibold text-gray-600">LLM Output Type</h3>
@@ -309,3 +329,18 @@
 		<!-- Custom method rendering is now handled by BaseWorkerNode -->
 	</div>
 </BaseWorkerNode>
+
+<style>
+	.text-2xs {
+		font-size: 0.65rem; /* 10.4px */
+		line-height: 1rem; /* 16px */
+	}
+
+	.label {
+		/* @apply text-2xs font-semibold text-gray-600; */
+		font-size: 0.65rem; /* Apply text-2xs size directly */
+		line-height: 1rem; /* Apply text-2xs line-height directly */
+		font-weight: 600; /* Corresponds to font-semibold */
+		color: rgb(75 85 99); /* Corresponds to text-gray-600 */
+	}
+</style>

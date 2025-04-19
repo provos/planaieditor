@@ -10,19 +10,23 @@
 	import Network from 'phosphor-svelte/lib/Network';
 	import PythonInterpreterSelector from '$lib/components/PythonInterpreterSelector.svelte';
 	import Export from 'phosphor-svelte/lib/Export';
+	import Gear from 'phosphor-svelte/lib/Gear';
 
 	let {
 		onExport,
 		onClearGraph,
-		onImport
+		onImport,
+		onConfigureLLMs
 	}: {
 		onExport: () => void;
 		onClearGraph: () => void;
 		onImport: () => void;
+		onConfigureLLMs: () => void;
 	} = $props<{
 		onExport: () => void;
 		onClearGraph: () => void;
 		onImport: () => void;
+		onConfigureLLMs: () => void;
 	}>();
 
 	// Handles the start of dragging a new node
@@ -147,6 +151,15 @@
 		>
 			<Eraser size={18} class="mr-1.5" />
 			Clear
+		</button>
+		<!-- Configure LLMs Button -->
+		<button
+			onclick={onConfigureLLMs}
+			class="flex items-center rounded bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"
+			title="Configure LLM Models"
+		>
+			<Gear size={18} class="mr-1.5" />
+			Configure LLMs
 		</button>
 	</div>
 

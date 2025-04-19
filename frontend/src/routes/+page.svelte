@@ -31,6 +31,9 @@
 	// Import utility for default method bodies
 	import { getDefaultMethodBody } from '$lib/utils/defaults';
 
+	// Import the LLM Config Modal
+	import LLMConfigModal from '$lib/components/LLMConfigModal.svelte';
+
 	// Import the Python import/export utility modules
 	import {
 		isPythonFile,
@@ -79,6 +82,9 @@
 		type: 'idle',
 		message: ''
 	});
+
+	// State for LLM Config Modal visibility
+	let showLLMConfigModal = $state(false);
 
 	// Ref for the hidden file input
 	let fileInputRef: HTMLInputElement;
@@ -713,7 +719,12 @@ Analyze the following information and provide a response.`,
 
 <div class="flex h-screen w-screen flex-col">
 	<div class="w-full border-b border-gray-300 bg-gray-100 p-4">
-		<ToolShelf onExport={handleExport} onClearGraph={handleClearGraph} onImport={triggerImport} />
+		<ToolShelf
+			onExport={handleExport}
+			onClearGraph={handleClearGraph}
+			onImport={triggerImport}
+			onConfigureLLMs={() => (showLLMConfigModal = true)}
+		/>
 
 		<!-- File input (hidden) -->
 		<input
@@ -794,6 +805,10 @@ Analyze the following information and provide a response.`,
 				y={contextMenuY}
 				onClose={closeContextMenu}
 			/>
+		{/if}
+
+		{#if showLLMConfigModal}
+			<LLMConfigModal bind:showModal={showLLMConfigModal} />
 		{/if}
 	</div>
 </div>

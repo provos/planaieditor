@@ -1,6 +1,8 @@
 import type { Node, Edge } from '@xyflow/svelte';
 import type { Socket } from 'socket.io-client';
 import type { BackendError } from './pythonImport';
+import { get } from 'svelte/store';
+import { llmConfigs, type LLMConfig } from '$lib/stores/llmConfigsStore';
 // import type { TaskImportNodeData } from '../components/nodes/TaskImportNode.svelte'; // Removed import
 
 // Type for export status updates
@@ -46,6 +48,27 @@ export function exportPythonCode(
         if (data?.workerName) {
             processedData.className = data.workerName;
             delete processedData.workerName;
+        }
+
+        // If it's an LLM worker node, resolve llmConfigName to the full config object
+        if ((node.type === 'llmtaskworker' || node.type === 'cachedllmtaskworker') && data?.llmConfigName) {
+            const configName = data.llmConfigName;
+            const allConfigs = get(llmConfigs); // Get current value of the store
+            const foundConfig = allConfigs.find(c => c.name === configName);
+
+            if (foundConfig) {
+                // Add the full config object to the data being exported
+                processedData.llmConfig = foundConfig;
+                // Optionally remove the name now that we have the full object
+                delete processedData.llmConfigName;
+            } else {
+                // Handle case where config name exists but config is not found (shouldn't happen ideally)
+                console.warn(`LLM Configuration named '${configName}' selected but not found in store. Skipping LLM config export for node ${node.id}`);
+                // Ensure llmConfig is not present if not found
+                delete processedData.llmConfig;
+                // Keep llmConfigName? Or delete it? Deleting might be cleaner for backend.
+                delete processedData.llmConfigName;
+            }
         }
 
         // Consolidate known class variables into classVars for worker nodes

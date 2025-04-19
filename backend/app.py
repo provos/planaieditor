@@ -19,11 +19,13 @@ import traceback
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
-from planaieditor.patch import get_definitions_from_file
-from planaieditor.python import generate_python_module
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
+from planaieditor.llm_interface_utils import list_models_for_provider
+from planaieditor.patch import get_definitions_from_file
+from planaieditor.python import generate_python_module
+from planaieditor.utils import is_valid_python_class_name
 
 # Determine mode and configure paths/CORS
 FLASK_ENV = os.environ.get("FLASK_ENV", "production")  # Default to production
@@ -31,7 +33,9 @@ is_development = FLASK_ENV == "development"
 
 # Define the build directory *within the package* for production
 # This path is relative to app.py's location
-package_static_dir = os.path.join(os.path.dirname(__file__), "planaieditor", "static_frontend")
+package_static_dir = os.path.join(
+    os.path.dirname(__file__), "planaieditor", "static_frontend"
+)
 
 # Initialize Flask differently based on mode
 if is_development:
@@ -475,6 +479,45 @@ def import_python_module():
                 print(f"Error removing temporary file {tmp_file.name}: {e}")
 
 
+# --- New Endpoint for LLM Model Listing ---
+@app.route("/api/llm/list-models", methods=["GET"])
+def get_llm_models():
+    provider = request.args.get("provider")
+    if not provider:
+        return (
+            jsonify({"success": False, "error": "Missing 'provider' query parameter"}),
+            400,
+        )
+
+    # Note: Ideally, this should run within the selected venv context.
+    # For simplicity now, it runs in the backend env. This requires PlanAI & keys there.
+    # A more robust solution would use a helper script + run_inspection_script.
+    print(
+        f"Attempting to list models for provider: {provider} (using backend environment)"
+    )
+
+    try:
+        # Ensure PlanAI is available (checked within the function)
+        models = list_models_for_provider(provider)
+        print(f"Successfully listed models for {provider}: {models}")
+        return jsonify({"success": True, "models": models})
+    except ValueError as e:  # Catch errors like missing keys or invalid provider
+        print(f"ValueError listing models for {provider}: {e}")
+        return jsonify({"success": False, "error": str(e)}), 400
+    except Exception as e:
+        tb_str = traceback.format_exc()
+        print(f"Internal server error listing models for {provider}: {e}\n{tb_str}")
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": f"Internal server error listing models: {e}",
+                }
+            ),
+            500,
+        )
+
+
 # --- Helper function to run the inspection script --- #
 def run_inspection_script(
     module_path: str, action: str, class_name: Optional[str] = None
@@ -489,7 +532,9 @@ def run_inspection_script(
             "error": f"Selected Python interpreter not found: {python_executable}",
         }
 
-    script_path = Path(__file__).parent / "planaieditor" / "codesnippets" / "inspect_module.py"
+    script_path = (
+        Path(__file__).parent / "planaieditor" / "codesnippets" / "inspect_module.py"
+    )
     if not script_path.exists():
         return {
             "success": False,
