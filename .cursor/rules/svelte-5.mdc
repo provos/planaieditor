@@ -12,3 +12,5 @@ alwaysApply: false
 - We use Svelte 5 snippets instead of Svelte 5 slots
 - createEventDispatcher() is obsolete; use $props() instead
 - We use phosphor ui for icons
+- We are using tailwindcss v4 for styles
+  - background opacity is now specified as follows: bg-gray-900/50 because bg-opacity-50 has been deprecated.
