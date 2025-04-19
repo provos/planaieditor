@@ -142,7 +142,7 @@
 {#if showModal}
 	<!-- Modal Backdrop -->
 	<div
-		class="fixed inset-0 z-40 bg-black bg-opacity-50 backdrop-blur-sm"
+		class="fixed inset-0 z-40 bg-gray-900/50 backdrop-blur-sm"
 		onclick={closeModal}
 		role="button"
 		tabindex="0"
@@ -411,3 +411,7 @@
 		</div>
 	</div>
 {/if}
+
+<style lang="postcss">
+	@reference "tailwindcss";
+</style>
