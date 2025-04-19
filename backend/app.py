@@ -590,7 +590,6 @@ def run_inspection_script(
         return {"success": False, "error": f"Failed to run inspection script: {e}"}
 
 
-# --- New endpoints for Task Import --- #
 @app.route("/api/import-task-classes", methods=["POST"])
 def import_task_classes():
     """Imports a module in the venv and lists PlanAI Task classes."""
