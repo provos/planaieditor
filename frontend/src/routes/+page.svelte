@@ -150,6 +150,21 @@
 			}
 		);
 
+		// ensure consistent edge styling after reload
+		edges.update((currentEdges: Edge[]) => {
+			return currentEdges.map((svelteEdge) => {
+				const sourceNode = getNodes().find((n) => n.id === svelteEdge.source);
+				// Use the new utility function
+				const styleProps = getEdgeStyleProps(sourceNode, svelteEdge);
+
+				return {
+					...svelteEdge,
+					style: styleProps.style,
+					animated: styleProps.animated
+				};
+			});
+		});
+
 		return () => {
 			// Disconnect the socket when the component is destroyed
 			socket?.disconnect();
