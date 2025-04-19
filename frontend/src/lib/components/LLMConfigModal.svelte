@@ -235,15 +235,17 @@
 			<!-- Add New / Edit Form -->
 			{#if isAddingNew || editingConfigId}
 				<div class="mb-4 rounded border border-gray-200 bg-gray-50 p-4">
-					<h3 class="mb-4 text-lg font-medium text-gray-700">
-						{isAddingNew ? 'Add New Configuration' : 'Edit Configuration'}
-					</h3>
-					{#if formState.provider}
-						{@const formVisuals = getProviderVisuals(formState.provider)}
-						<div class="absolute right-4 top-4">
-							<formVisuals.icon size={24} class={formVisuals.colorClass} />
-						</div>
-					{/if}
+					<div class="mb-4 flex items-center justify-between">
+						<h3 class="text-lg font-medium text-gray-700">
+							{isAddingNew ? 'Add New Configuration' : 'Edit Configuration'}
+						</h3>
+						{#if formState.provider}
+							{@const formVisuals = getProviderVisuals(formState.provider)}
+							<div title={formState.provider} class="ml-2">
+								<formVisuals.icon size={24} class={formVisuals.colorClass} />
+							</div>
+						{/if}
+					</div>
 					<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
 						<!-- Name -->
 						<div>
