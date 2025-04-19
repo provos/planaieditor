@@ -11,12 +11,14 @@
 		{
 			name: 'create_planning_worker',
 			inputTypes: ['PlanRequest'],
-			outputTypes: ['FinalPlan']
+			outputTypes: ['FinalPlan'],
+			className: 'PlanningWorkerSubgraph'
 		},
 		{
 			name: 'create_search_fetch_worker',
 			inputTypes: ['SearchQuery'],
-			outputTypes: ['ConsolidatedPages']
+			outputTypes: ['ConsolidatedPages'],
+			className: 'SearchFetchWorker'
 		}
 	];
 
@@ -36,6 +38,10 @@
 	// Use a temporary variable to store the currently selected factory function
 	let selectedFactoryName = $state(data.factoryFunction || '');
 
+	if (!!data.factoryInvocation) {
+		data.factoryInvocation = '';
+	}
+
 	function updateFactoryFunction(event: Event) {
 		const select = event.target as HTMLSelectElement;
 		const value = select.value;
@@ -45,25 +51,24 @@
 			console.log('updateFactoryFunction', value);
 			const selectedFactory = availableFactoryFunctions.find((f) => f.name === value);
 			if (selectedFactory) {
-				data = {
-					...data,
-					factoryFunction: selectedFactory.name,
-					inputTypes: selectedFactory.inputTypes,
-					output_types: selectedFactory.outputTypes
-				};
+				data.factoryFunction = selectedFactory.name;
+				data.inputTypes = selectedFactory.inputTypes;
+				data.output_types = selectedFactory.outputTypes;
+				data.workerName = selectedFactory.className;
 				// Also update our local tracking variable
 				selectedFactoryName = selectedFactory.name;
 			}
+			data = { ...data };
 			tick().then(() => updateNodeInternals(id));
 		} else {
 			// Handle empty selection (reset)
-			data = {
-				...data,
-				factoryFunction: undefined,
-				inputTypes: [],
-				output_types: []
-			};
+			console.log('resetting factory function');
+			data.factoryFunction = undefined;
+			data.inputTypes = [];
+			data.output_types = [];
+			data.workerName = undefined;
 			selectedFactoryName = '';
+			data = { ...data };
 			tick().then(() => updateNodeInternals(id));
 		}
 	}
@@ -81,13 +86,13 @@
 <BaseWorkerNode
 	{id}
 	{data}
-	defaultName={data.factoryFunction || 'SubGraphWorker'}
+	defaultName={data.workerName || 'SubGraphWorker'}
 	isCached={data.isCached}
 	minWidth={200}
 	minHeight={150}
 	outputTypesEditable={false}
 >
-	<div class="mt-1 flex flex-col rounded bg-blue-50 p-1 text-blue-700">
+	<div class="mt-1 flex flex-col rounded bg-blue-50 p-1 text-blue-700 h-auto">
 		<div class="text-2xs mb-1 flex flex-none items-center">
 			<CodeSimple size={10} weight="bold" class="mr-1 flex-none" />
 			<span class="mr-1 font-mono font-semibold">Factory:</span>
@@ -102,18 +107,16 @@
 				{/each}
 			</select>
 		</div>
-		{#if data.factoryInvocation !== undefined}
-			<div class="mt-1">
-				<EditableCodeSection
-					title="Arguments"
-					code={data.factoryInvocation}
-					language="python"
-					onUpdate={handleInvocationUpdate}
-					onCollapseToggle={handleCollapse}
-					initialCollapsed={true}
-				/>
-			</div>
-		{/if}
+		<div class="mt-1">
+			<EditableCodeSection
+				title="Arguments"
+				code={data.factoryInvocation}
+				language="python"
+				onUpdate={handleInvocationUpdate}
+				onCollapseToggle={handleCollapse}
+				initialCollapsed={true}
+			/>
+		</div>
 	</div>
 	<!-- Any additional content specific to SubGraphWorker can go here -->
 	<!-- BaseWorkerNode already displays input/output types -->
