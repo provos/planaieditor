@@ -73,23 +73,8 @@ export function exportPythonCode(
 
         // Handle factory function details for subgraphworkers
         if (node.type === 'subgraphworker' && data?.isFactoryCreated) {
-            processedData.factoryFunction = data.factoryFunction;
-            processedData.factoryInvocation = data.factoryInvocation;
             // Remove isFactoryCreated flag as it's frontend-specific
             delete processedData.isFactoryCreated;
-        }
-
-        if (node.type === 'taskimport') {
-            // Explicitly check type before asserting
-            const importData = data as { modulePath?: string, className?: string }; // Use inline type
-            if (importData.modulePath && importData.className) {
-                processedData.modulePath = importData.modulePath;
-                processedData.className = importData.className;
-            } else {
-                console.warn(`Skipping TaskImportNode ${node.id} due to missing modulePath or className.`);
-                // Consider how to handle incomplete import nodes - skip or error?
-                // For now, let's keep it but it might cause issues downstream if className isn't set.
-            }
         }
 
         return { ...node, data: processedData };
