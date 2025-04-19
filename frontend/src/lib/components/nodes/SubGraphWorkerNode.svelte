@@ -33,23 +33,17 @@
 
 	const updateNodeInternals = useUpdateNodeInternals();
 
-	// --- State for Factory Function Editing ---
-	let editingFactoryFunction = $state(false);
-	// tempFactoryFunction now stores just the name for the select binding
-	let tempFactoryFunction = $state(data.factoryFunction || availableFactoryFunctions[0].name);
-
-	function startEditingFactory() {
-		tempFactoryFunction = data.factoryFunction || availableFactoryFunctions[0].name;
-		editingFactoryFunction = true;
-	}
+	// Use a temporary variable to store the currently selected factory function
+	let selectedFactoryName = $state(data.factoryFunction || '');
 
 	function updateFactoryFunction(event: Event) {
 		const select = event.target as HTMLSelectElement;
-		if (select.value) {
-			console.log('updateFactoryFunction', select.value);
-			const selectedFactory = availableFactoryFunctions.find(
-				(f) => f.name === select.value
-			);
+		const value = select.value;
+
+		// Only update if a factory function is actually selected
+		if (value) {
+			console.log('updateFactoryFunction', value);
+			const selectedFactory = availableFactoryFunctions.find((f) => f.name === value);
 			if (selectedFactory) {
 				data = {
 					...data,
@@ -57,22 +51,21 @@
 					inputTypes: selectedFactory.inputTypes,
 					output_types: selectedFactory.outputTypes
 				};
-			} else {
-				// Handle case where factory function might be invalid or unset
-				data = {
-					...data,
-					factoryFunction: undefined,
-					inputTypes: [],
-					output_types: []
-				};
+				// Also update our local tracking variable
+				selectedFactoryName = selectedFactory.name;
 			}
 			tick().then(() => updateNodeInternals(id));
+		} else {
+			// Handle empty selection (reset)
+			data = {
+				...data,
+				factoryFunction: undefined,
+				inputTypes: [],
+				output_types: []
+			};
+			selectedFactoryName = '';
+			tick().then(() => updateNodeInternals(id));
 		}
-		editingFactoryFunction = false;
-	}
-
-	function cancelEditingFactory() {
-		editingFactoryFunction = false;
 	}
 
 	function handleInvocationUpdate(newCode: string) {
@@ -97,28 +90,17 @@
 	<div class="mt-1 flex flex-col rounded bg-blue-50 p-1 text-blue-700">
 		<div class="text-2xs mb-1 flex flex-none items-center">
 			<CodeSimple size={10} weight="bold" class="mr-1 flex-none" />
-			{#if editingFactoryFunction}
-				<select
-					bind:value={tempFactoryFunction}
-					onchange={updateFactoryFunction}
-					onblur={cancelEditingFactory}
-					class="text-2xs font-mono font-semibold"
-				>
-					{#each availableFactoryFunctions as func}
-						<option value={func.name}>{func.name}</option>
-					{/each}
-				</select>
-			{:else}
-				<!-- svelte-ignore a11y_click_events_have_key_events -->
-				<span
-					class="cursor-pointer rounded px-1 font-mono font-semibold hover:bg-blue-100"
-					onclick={startEditingFactory}
-					role="button"
-					tabindex="0"
-				>
-					Factory: {data.factoryFunction}
-				</span>
-			{/if}
+			<span class="mr-1 font-mono font-semibold">Factory:</span>
+			<select
+				bind:value={selectedFactoryName}
+				onchange={updateFactoryFunction}
+				class="text-2xs rounded border-blue-200 bg-blue-50 px-1 py-0.5 font-mono"
+			>
+				<option value="">Select Factory...</option>
+				{#each availableFactoryFunctions as func}
+					<option value={func.name}>{func.name}</option>
+				{/each}
+			</select>
 		</div>
 		{#if data.factoryInvocation !== undefined}
 			<div class="mt-1">
