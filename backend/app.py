@@ -39,11 +39,11 @@ package_static_dir = os.path.join(
 
 # Initialize Flask differently based on mode
 if is_development:
-    print("Running in DEVELOPMENT mode. Enabling CORS for http://localhost:5173")
+    print("Running in DEVELOPMENT mode. Enabling CORS for *")
     app = Flask(__name__)
     # Allow requests from frontend dev server origin
-    CORS(app, resources={r"/*": {"origins": "http://localhost:5173"}})
-    socketio = SocketIO(app, cors_allowed_origins="http://localhost:5173")
+    CORS(app, resources={r"/*": {"origins": "*"}})
+    socketio = SocketIO(app, cors_allowed_origins="*")
 else:
     # Production mode: Serve static files from the packaged directory
     print(
