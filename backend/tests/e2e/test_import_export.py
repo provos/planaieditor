@@ -111,13 +111,26 @@ def compare_definitions(defs1: dict, defs2: dict) -> bool:
                 "join_type",
                 "use_xml",
                 "debug_mode",
-            ]  # Exclude prompt/system_prompt
+                "prompt",
+                "system_prompt",
+            ]
             for vname in vars_to_check:
                 val1 = vars1.get(vname)
                 val2 = vars2.get(vname)
+
+                # Normalize prompt strings before comparison
+                if (
+                    vname in ("prompt", "system_prompt")
+                    and isinstance(val1, str)
+                    and isinstance(val2, str)
+                ):
+                    val1 = val1.strip()
+                    val2 = val2.strip()
+
                 if val1 != val2:
+                    # Use repr() to show potential hidden characters
                     print(
-                        f"Worker '{name}' classVar '{vname}' mismatch: {val1} vs {val2}"
+                        f"Worker '{name}' classVar '{vname}' mismatch: {repr(val1)} vs {repr(val2)}"
                     )
                     all_match = False
             # Compare factory details if present
