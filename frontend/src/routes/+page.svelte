@@ -733,6 +733,7 @@ Analyze the following information and provide a response.`,
 			accept=".py,text/x-python"
 			style="display: none;"
 			onchange={handleFileSelect}
+			data-testid="file-input"
 		/>
 
 		<!-- Display Connection and Export/Import Status -->

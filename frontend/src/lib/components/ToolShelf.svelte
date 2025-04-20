@@ -39,7 +39,7 @@
 	}
 </script>
 
-<div class="flex items-center gap-4">
+<div class="flex items-center gap-4" data-testid="toolshelf-container">
 	<!-- Draggable Nodes Section -->
 	<div class="flex items-center gap-2 border-r border-gray-300 pr-4">
 		<span class="font-semibold">Nodes:</span>
@@ -131,6 +131,7 @@
 			onclick={onImport}
 			class="flex items-center rounded bg-blue-500 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-600 disabled:opacity-50"
 			title="Import Task definitions from Python file"
+			data-testid="import-button"
 		>
 			<UploadSimple size={18} weight="bold" class="mr-1.5" />
 			Import
@@ -139,6 +140,7 @@
 		<button
 			onclick={onExport}
 			class="flex items-center rounded bg-green-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-700"
+			data-testid="export-button"
 		>
 			<Export size={18} class="mr-1.5" />
 			Export
