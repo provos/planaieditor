@@ -30,6 +30,19 @@ export function exportPythonCode(
 
     // --- Transformation Step ---
     // Create a map from nodeId to className/workerName
+    const graphData = convertGraphtoJSON(nodes, edges); // Use transformed nodes and edges
+    console.log('Exporting transformed graph:', graphData);
+
+    socket.emit('export_graph', graphData);
+    return { type: 'loading', message: 'Exporting...' };
+}
+
+interface GraphData {
+    nodes: { id: string; data: any }[];
+    edges: { source: string; target: string }[];
+}
+
+function convertGraphtoJSON(nodes: Node[], edges: Edge[]): GraphData {
     const nodeIdToNameMap = new Map<string, string>();
     nodes.forEach(node => {
         const data = node.data as any; // Use any for broader compatibility during processing
@@ -104,7 +117,7 @@ export function exportPythonCode(
     });
 
     // Transform edges to use class names instead of node IDs
-    const exportedEdges: Array<{ source: string; target: string }> = edges
+    const exportedEdges: Array<{ source: string; target: string; }> = edges
         .map(edge => {
             const sourceName = nodeIdToNameMap.get(edge.source);
             const targetName = nodeIdToNameMap.get(edge.target);
@@ -122,15 +135,14 @@ export function exportPythonCode(
                 // targetInputType: ... // If needed
             };
         })
-        .filter((edge): edge is { source: string; target: string } => edge !== null); // Type guard to filter out nulls and satisfy TypeScript
-    // --- End Transformation ---
+        .filter((edge): edge is { source: string; target: string; } => edge !== null); // Type guard to filter out nulls and satisfy TypeScript
 
+
+
+    // --- End Transformation ---
     // Send transformed data
     const graphData = { nodes: exportedNodes, edges: exportedEdges }; // Use transformed nodes and edges
-    console.log('Exporting transformed graph:', graphData);
-
-    socket.emit('export_graph', graphData);
-    return { type: 'loading', message: 'Exporting...' };
+    return graphData;
 }
 
 /**
