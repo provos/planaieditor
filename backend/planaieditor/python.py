@@ -596,16 +596,6 @@ def generate_python_module(
             f"from planai.patterns import {', '.join(sorted_factories)}"
         )
 
-    # Check if any LLM workers were instantiated to determine if llm_from_config import is needed
-    needs_llm_import = any(
-        n.get("type") in ["llmtaskworker", "cachedllmtaskworker"]
-        and n.get("data", {}).get("llmConfig")
-        for n in worker_nodes
-    )
-    llm_import_line = (
-        "from planai.llm import llm_from_config" if needs_llm_import else ""
-    )
-
     final_code = custom_format(
         code_to_format,
         import_statements="\n".join(
@@ -614,7 +604,6 @@ def generate_python_module(
                 [  # Filter out empty strings
                     *import_statements,
                     factory_import_line,
-                    llm_import_line,
                 ],
             )
         ),

@@ -417,16 +417,9 @@ def handle_export_graph(data):
         )
         return
 
-    # --- TEMPORARILY SKIP VALIDATION FOR DEBUGGING ---
     # Attempt to validate the generated module in the specified venv
-    # validation_result = validate_code_in_venv(module_name, python_code)
-    print("--- Skipping validation step for debugging timeout ---")
-    validation_result = {
-        "success": True,
-        "message": "Validation skipped for debugging",
-    }  # Placeholder
-    # --- END TEMPORARY SKIP ---
-
+    validation_result = validate_code_in_venv(module_name, python_code)
+    
     # Construct the final response
     response_data = {
         "success": validation_result.get("success", False),
