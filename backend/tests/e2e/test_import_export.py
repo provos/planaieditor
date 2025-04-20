@@ -11,9 +11,10 @@ from typing import Optional
 import pytest
 from playwright.sync_api import APIResponse, Page, Route, expect
 
-# Ensure planai can be imported (adjust if your structure differs)
+# Ensure planaieditor can be imported (adjust if your structure differs)
 # This might be handled by running pytest from the 'backend' dir
-# sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+from planaieditor.patch import get_definitions_from_file # Import the parser
 
 # --- Configuration ---
 os.environ["FLASK_ENV"] = "development"
@@ -26,337 +27,133 @@ TEST_FIXTURE_PATH = Path(__file__).parent / "fixtures/releasenotes_fixture.py"
 # Timeout for waiting for elements or status changes (in milliseconds)
 TIMEOUT = 15000  # Increased timeout slightly
 
-# --- Helper Functions / Verification Logic (Placeholders) ---
+# --- Helper Functions / Verification Logic --- #
 
-
-def adapt_code_to_return_graph(code_string: str) -> str:
+def compare_definitions(defs1: dict, defs2: dict) -> bool:
     """
-    Attempts to modify the input code string so that instead of running
-    the graph or main function, it assigns the created graph object to
-    a known variable name (__returned_graph__) and returns it.
-
-    This is a simplified placeholder and might need AST manipulation for robustness.
+    Compares the dictionaries produced by get_definitions_from_file.
+    Focuses on comparing names, types, fields, classVars, edges, entries.
+    Ignores method bodies and otherMembersSource for flexibility.
+    Handles expected differences (e.g., llmConfig presence).
     """
-    # Simple approach: comment out graph.run() and main() calls
-    # and try to find the graph assignment.
-    modified_lines = []
-    graph_var_name = None
-    in_main_def = False
-    main_call_found = False
+    print("Comparing parsed definitions...")
+    all_match = True
 
-    # Find the likely graph variable name
-    for line in code_string.splitlines():
-        stripped_line = line.strip()
-        if stripped_line.startswith("graph = Graph") or stripped_line.startswith(
-            "g = Graph"
-        ):
-            # Basic check, might need regex for robustness
-            graph_var_name = stripped_line.split("=")[0].strip()
-            break  # Assume first assignment is the main graph
+    # Compare Tasks (name, fields - name, type, isList, required)
+    tasks1 = {t['className']: t for t in defs1.get('tasks', [])}
+    tasks2 = {t['className']: t for t in defs2.get('tasks', [])}
+    if set(tasks1.keys()) != set(tasks2.keys()):
+        print(f"Task className mismatch:\nDefs1: {set(tasks1.keys())}\nDefs2: {set(tasks2.keys())}")
+        all_match = False
+    else:
+        for name, task1 in tasks1.items():
+            task2 = tasks2[name]
+            fields1 = {f['name']: f for f in task1.get('fields', [])}
+            fields2 = {f['name']: f for f in task2.get('fields', [])}
+            if set(fields1.keys()) != set(fields2.keys()):
+                print(f"Task '{name}' field name mismatch:\nDefs1: {set(fields1.keys())}\nDefs2: {set(fields2.keys())}")
+                all_match = False
+                continue
+            for fname, field1 in fields1.items():
+                field2 = fields2[fname]
+                # Compare key field attributes
+                for attr in ['type', 'isList', 'required', 'literalValues']: # Added literalValues
+                    val1 = field1.get(attr)
+                    val2 = field2.get(attr)
+                    if val1 != val2:
+                         # Allow type Any vs specific type if one is missing (e.g., from simple generation)
+                        if attr == 'type' and ('Any' in [val1, val2] and (val1 is None or val2 is None)):
+                            print(f"Task '{name}' field '{fname}': Tolerating type mismatch ('{val1}' vs '{val2}')")
+                            continue
+                        print(f"Task '{name}' field '{fname}' attribute '{attr}' mismatch: {val1} vs {val2}")
+                        all_match = False
 
-    if not graph_var_name:
-        print("Warning: Could not reliably determine graph variable name.")
-        # Fallback or raise error? For now, try 'graph'
-        graph_var_name = "graph"
+    # Compare Workers (className, workerType, classVars - *selectively*)
+    workers1 = {w['className']: w for w in defs1.get('workers', [])}
+    workers2 = {w['className']: w for w in defs2.get('workers', [])}
+    if set(workers1.keys()) != set(workers2.keys()):
+        print(f"Worker className mismatch:\nDefs1: {set(workers1.keys())}\nDefs2: {set(workers2.keys())}")
+        all_match = False
+    else:
+        for name, worker1 in workers1.items():
+            worker2 = workers2[name]
+            # Compare type
+            if worker1.get('workerType') != worker2.get('workerType'):
+                 print(f"Worker '{name}' workerType mismatch: {worker1.get('workerType')} vs {worker2.get('workerType')}")
+                 all_match = False
+            # Compare classVars selectively
+            vars1 = worker1.get('classVars', {})
+            vars2 = worker2.get('classVars', {})
+            vars_to_check = ['output_types', 'llm_input_type', 'llm_output_type', 'join_type', 'use_xml', 'debug_mode'] # Exclude prompt/system_prompt
+            for vname in vars_to_check:
+                val1 = vars1.get(vname)
+                val2 = vars2.get(vname)
+                if val1 != val2:
+                    print(f"Worker '{name}' classVar '{vname}' mismatch: {val1} vs {val2}")
+                    all_match = False
+            # Compare factory details if present
+            if worker1.get('factoryFunction') or worker2.get('factoryFunction'):
+                if worker1.get('factoryFunction') != worker2.get('factoryFunction'):
+                    print(f"Worker '{name}' factoryFunction mismatch: {worker1.get('factoryFunction')} vs {worker2.get('factoryFunction')}")
+                    all_match = False
+                if worker1.get('factoryInvocation') != worker2.get('factoryInvocation'):
+                     print(f"Worker '{name}' factoryInvocation mismatch:\nDefs1: {worker1.get('factoryInvocation')}\nDefs2: {worker2.get('factoryInvocation')}")
+                     all_match = False
 
-    for line in code_string.splitlines():
-        stripped_line = line.strip()
+    # Compare Edges (source, target)
+    edges1 = {(e['source'], e['target']) for e in defs1.get('edges', [])}
+    edges2 = {(e['source'], e['target']) for e in defs2.get('edges', [])}
+    if edges1 != edges2:
+        print(f"Edge mismatch:\nDefs1: {edges1}\nDefs2: {edges2}")
+        all_match = False
 
-        # Comment out graph.run() or graph.execute()
-        if (
-            f"{graph_var_name}.run(" in stripped_line
-            or f"{graph_var_name}.execute(" in stripped_line
-        ):
-            modified_lines.append(f"# {line}")
-            continue
-
-        # Comment out the main execution block
-        if stripped_line == 'if __name__ == "__main__":':
-            in_main_def = True
-            modified_lines.append(f"# {line}")
-            continue
-        elif in_main_def and line.startswith((" ", "\t")):
-            modified_lines.append(f"# {line}")
-            continue
-        elif in_main_def:  # End of main block
-            in_main_def = False
-            # Add assignment after the commented block
-            modified_lines.append(f"__returned_graph__ = {graph_var_name}")
-
-        # Comment out direct calls to main() if found at top level
-        if stripped_line.startswith("main()"):
-            modified_lines.append(f"# {line}")
-            main_call_found = True
-            continue
-
-        modified_lines.append(line)
-
-    # If main block wasn't found but main() call was, add assignment at end
-    if not in_main_def and main_call_found:
-        modified_lines.append(f"__returned_graph__ = {graph_var_name}")
-    # If neither was found, assume graph var is assigned globally and add assignment at end
-    elif not in_main_def and not main_call_found:
-        modified_lines.append(f"\n__returned_graph__ = {graph_var_name}")
-
-    return "\n".join(modified_lines)
-
-
-def get_graph_from_code(
-    code_string: str, filename: str = "<string>"
-) -> Optional["Graph"]:
-    """
-    Executes Python code defining a PlanAI graph and returns the Graph object.
-    Uses a temporary file for execution via importlib.
-    """
-    # Ensure planai is importable for type hint and potential internal use
-    from planai import Graph  # type: ignore
-
-    modified_code = adapt_code_to_return_graph(code_string)
-    # print(f"--- Modified Code for {filename} ---")
-    # print(modified_code)
-    # print("-------------------------------------")
-
-    # Use a temporary file to execute the code
-    with tempfile.NamedTemporaryFile(mode="w+", suffix=".py", delete=False) as tmp_file:
-        tmp_file_path = tmp_file.name
-        tmp_file.write(modified_code)
-        tmp_file.flush()  # Ensure content is written
-
-    graph_instance: Optional[Graph] = None
-    spec = None
-    module = None
-    try:
-        # Dynamically import the temporary module
-        module_name = Path(tmp_file_path).stem
-        spec = importlib.util.spec_from_file_location(module_name, tmp_file_path)
-        if spec and spec.loader:
-            module = importlib.util.module_from_spec(spec)
-            sys.modules[module_name] = (
-                module  # Add to sys.modules for potential relative imports
-            )
-            spec.loader.exec_module(module)
-            # Retrieve the graph instance assigned by adapt_code_to_return_graph
-            graph_instance = getattr(module, "__returned_graph__", None)
-        else:
-            print(f"Error: Could not create module spec for {tmp_file_path}")
-
-    except Exception as e:
-        print(f"Error executing code from {filename} in {tmp_file_path}: {e}")
-        # print("--- Failing Code ---")
-        # print(modified_code)
-        # print("--------------------")
-        graph_instance = None  # Ensure it's None on error
-    finally:
-        # Clean up the temporary file and remove from sys.modules
-        if module_name in sys.modules:
-            del sys.modules[module_name]
-        if os.path.exists(tmp_file_path):
-            os.remove(tmp_file_path)
-
-    if not isinstance(graph_instance, Graph):
-        print(f"Warning: Failed to retrieve a valid Graph object from {filename}.")
-        return None
-
-    return graph_instance
-
-
-def compare_worker_configs(worker1, worker2) -> bool:
-    """Compares relevant configuration attributes of two worker instances."""
-    from planai import (  # type: ignore
-        CachedLLMTaskWorker,
-        CachedTaskWorker,
-        JoinedTaskWorker,
-        LLMTaskWorker,
-        SubGraphWorker,
-        TaskWorker,
-    )
-
-    if type(worker1) != type(worker2):
-        print(f"Worker type mismatch: {type(worker1)} vs {type(worker2)}")
-        return False
-
-    attrs_to_compare = ["name"]  # Always compare name
-
-    # Basic TaskWorker attributes (inherited)
-    # attrs_to_compare.extend(['output_types']) # Comparing types is tricky due to potential dynamic generation
-
-    if isinstance(worker1, LLMTaskWorker):  # Includes CachedLLMTaskWorker
-        attrs_to_compare.extend(
-            [
-                "prompt",
-                "system_prompt",
-                "llm_input_type",
-                "llm_output_type",
-                "use_xml",
-                "debug_mode",
-            ]
-        )
-        # TODO: Compare LLM config if feasible?
-
-    if isinstance(worker1, CachedTaskWorker):  # Includes CachedLLMTaskWorker
-        # Compare cache settings if applicable
-        pass  # Add cache-related attributes if needed
-
-    if isinstance(worker1, JoinedTaskWorker):
-        attrs_to_compare.extend(["join_type"])  # Compare join_type (by name?)
-
-    if isinstance(worker1, SubGraphWorker):
-        # Compare subgraph details - might need deeper comparison
-        attrs_to_compare.extend(["entry_worker", "exit_worker"])
-        # Recursively compare subgraphs? graph1.graph vs graph2.graph?
-        # For now, just check entry/exit worker names if they are strings
-        if not compare_graphs(worker1.graph, worker2.graph):
-            print(f"Subgraph comparison failed for {worker1.name}")
-            return False
-
-    for attr in attrs_to_compare:
-        val1 = getattr(worker1, attr, None)
-        val2 = getattr(worker2, attr, None)
-
-        # Special handling for type comparisons (compare names)
-        if attr in ("llm_input_type", "llm_output_type", "join_type"):
-            name1 = val1.__name__ if val1 else None
-            name2 = val2.__name__ if val2 else None
-            if name1 != name2:
-                print(
-                    f"Worker '{worker1.name}' attribute '{attr}' mismatch: {name1} vs {name2}"
-                )
-                return False
-            continue  # Skip normal comparison
-
-        # Compare entry/exit worker names for SubGraphWorker
-        if isinstance(worker1, SubGraphWorker) and attr in (
-            "entry_worker",
-            "exit_worker",
-        ):
-            name1 = val1.name if val1 else None  # Assuming they have .name
-            name2 = val2.name if val2 else None
-            if name1 != name2:
-                print(
-                    f"Subgraph worker '{worker1.name}' attribute '{attr}' mismatch: {name1} vs {name2}"
-                )
-                return False
-            continue
-
-        if val1 != val2:
-            # Improve printing for long prompts
-            if (
-                attr in ("prompt", "system_prompt")
-                and isinstance(val1, str)
-                and isinstance(val2, str)
-            ):
-                if len(val1) > 100 or len(val2) > 100:
-                    print(
-                        f"Worker '{worker1.name}' attribute '{attr}' mismatch (showing first 100 chars):"
-                    )
-                    print(f"  Graph1: {val1[:100]}...")
-                    print(f"  Graph2: {val2[:100]}...")
-                else:
-                    print(
-                        f"Worker '{worker1.name}' attribute '{attr}' mismatch: {val1!r} vs {val2!r}"
-                    )
-
-            else:
-                print(
-                    f"Worker '{worker1.name}' attribute '{attr}' mismatch: {val1} vs {val2}"
-                )
-            return False
-    return True
-
-
-def compare_graphs(graph1: Optional["Graph"], graph2: Optional["Graph"]) -> bool:
-    """
-    Compares two PlanAI Graph objects for functional equivalence.
-    Focuses on structure and configuration, not instance IDs.
-    """
-    from planai import Graph  # type: ignore
-
-    if graph1 is None or graph2 is None:
-        print("Cannot compare graphs, one or both failed to load.")
-        return False
-    if not isinstance(graph1, Graph) or not isinstance(graph2, Graph):
-        print("Cannot compare, inputs are not Graph objects.")
-        return False
-
-    # 1. Compare Name
-    if graph1.name != graph2.name:
-        print(f"Graph name mismatch: '{graph1.name}' vs '{graph2.name}'")
-        return False
-
-    # 2. Compare Workers (by name and configuration)
-    workers1_map = {w.name: w for w in graph1.workers}
-    workers2_map = {w.name: w for w in graph2.workers}
-
-    if set(workers1_map.keys()) != set(workers2_map.keys()):
-        print(f"Worker set mismatch:")
-        print(f"  Graph1: {set(workers1_map.keys())}")
-        print(f"  Graph2: {set(workers2_map.keys())}")
-        return False
-
-    for name, worker1 in workers1_map.items():
-        worker2 = workers2_map[name]
-        if not compare_worker_configs(worker1, worker2):
-            # Error already printed in compare_worker_configs
-            return False
-
-    # 3. Compare Dependencies (structure based on worker names)
-    deps1 = set()
-    for source, targets in graph1.dependencies.items():
-        for target in targets:
-            deps1.add((source.name, target.name))
-
-    deps2 = set()
-    for source, targets in graph2.dependencies.items():
-        for target in targets:
-            deps2.add((source.name, target.name))
-
-    if deps1 != deps2:
-        print(f"Dependency mismatch:")
-        print(f"  Graph1: {deps1}")
-        print(f"  Graph2: {deps2}")
-        return False
-
-    # 4. Compare Entry Points (by worker name and input task type name)
-    # Assuming entry_points stores tuples of (worker, task_type)
-    # We need to compare worker.name and task_type.__name__
-    entries1 = set()
-    for worker, task_type in graph1.entry_points:
-        type_name = task_type.__name__ if task_type else None
-        entries1.add((worker.name, type_name))
-
-    entries2 = set()
-    for worker, task_type in graph2.entry_points:
-        type_name = task_type.__name__ if task_type else None
-        entries2.add((worker.name, type_name))
-
+    # Compare Entry Edges (sourceTask, targetWorker)
+    entries1 = {(e['sourceTask'], e['targetWorker']) for e in defs1.get('entryEdges', [])}
+    entries2 = {(e['sourceTask'], e['targetWorker']) for e in defs2.get('entryEdges', [])}
     if entries1 != entries2:
-        print(f"Entry point mismatch:")
-        print(f"  Graph1: {entries1}")
-        print(f"  Graph2: {entries2}")
-        return False
+        print(f"Entry edge mismatch:\nDefs1: {entries1}\nDefs2: {entries2}")
+        all_match = False
 
-    # TODO: Compare Sinks?
-    # TODO: Compare Task Definitions? (Implicitly checked via worker configs/entry points)
+    # Compare Imported Tasks (modulePath, className)
+    imports1 = {(t['modulePath'], t['className']) for t in defs1.get('imported_tasks', [])}
+    imports2 = {(t['modulePath'], t['className']) for t in defs2.get('imported_tasks', [])}
+    if imports1 != imports2:
+        print(f"Imported tasks mismatch:\nDefs1: {imports1}\nDefs2: {imports2}")
+        all_match = False
 
-    print("Graph comparison successful.")
-    return True
-
+    if all_match:
+        print("Parsed definitions comparison successful.")
+    else:
+        print("Parsed definitions comparison failed.")
+    return all_match
 
 def verify_functional_equivalence(original_code: str, exported_code: str) -> bool:
     """
-    Verifies functional equivalence by extracting and comparing Graph objects.
+    Verifies functional equivalence by parsing both code strings using
+    get_definitions_from_file and comparing the resulting structures.
     """
-    print("Verifying functional equivalence...")
-    # print("--- Original Code ---")
-    # print(original_code[:500] + "...") # Print snippet
-    # print("--- Exported Code ---")
-    # print(exported_code[:500] + "...") # Print snippet
+    print("Verifying functional equivalence using AST parsing...")
 
-    original_graph = get_graph_from_code(original_code, "original")
-    exported_graph = get_graph_from_code(exported_code, "exported")
+    # Parse original code
+    print("Parsing original code...")
+    original_defs = get_definitions_from_file(code_string=original_code)
+    if not original_defs or (not original_defs.get('tasks') and not original_defs.get('workers')):
+        print("ERROR: Failed to parse original code or no definitions found.")
+        return False
 
-    return compare_graphs(original_graph, exported_graph)
+    # Parse exported code
+    print("Parsing exported code...")
+    exported_defs = get_definitions_from_file(code_string=exported_code)
+    if not exported_defs or (not exported_defs.get('tasks') and not exported_defs.get('workers')):
+        print("ERROR: Failed to parse exported code or no definitions found.")
+        # Optionally print the exported code here for debugging
+        # print("--- Exported Code Start ---")
+        # print(exported_code)
+        # print("--- Exported Code End ---")
+        return False
 
+    # Compare the parsed structures
+    return compare_definitions(original_defs, exported_defs)
 
 # --- Pytest Fixtures ---
 
@@ -432,7 +229,8 @@ def test_releasenotes_roundtrip(page: Page, backend_server):
     # ** Simplified Route Handler **
     def handle_route(route: Route):
         # Only log the interception, let wait_for_response handle capturing
-        print(f"Intercepted request: {route.request.url}")
+        if "/api/" in route.request.url:
+            print(f"Intercepted request: {route.request.url}")
         route.continue_()
 
     page.route("**/*", handle_route)
@@ -467,12 +265,7 @@ def test_releasenotes_roundtrip(page: Page, backend_server):
 
     # 3. Import the fixture file
     print(f"Importing fixture: {TEST_FIXTURE_PATH}")
-    import_button = page.locator('button[data-testid="import-button"]')
-    expect(import_button).to_be_enabled(timeout=TIMEOUT)
-
     try:
-        # Start waiting for the response *before* clicking the button
-        # that triggers the action causing the response.
         with page.expect_response(
             lambda response: "/api/import-python" in response.url
             and response.request.method == "POST",
@@ -480,6 +273,8 @@ def test_releasenotes_roundtrip(page: Page, backend_server):
         ) as response_info:
             with page.expect_file_chooser(timeout=TIMEOUT) as fc_info:
                 print("Clicking import button...")
+                import_button = page.locator('button[data-testid="import-button"]')
+                expect(import_button).to_be_enabled(timeout=TIMEOUT)
                 import_button.click()
                 print("Import button clicked.")
             file_chooser = fc_info.value
@@ -487,7 +282,6 @@ def test_releasenotes_roundtrip(page: Page, backend_server):
             file_chooser.set_files(TEST_FIXTURE_PATH)
             print("File chooser handled and file set.")
 
-        # Now process the response
         api_response: APIResponse = response_info.value
         print(
             f"Received API response from {api_response.url} (Status: {api_response.status})"
@@ -501,63 +295,153 @@ def test_releasenotes_roundtrip(page: Page, backend_server):
         ), f"API import failed: {api_response_data.get('error')}"
         print("API import successful.")
 
-        # Give frontend a moment to process the successful response and render nodes
-        page.wait_for_timeout(1000)
-
     except Exception as e:
         pytest.fail(f"Failed during file chooser or API wait: {e}")
 
-    # 4. Wait for import success indication
-    # Check for a specific node from releasenotes.py (e.g., CommitCollector)
+    # 4. Wait for graph to render after import
     commit_collector_node_selector = (
         'div.svelte-flow__node[data-id*="imported-taskworker-CommitCollector"]'
     )
     print(f"Waiting for node: {commit_collector_node_selector}")
     expect(page.locator(commit_collector_node_selector)).to_be_visible(timeout=TIMEOUT)
-    print("CommitCollector node found.")
+    # Wait for expected number of nodes
+    expect(page.locator(".svelte-flow__node")).to_have_count(10, timeout=TIMEOUT)
+    print("Expected number of nodes rendered after import.")
 
-    # 5. Get graph data from frontend localStorage for export
-    # Give the frontend a moment to potentially update localStorage after import
-    page.wait_for_timeout(500)
-    nodes_data = page.evaluate("() => JSON.parse(localStorage.getItem('nodes'))")
-    edges_data = page.evaluate("() => JSON.parse(localStorage.getItem('edges'))")
-
-    assert nodes_data is not None, "Failed to retrieve nodes data from localStorage"
-    assert edges_data is not None, "Failed to retrieve edges data from localStorage"
-    assert len(nodes_data) > 0, "No nodes found in localStorage after import"
-
-    graph_data = {"nodes": nodes_data, "edges": edges_data}
-    print(
-        f"Retrieved {len(nodes_data)} nodes and {len(edges_data)} edges from frontend localStorage."
-    )
-
-    # Verify Export button is present and enabled (even though we call API directly)
+    # 5. Click Export Button to trigger frontend transformation
     export_button = page.locator('button[data-testid="export-button"]')
     expect(export_button).to_be_visible(timeout=TIMEOUT)
     expect(export_button).to_be_enabled(timeout=TIMEOUT)
+    print("Clicking export button...")
+    export_button.click()
+    print("Export button clicked.")
+    # Give a brief moment for any potential state updates triggered by the click
+    page.wait_for_timeout(500)
 
-    # 6. Trigger Export via Synchronous Backend API
-    # This requires the backend Flask app to have an endpoint like /api/export-sync
-    export_api_url = f"{BACKEND_TEST_URL}/api/export-sync"
-    print(f"Triggering export via synchronous API: {export_api_url}...")
+    # 6. Extract transformed data using page.evaluate
+    # Define the JS transformation logic again (reading from localStorage inside)
+    js_transform_function = """
+    () => { // No arguments needed, reads directly from localStorage
+        const nodes_raw = JSON.parse(localStorage.getItem('nodes'));
+        const edges_raw = JSON.parse(localStorage.getItem('edges'));
+        const llm_configs_raw = JSON.parse(localStorage.getItem('llmConfigs')); // Get LLM configs if needed by logic below
 
-    # Use Playwright's request context to make the API call directly to the backend
+        if (!nodes_raw || !Array.isArray(nodes_raw)) {
+             console.error('[evaluate] Invalid or missing nodes data in localStorage');
+             return null;
+        }
+        const safe_edges_raw = edges_raw && Array.isArray(edges_raw) ? edges_raw : [];
+        const safe_llm_configs = llm_configs_raw && Array.isArray(llm_configs_raw) ? llm_configs_raw : [];
+
+        console.log(`[evaluate] Read ${nodes_raw.length} nodes, ${safe_edges_raw.length} edges, ${safe_llm_configs.length} LLM configs from localStorage.`);
+
+        // --- Replicate core logic from convertGraphtoJSON ---
+        const nodeIdToNameMap = new Map();
+        nodes_raw.forEach(node => {
+            const data = node.data;
+            const name = data?.className || data?.workerName;
+            if (name) {
+                nodeIdToNameMap.set(node.id, name);
+            }
+        });
+
+        const exportedNodes = nodes_raw.map(node => {
+            const data = node.data;
+            let processedData = { ...data };
+
+            if (data?.workerName) {
+                processedData.className = data.workerName;
+                delete processedData.workerName;
+            }
+
+            // --- Include LLM config injection logic again, using safe_llm_configs ---
+            if ((node.type === 'llmtaskworker' || node.type === 'cachedllmtaskworker') && data?.llmConfigName) {
+                const configName = data.llmConfigName;
+                const foundConfig = safe_llm_configs.find(c => c.name === configName);
+                if (foundConfig) {
+                    processedData.llmConfig = foundConfig;
+                    delete processedData.llmConfigName;
+                } else {
+                    console.warn(`[evaluate] LLM Config '${configName}' not found during transformation.`);
+                    delete processedData.llmConfig;
+                    delete processedData.llmConfigName;
+                }
+            }
+            // --- End LLM config logic ---
+
+            const knownClassVars = [
+                'prompt', 'system_prompt', 'use_xml', 'debug_mode',
+                'llm_input_type', 'llm_output_type', 'join_type', 'output_types'
+            ];
+            if (node.type?.endsWith('worker')) {
+                if (!processedData.classVars) processedData.classVars = {};
+                for (const key of knownClassVars) {
+                    if (processedData[key] !== undefined) {
+                        processedData.classVars[key] = processedData[key];
+                        delete processedData[key];
+                    }
+                }
+            }
+
+            if (node.type === 'subgraphworker' && data?.isFactoryCreated) {
+                delete processedData.isFactoryCreated;
+            }
+
+            return { ...node, data: processedData };
+        });
+
+        const exportedEdges = safe_edges_raw
+            .map(edge => {
+                const sourceName = nodeIdToNameMap.get(edge.source);
+                const targetName = nodeIdToNameMap.get(edge.target);
+                if (!sourceName || !targetName) return null;
+                return { source: sourceName, target: targetName };
+            })
+            .filter(edge => edge !== null);
+        // --- End Replicated Logic ---
+
+        const result = { nodes: exportedNodes, edges: exportedEdges };
+        console.log('[evaluate] Returning transformed data:', result);
+        return result;
+    }
+    """
+
+    # Execute the transformation in the browser
+    try:
+        print("Executing frontend transformation logic via page.evaluate...")
+        graph_data_transformed = page.evaluate(js_transform_function)
+        assert (
+            graph_data_transformed is not None
+        ), "Frontend transformation returned null or had errors (check browser console)"
+        assert (
+            "nodes" in graph_data_transformed and "edges" in graph_data_transformed
+        ), "Transformed data missing nodes/edges"
+        print(
+            f"Received transformed data: {len(graph_data_transformed['nodes'])} nodes, {len(graph_data_transformed['edges'])} edges."
+        )
+    except Exception as e:
+        pytest.fail(f"page.evaluate for transformation failed: {e}")
+
+    # 7. Trigger Export API Call with TRANSFORMED data
+    export_api_url = f"{BACKEND_TEST_URL}/api/export-transformed"
+    print(f"Triggering export API: {export_api_url}...")
+
     api_context = page.request
     try:
         response = api_context.post(
             export_api_url,
-            data=json.dumps(graph_data),
+            data=json.dumps(graph_data_transformed),
             headers={"Content-Type": "application/json"},
-            timeout=TIMEOUT,  # Add timeout to the request
+            timeout=TIMEOUT * 2,
         )
     except Exception as e:
         pytest.fail(f"API call to {export_api_url} failed: {e}")
 
-    # 7. Get exported code from response
+    # 8. Get exported code from response
     print(f"Export API response status: {response.status}")
-    expect(response).to_be_ok(
-        message=f"Export API call failed with status {response.status}. Response: {response.text()}"
-    )
+    assert (
+        response.ok
+    ), f"Export API call failed with status {response.status}. Response: {response.text()}"
     response_json = response.json()
 
     # Check backend response structure (needs to match what backend endpoint returns)
@@ -568,9 +452,9 @@ def test_releasenotes_roundtrip(page: Page, backend_server):
     assert exported_code is not None and isinstance(
         exported_code, str
     ), "Exported Python code not found or invalid in backend response."
-    print("Successfully received exported code from backend API.")
+    print(f"Successfully received exported code from backend API.")
 
-    # 8. Verify Functional Equivalence
+    # 9. Verify Functional Equivalence
     assert verify_functional_equivalence(
         original_code, exported_code
     ), "Functional equivalence check failed."

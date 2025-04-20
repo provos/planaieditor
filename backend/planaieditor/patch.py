@@ -1009,26 +1009,73 @@ def parse_graph_run_entry_points(
     return entry_edges
 
 
-def get_definitions_from_file(filename: str) -> Dict[str, List[Dict[str, Any]]]:
+def get_definitions_from_file(
+    filename: Optional[str] = None, code_string: Optional[str] = None
+) -> Dict[str, List[Dict[str, Any]]]:
     """
-    Parses a Python file, extracts Task and Worker class definitions,
-    graph edges, and formats them into separate lists within a dictionary.
-    Returns: {"tasks": [...], "workers": [...], "edges": [...]}
+    Parses Python code (from a file or a string), extracts Task and Worker
+    class definitions, graph edges, and formats them into separate lists
+    within a dictionary.
+    Returns: {"tasks": [...], "workers": [...], "edges": [...], ...}
     """
-    try:
-        with open(filename, "r") as f:
-            source_code = f.read()
-        parsed_ast = ast.parse(source_code)
-    except FileNotFoundError:
-        print(f"Error: File not found '{filename}'")
-        return {"tasks": [], "workers": [], "edges": []}
-    except SyntaxError as e:
-        print(f"Error: Syntax error parsing '{filename}': {e}")
-        return {"tasks": [], "workers": [], "edges": []}
-    except Exception as e:
-        print(f"Error: Could not read or parse file '{filename}': {e}")
-        return {"tasks": [], "workers": [], "edges": []}
+    source_code = ""
+    if code_string is not None:
+        source_code = code_string
+        parse_target = "<string>"  # For error messages
+    elif filename is not None:
+        parse_target = filename
+        try:
+            with open(filename, "r") as f:
+                source_code = f.read()
+        except FileNotFoundError:
+            print(f"Error: File not found '{filename}'")
+            return {
+                "tasks": [],
+                "workers": [],
+                "edges": [],
+                "entryEdges": [],
+                "imported_tasks": [],
+            }
+        except Exception as e:
+            print(f"Error: Could not read file '{filename}': {e}")
+            return {
+                "tasks": [],
+                "workers": [],
+                "edges": [],
+                "entryEdges": [],
+                "imported_tasks": [],
+            }
+    else:
+        raise ValueError("Either filename or code_string must be provided")
 
+    try:
+        parsed_ast = ast.parse(source_code)
+    except SyntaxError as e:
+        print(f"Error: Syntax error parsing {parse_target}: {e}")
+        # Try to return partial info if possible, or just empty
+        # Add more detailed error info?
+        error_line = (
+            source_code.splitlines()[e.lineno - 1] if e.lineno else "<unknown line>"
+        )
+        print(f"  Error near line {e.lineno}, offset {e.offset}: {error_line.strip()}")
+        return {
+            "tasks": [],
+            "workers": [],
+            "edges": [],
+            "entryEdges": [],
+            "imported_tasks": [],
+        }
+    except Exception as e:
+        print(f"Error: Could not parse {parse_target}: {e}")
+        return {
+            "tasks": [],
+            "workers": [],
+            "edges": [],
+            "entryEdges": [],
+            "imported_tasks": [],
+        }
+
+    # The rest of the function remains the same, operating on parsed_ast and source_code
     class_definitions = get_class_definitions(parsed_ast)
 
     # --- Extract Tasks ---
