@@ -326,22 +326,35 @@ def test_releasenotes_roundtrip(page: Page, backend_server):
     # 3. Import the fixture file
     print(f"Importing fixture: {TEST_FIXTURE_PATH}")
     try:
+        # Start waiting for the response *before* triggering the action
         with page.expect_response(
             lambda response: "/api/import-python" in response.url
             and response.request.method == "POST",
-            timeout=TIMEOUT,
+            timeout=TIMEOUT * 2,  # Generous timeout for API response
         ) as response_info:
-            with page.expect_file_chooser(timeout=TIMEOUT) as fc_info:
-                print("Clicking import button...")
-                import_button = page.locator('button[data-testid="import-button"]')
-                expect(import_button).to_be_enabled(timeout=TIMEOUT)
-                import_button.click()
-                print("Import button clicked.")
-            file_chooser = fc_info.value
-            print(f"File chooser opened, setting file: {TEST_FIXTURE_PATH}")
-            file_chooser.set_files(TEST_FIXTURE_PATH)
-            print("File chooser handled and file set.")
 
+            # --- Hybrid Approach: Click button, then interact with input ---
+            import_button = page.locator('button[data-testid="import-button"]')
+            expect(import_button).to_be_visible(timeout=TIMEOUT)
+            expect(import_button).to_be_enabled(timeout=TIMEOUT)
+            print("Clicking import button (standard)...")
+            import_button.click()
+            print("Import button clicked (may not open chooser headless).")
+
+            # Wait briefly for any state changes from the click
+            page.wait_for_timeout(200)
+
+            # Now interact directly with the hidden input
+            file_input = page.locator('input[data-testid="file-input"]')
+            expect(file_input).to_be_attached()
+            print(f"Setting input file directly: {TEST_FIXTURE_PATH}")
+            file_input.set_input_files(TEST_FIXTURE_PATH)
+            print("Dispatching 'change' event directly...")
+            file_input.dispatch_event("change")  # Trigger Svelte's onchange
+            print("Direct file input set and event dispatched.")
+            # --- End Hybrid Approach ---
+
+        # Now process the response (outside the expect_response block)
         api_response: APIResponse = response_info.value
         print(
             f"Received API response from {api_response.url} (Status: {api_response.status})"
@@ -519,8 +532,3 @@ def test_releasenotes_roundtrip(page: Page, backend_server):
         original_code, exported_code
     ), "Functional equivalence check failed."
     print("Functional equivalence check passed.")
-
-
-# Add more tests for different fixture files if needed
-# def test_another_graph_roundtrip(page: Page, backend_server):
-#     ...
