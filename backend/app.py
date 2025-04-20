@@ -670,10 +670,6 @@ def export_transformed_graph():
     if not graph_data or "nodes" not in graph_data or "edges" not in graph_data:
         return jsonify({"success": False, "error": "Invalid graph data format"}), 400
 
-    print(
-        f"Received export_transformed request with {len(graph_data.get('nodes',[]))} nodes, {len(graph_data.get('edges',[]))} edges."
-    )
-
     # Directly generate code from the pre-transformed data
     python_code, module_name, error_json = generate_python_module(graph_data)
 

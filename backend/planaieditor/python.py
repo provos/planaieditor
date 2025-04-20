@@ -119,6 +119,9 @@ def create_worker_class(node: Dict[str, Any]) -> Optional[str]:
     # Handle Boolean Flags (use_xml, debug_mode)
     if class_vars.get("use_xml") is True:
         class_body.append("    use_xml: bool = True")
+    elif class_vars.get("use_xml") is False:
+        class_body.append("    use_xml: bool = False")
+
     if class_vars.get("debug_mode") is True:
         class_body.append("    debug_mode: bool = True")
 
@@ -344,11 +347,10 @@ def generate_python_module(
     code_to_format = return_code_snippet("imports")
 
     # 2. Task Definitions (from 'task' nodes)
-    tasks = []
+    tasks_code = []
     task_nodes = [n for n in nodes if n.get("type") == "task"]
     imported_tasks = {}  # Store details of imported tasks: {className: modulePath}
     task_import_nodes = [n for n in nodes if n.get("type") == "taskimport"]
-    task_class_names = {}  # Map node ID to generated Task class name
 
     # Add imports for TaskImportNodes first
     import_statements = []
@@ -365,14 +367,10 @@ def generate_python_module(
                 imported_tasks[module_path] = set()
             if class_name not in imported_tasks[module_path]:
                 imported_tasks[module_path].add(class_name)
-                # Store mapping for dependency resolution later
-                task_class_names[node_id] = class_name  # Map node ID to class name
             else:
                 print(
                     f"Warning: Task '{class_name}' from module '{module_path}' already imported or name collision."
                 )
-                # Still map the ID even if duplicate import detected
-                task_class_names[node_id] = class_name
         else:
             print(
                 f"Warning: Invalid or missing import details for node {node['id']}. Module: '{module_path}', Class: '{class_name}'"
@@ -388,7 +386,7 @@ def generate_python_module(
 
     # Add locally defined Task nodes
     if not task_nodes:
-        tasks.append("# No Task nodes defined in the graph.")
+        tasks_code.append("# No Task nodes defined in the graph.")
     else:
         for node in task_nodes:
             node_id = node["id"]
@@ -396,11 +394,10 @@ def generate_python_module(
             class_name = data.get("className")
             if not is_valid_python_class_name(class_name):
                 raise ValueError(f"Invalid class name: {class_name}")
-            task_class_names[node_id] = class_name
-            tasks.append(f"\nclass {class_name}(Task):")
+            tasks_code.append(f"\nclass {class_name}(Task):")
             fields = data.get("fields", [])
             if not fields:
-                tasks.append("    pass # No fields defined")
+                tasks_code.append("    pass # No fields defined")
             else:
                 # Add ConfigDict for arbitrary_types_allowed if needed later
                 # code.append("    model_config = ConfigDict(arbitrary_types_allowed=True)")
@@ -481,7 +478,7 @@ def generate_python_module(
 
                     # Format the complete field with appropriate spacing
                     field_args_str = ", ".join(field_args)
-                    tasks.append(
+                    tasks_code.append(
                         f"    {field_name}: {py_type} = Field({field_args_str})"
                     )
 
@@ -549,6 +546,15 @@ def generate_python_module(
     if not edges:
         dep_code_lines.append("# No edges defined in the graph data.")
     else:
+        # Map all the task names
+        task_names = set()
+        for node in task_nodes:
+            data = node.get("data", {})
+            class_name = data.get("className")
+            if class_name:
+                task_names.add(class_name)
+
+
         # Create a lookup for worker instance names by className
         worker_instance_by_class_name = {}
         # Populate lookup using all worker nodes (including factory)
@@ -572,6 +578,10 @@ def generate_python_module(
             if source_inst_name and target_inst_name:
                 dep_code_lines.append(
                     f"    graph.set_dependency({source_inst_name}, {target_inst_name})"
+                )
+            elif source_class_name in task_names and target_inst_name:
+                dep_code_lines.append(
+                    f"    graph.set_entry({target_inst_name})"
                 )
             else:
                 print(
@@ -608,7 +618,7 @@ def generate_python_module(
                 ],
             )
         ),
-        task_definitions="\n".join(tasks),
+        task_definitions="\n".join(tasks_code),
         worker_definitions="\n".join(workers),
         worker_instantiation=indent(dedent("\n".join(worker_setup)), "    ")[4:],
         dependency_setup=indent(dedent("\n".join(dep_code_lines)), "    ")[4:],

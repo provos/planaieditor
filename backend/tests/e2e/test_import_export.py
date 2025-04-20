@@ -14,7 +14,7 @@ from playwright.sync_api import APIResponse, Page, Route, expect
 # Ensure planaieditor can be imported (adjust if your structure differs)
 # This might be handled by running pytest from the 'backend' dir
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-from planaieditor.patch import get_definitions_from_file # Import the parser
+from planaieditor.patch import get_definitions_from_file  # Import the parser
 
 # --- Configuration ---
 os.environ["FLASK_ENV"] = "development"
@@ -29,6 +29,7 @@ TIMEOUT = 15000  # Increased timeout slightly
 
 # --- Helper Functions / Verification Logic --- #
 
+
 def compare_definitions(defs1: dict, defs2: dict) -> bool:
     """
     Compares the dictionaries produced by get_definitions_from_file.
@@ -40,83 +41,123 @@ def compare_definitions(defs1: dict, defs2: dict) -> bool:
     all_match = True
 
     # Compare Tasks (name, fields - name, type, isList, required)
-    tasks1 = {t['className']: t for t in defs1.get('tasks', [])}
-    tasks2 = {t['className']: t for t in defs2.get('tasks', [])}
+    tasks1 = {t["className"]: t for t in defs1.get("tasks", [])}
+    tasks2 = {t["className"]: t for t in defs2.get("tasks", [])}
     if set(tasks1.keys()) != set(tasks2.keys()):
-        print(f"Task className mismatch:\nDefs1: {set(tasks1.keys())}\nDefs2: {set(tasks2.keys())}")
+        print(
+            f"Task className mismatch:\nDefs1: {set(tasks1.keys())}\nDefs2: {set(tasks2.keys())}"
+        )
         all_match = False
     else:
         for name, task1 in tasks1.items():
             task2 = tasks2[name]
-            fields1 = {f['name']: f for f in task1.get('fields', [])}
-            fields2 = {f['name']: f for f in task2.get('fields', [])}
+            fields1 = {f["name"]: f for f in task1.get("fields", [])}
+            fields2 = {f["name"]: f for f in task2.get("fields", [])}
             if set(fields1.keys()) != set(fields2.keys()):
-                print(f"Task '{name}' field name mismatch:\nDefs1: {set(fields1.keys())}\nDefs2: {set(fields2.keys())}")
+                print(
+                    f"Task '{name}' field name mismatch:\nDefs1: {set(fields1.keys())}\nDefs2: {set(fields2.keys())}"
+                )
                 all_match = False
                 continue
             for fname, field1 in fields1.items():
                 field2 = fields2[fname]
                 # Compare key field attributes
-                for attr in ['type', 'isList', 'required', 'literalValues']: # Added literalValues
+                for attr in [
+                    "type",
+                    "isList",
+                    "required",
+                    "literalValues",
+                ]:  # Added literalValues
                     val1 = field1.get(attr)
                     val2 = field2.get(attr)
                     if val1 != val2:
-                         # Allow type Any vs specific type if one is missing (e.g., from simple generation)
-                        if attr == 'type' and ('Any' in [val1, val2] and (val1 is None or val2 is None)):
-                            print(f"Task '{name}' field '{fname}': Tolerating type mismatch ('{val1}' vs '{val2}')")
+                        # Allow type Any vs specific type if one is missing (e.g., from simple generation)
+                        if attr == "type" and (
+                            "Any" in [val1, val2] and (val1 is None or val2 is None)
+                        ):
+                            print(
+                                f"Task '{name}' field '{fname}': Tolerating type mismatch ('{val1}' vs '{val2}')"
+                            )
                             continue
-                        print(f"Task '{name}' field '{fname}' attribute '{attr}' mismatch: {val1} vs {val2}")
+                        print(
+                            f"Task '{name}' field '{fname}' attribute '{attr}' mismatch: {val1} vs {val2}"
+                        )
                         all_match = False
 
     # Compare Workers (className, workerType, classVars - *selectively*)
-    workers1 = {w['className']: w for w in defs1.get('workers', [])}
-    workers2 = {w['className']: w for w in defs2.get('workers', [])}
+    workers1 = {w["className"]: w for w in defs1.get("workers", [])}
+    workers2 = {w["className"]: w for w in defs2.get("workers", [])}
     if set(workers1.keys()) != set(workers2.keys()):
-        print(f"Worker className mismatch:\nDefs1: {set(workers1.keys())}\nDefs2: {set(workers2.keys())}")
+        print(
+            f"Worker className mismatch:\nDefs1: {set(workers1.keys())}\nDefs2: {set(workers2.keys())}"
+        )
         all_match = False
     else:
         for name, worker1 in workers1.items():
             worker2 = workers2[name]
             # Compare type
-            if worker1.get('workerType') != worker2.get('workerType'):
-                 print(f"Worker '{name}' workerType mismatch: {worker1.get('workerType')} vs {worker2.get('workerType')}")
-                 all_match = False
+            if worker1.get("workerType") != worker2.get("workerType"):
+                print(
+                    f"Worker '{name}' workerType mismatch: {worker1.get('workerType')} vs {worker2.get('workerType')}"
+                )
+                all_match = False
             # Compare classVars selectively
-            vars1 = worker1.get('classVars', {})
-            vars2 = worker2.get('classVars', {})
-            vars_to_check = ['output_types', 'llm_input_type', 'llm_output_type', 'join_type', 'use_xml', 'debug_mode'] # Exclude prompt/system_prompt
+            vars1 = worker1.get("classVars", {})
+            vars2 = worker2.get("classVars", {})
+            vars_to_check = [
+                "output_types",
+                "llm_input_type",
+                "llm_output_type",
+                "join_type",
+                "use_xml",
+                "debug_mode",
+            ]  # Exclude prompt/system_prompt
             for vname in vars_to_check:
                 val1 = vars1.get(vname)
                 val2 = vars2.get(vname)
                 if val1 != val2:
-                    print(f"Worker '{name}' classVar '{vname}' mismatch: {val1} vs {val2}")
+                    print(
+                        f"Worker '{name}' classVar '{vname}' mismatch: {val1} vs {val2}"
+                    )
                     all_match = False
             # Compare factory details if present
-            if worker1.get('factoryFunction') or worker2.get('factoryFunction'):
-                if worker1.get('factoryFunction') != worker2.get('factoryFunction'):
-                    print(f"Worker '{name}' factoryFunction mismatch: {worker1.get('factoryFunction')} vs {worker2.get('factoryFunction')}")
+            if worker1.get("factoryFunction") or worker2.get("factoryFunction"):
+                if worker1.get("factoryFunction") != worker2.get("factoryFunction"):
+                    print(
+                        f"Worker '{name}' factoryFunction mismatch: {worker1.get('factoryFunction')} vs {worker2.get('factoryFunction')}"
+                    )
                     all_match = False
-                if worker1.get('factoryInvocation') != worker2.get('factoryInvocation'):
-                     print(f"Worker '{name}' factoryInvocation mismatch:\nDefs1: {worker1.get('factoryInvocation')}\nDefs2: {worker2.get('factoryInvocation')}")
-                     all_match = False
+                if worker1.get("factoryInvocation") != worker2.get("factoryInvocation"):
+                    print(
+                        f"Worker '{name}' factoryInvocation mismatch:\nDefs1: {worker1.get('factoryInvocation')}\nDefs2: {worker2.get('factoryInvocation')}"
+                    )
+                    all_match = False
 
     # Compare Edges (source, target)
-    edges1 = {(e['source'], e['target']) for e in defs1.get('edges', [])}
-    edges2 = {(e['source'], e['target']) for e in defs2.get('edges', [])}
+    edges1 = {(e["source"], e["target"]) for e in defs1.get("edges", [])}
+    edges2 = {(e["source"], e["target"]) for e in defs2.get("edges", [])}
     if edges1 != edges2:
         print(f"Edge mismatch:\nDefs1: {edges1}\nDefs2: {edges2}")
         all_match = False
 
     # Compare Entry Edges (sourceTask, targetWorker)
-    entries1 = {(e['sourceTask'], e['targetWorker']) for e in defs1.get('entryEdges', [])}
-    entries2 = {(e['sourceTask'], e['targetWorker']) for e in defs2.get('entryEdges', [])}
+    entries1 = {
+        (e["sourceTask"], e["targetWorker"]) for e in defs1.get("entryEdges", [])
+    }
+    entries2 = {
+        (e["sourceTask"], e["targetWorker"]) for e in defs2.get("entryEdges", [])
+    }
     if entries1 != entries2:
         print(f"Entry edge mismatch:\nDefs1: {entries1}\nDefs2: {entries2}")
         all_match = False
 
     # Compare Imported Tasks (modulePath, className)
-    imports1 = {(t['modulePath'], t['className']) for t in defs1.get('imported_tasks', [])}
-    imports2 = {(t['modulePath'], t['className']) for t in defs2.get('imported_tasks', [])}
+    imports1 = {
+        (t["modulePath"], t["className"]) for t in defs1.get("imported_tasks", [])
+    }
+    imports2 = {
+        (t["modulePath"], t["className"]) for t in defs2.get("imported_tasks", [])
+    }
     if imports1 != imports2:
         print(f"Imported tasks mismatch:\nDefs1: {imports1}\nDefs2: {imports2}")
         all_match = False
@@ -126,6 +167,7 @@ def compare_definitions(defs1: dict, defs2: dict) -> bool:
     else:
         print("Parsed definitions comparison failed.")
     return all_match
+
 
 def verify_functional_equivalence(original_code: str, exported_code: str) -> bool:
     """
@@ -137,14 +179,18 @@ def verify_functional_equivalence(original_code: str, exported_code: str) -> boo
     # Parse original code
     print("Parsing original code...")
     original_defs = get_definitions_from_file(code_string=original_code)
-    if not original_defs or (not original_defs.get('tasks') and not original_defs.get('workers')):
+    if not original_defs or (
+        not original_defs.get("tasks") and not original_defs.get("workers")
+    ):
         print("ERROR: Failed to parse original code or no definitions found.")
         return False
 
     # Parse exported code
     print("Parsing exported code...")
     exported_defs = get_definitions_from_file(code_string=exported_code)
-    if not exported_defs or (not exported_defs.get('tasks') and not exported_defs.get('workers')):
+    if not exported_defs or (
+        not exported_defs.get("tasks") and not exported_defs.get("workers")
+    ):
         print("ERROR: Failed to parse exported code or no definitions found.")
         # Optionally print the exported code here for debugging
         # print("--- Exported Code Start ---")
@@ -154,6 +200,7 @@ def verify_functional_equivalence(original_code: str, exported_code: str) -> boo
 
     # Compare the parsed structures
     return compare_definitions(original_defs, exported_defs)
+
 
 # --- Pytest Fixtures ---
 
