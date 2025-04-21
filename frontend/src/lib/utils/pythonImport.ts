@@ -6,6 +6,7 @@ import { get } from 'svelte/store';
 import ELK from 'elkjs/lib/elk.bundled.js';
 import { Position } from '@xyflow/svelte';
 import { getEdgeStyleProps } from '$lib/utils/edgeUtils';
+import { addLLMConfigFromCode, type LLMConfigFromCode } from '$lib/stores/llmConfigsStore';
 
 // Type for the structured error from the backend
 export interface BackendError {
@@ -350,6 +351,14 @@ export async function importPythonCode(
 
                 // Log the imported LLM config for debugging
                 console.log(`Imported LLM config for ${worker.className}:`, worker.llmConfigFromCode);
+
+                if (worker.llmConfigVar) {
+                    // Add the LLM config to the store if it's not already there
+                    addLLMConfigFromCode({
+                        name: worker.llmConfigVar,
+                        llmConfigFromCode: worker.llmConfigFromCode
+                    });
+                }
             }
 
             // Type-specific mappings

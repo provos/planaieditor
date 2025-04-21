@@ -1,13 +1,14 @@
 <script lang="ts">
 	import { backendUrl } from '$lib/utils/backendUrl';
-	import { X, FloppyDisk, PencilSimple, Trash, Spinner } from 'phosphor-svelte';
+	import { X, FloppyDisk, PencilSimple, Trash, Spinner, Code } from 'phosphor-svelte';
 	import {
 		llmConfigs,
 		addLLMConfig,
 		updateLLMConfig,
 		deleteLLMConfig,
 		validLLMProviders,
-		type LLMConfig
+		llmConfigsFromCode,
+		type LLMConfig,
 	} from '$lib/stores/llmConfigsStore';
 	import { getProviderVisuals } from '$lib/utils/providerVisuals';
 
@@ -137,6 +138,20 @@
 		resetForm();
 		showModal = false;
 	}
+
+	// Function to format the imported LLM config for display (similar to LLMTaskWorkerNode)
+	function formatImportedLLMConfigDetails(configData: Record<string, any>): string {
+		const parts = [];
+		if (configData.provider) parts.push(`Provider: ${configData.provider}`);
+		if (configData.model_name) parts.push(`Model: ${configData.model_name}`);
+		if (configData.max_tokens) parts.push(`Max Tokens: ${configData.max_tokens}`);
+		if (configData.host) parts.push(`Host: ${configData.host}`); // Used by Ollama
+		if (configData.base_url) parts.push(`Base URL: ${configData.base_url}`); // Used by OpenAI
+		if (configData.remote_hostname) parts.push(`Remote Host: ${configData.remote_hostname}`);
+		if (configData.remote_username) parts.push(`Remote User: ${configData.remote_username}`);
+
+		return parts.join(', ');
+	}
 </script>
 
 {#if showModal}
@@ -231,6 +246,51 @@
 					</tbody>
 				</table>
 			</div>
+
+			<!-- Imported Configurations List (Read-only) -->
+			{#if $llmConfigsFromCode.length > 0}
+				<div class="mb-4 border-t border-gray-300 pt-4">
+					<h3 class="mb-2 flex items-center text-base font-semibold text-gray-700">
+						<Code size={18} class="mr-2 text-gray-500" />
+						Imported from Code
+					</h3>
+					<div class="max-h-40 overflow-y-auto rounded border border-gray-200 bg-gray-50/50">
+						<table class="min-w-full divide-y divide-gray-200">
+							<thead class="sticky top-0 bg-gray-100">
+								<tr>
+									<th
+										class="w-8 px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+										title="Imported"
+									></th>
+									<th
+										class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+										>Variable Name</th
+									>
+									<th
+										class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+										>Details</th
+									>
+								</tr>
+							</thead>
+							<tbody class="divide-y divide-gray-200 bg-white">
+								{#each $llmConfigsFromCode as config (config.id)}
+									<tr>
+										<td class="whitespace-nowrap px-3 py-2 text-sm text-gray-400">
+											<Code size={18} />
+										</td>
+										<td class="whitespace-nowrap px-4 py-2 text-sm font-medium text-gray-800"
+											>{config.name}</td
+										>
+										<td class="px-4 py-2 text-sm text-gray-600">
+											{formatImportedLLMConfigDetails(config.llmConfigFromCode)}
+										</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			{/if}
 
 			<!-- Add New / Edit Form -->
 			{#if isAddingNew || editingConfigId}
