@@ -107,3 +107,7 @@ export function addLLMConfigFromCode(config: Omit<LLMConfigFromCode, 'id'>): str
     llmConfigsFromCode.update(configs => [...configs, newConfig]);
     return newId;
 }
+
+export function clearLLMConfigsFromCode() {
+    llmConfigsFromCode.set([]);
+}

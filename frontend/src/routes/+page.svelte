@@ -18,6 +18,7 @@
 	import { get } from 'svelte/store';
 	import { allClassNames } from '$lib/stores/classNameStore';
 	import { taskClassNamesStore } from '$lib/stores/taskClassNamesStore';
+	import { clearLLMConfigsFromCode } from '$lib/stores/llmConfigsStore';
 	import ContextMenu from '$lib/components/ContextMenu.svelte';
 	import type { ContextMenuItem } from '$lib/components/ContextMenu.svelte';
 	import Trash from 'phosphor-svelte/lib/Trash';
@@ -516,6 +517,7 @@ Analyze the following information and provide a response.`,
 		if (confirm('Are you sure you want to clear the entire graph? This action cannot be undone.')) {
 			nodes.set([]);
 			edges.set([]);
+			clearLLMConfigsFromCode();
 			console.log('Graph cleared.');
 		}
 	}
