@@ -7,6 +7,7 @@ from textwrap import dedent, indent
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import black
+
 from planaieditor.utils import is_valid_python_class_name
 
 CODE_SNIPPETS_DIR = os.path.join(os.path.dirname(__file__), "codesnippets")
@@ -554,7 +555,6 @@ def generate_python_module(
             if class_name:
                 task_names.add(class_name)
 
-
         # Create a lookup for worker instance names by className
         worker_instance_by_class_name = {}
         # Populate lookup using all worker nodes (including factory)
@@ -580,9 +580,7 @@ def generate_python_module(
                     f"    graph.set_dependency({source_inst_name}, {target_inst_name})"
                 )
             elif source_class_name in task_names and target_inst_name:
-                dep_code_lines.append(
-                    f"    graph.set_entry({target_inst_name})"
-                )
+                dep_code_lines.append(f"    graph.set_entry({target_inst_name})")
             else:
                 print(
                     f"Warning: Could not find worker instances for edge {source_class_name} -> {target_class_name}"

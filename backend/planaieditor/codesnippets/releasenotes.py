@@ -4,8 +4,6 @@ from textwrap import dedent
 from typing import List, Optional, Type
 
 from git import Repo
-from pydantic import Field, PrivateAttr
-
 from planai import (
     CachedLLMTaskWorker,
     CachedTaskWorker,
@@ -17,6 +15,7 @@ from planai import (
     llm_from_config,
 )
 from planai.utils import setup_logging
+from pydantic import Field, PrivateAttr
 
 
 class InitialCommit(Task):

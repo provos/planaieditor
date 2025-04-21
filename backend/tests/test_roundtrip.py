@@ -8,8 +8,8 @@ import pytest
 # Add the parent directory to sys.path to import our modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from planaieditor.patch import get_definitions_from_file
-from planaieditor.python import generate_python_module
+from planaieditor.patch import get_definitions_from_file  # noqa: E402
+from planaieditor.python import generate_python_module  # noqa: E402
 
 
 @pytest.fixture
@@ -53,7 +53,7 @@ def temp_file():
     for file_path in temp_files:
         try:
             os.unlink(file_path)
-        except:
+        except Exception:
             pass
 
 
@@ -340,7 +340,10 @@ def test_releasenotes_roundtrip(temp_file):
     """Test roundtrip conversion of a complex example with multiple workers and edges."""
     # Define the path to the original releasenotes example
     original_file_path = (
-        Path(__file__).parent.parent / "planaieditor" / "codesnippets" / "releasenotes.py"
+        Path(__file__).parent.parent
+        / "planaieditor"
+        / "codesnippets"
+        / "releasenotes.py"
     )
     assert original_file_path.exists(), f"Original file not found: {original_file_path}"
 
@@ -513,7 +516,7 @@ def setup_graph():
     # Step 2: Create graph data for regeneration
     task_nodes = []
     for i, task_def in enumerate(orig_task_defs):
-        task_nodes.append({f"id": f"task_{i}", "type": "task", "data": task_def})
+        task_nodes.append({"id": f"task_{i}", "type": "task", "data": task_def})
 
     # Create taskimport nodes for the *parsed* imported tasks
     imported_task_nodes = []

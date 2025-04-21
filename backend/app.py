@@ -17,7 +17,7 @@ import sys
 import tempfile
 import traceback
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional
 
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
@@ -25,7 +25,6 @@ from flask_socketio import SocketIO, emit
 from planaieditor.llm_interface_utils import list_models_for_provider
 from planaieditor.patch import get_definitions_from_file
 from planaieditor.python import generate_python_module
-from planaieditor.utils import is_valid_python_class_name
 
 # Determine mode and configure paths/CORS
 FLASK_ENV = os.environ.get("FLASK_ENV", "production")  # Default to production
@@ -419,7 +418,7 @@ def handle_export_graph(data):
 
     # Attempt to validate the generated module in the specified venv
     validation_result = validate_code_in_venv(module_name, python_code)
-    
+
     # Construct the final response
     response_data = {
         "success": validation_result.get("success", False),
@@ -429,11 +428,6 @@ def handle_export_graph(data):
     # Add error details to the main level if validation failed
     if not response_data["success"]:
         response_data["error"] = validation_result.get("error", "Validation failed.")
-
-    # Determine status code based on validation success
-    status_code = (
-        200 if response_data["success"] else 400
-    )  # Bad request if validation fails?
 
     emit("export_result", response_data, room=request.sid)
 
@@ -572,14 +566,14 @@ def run_inspection_script(
         )
 
         # Debugging output
-        print(f"--- Inspect Script Start ---")
+        print("--- Inspect Script Start ---")
         print(f"Command: {' '.join(command)}")
         print(f"Return Code: {process.returncode}")
         if process.stdout:
             print(f"stdout:\n{process.stdout.strip()}")
         if process.stderr:
             print(f"stderr:\n{process.stderr.strip()}")
-        print(f"--- Inspect Script End ---")
+        print("--- Inspect Script End ---")
 
         # Attempt to parse JSON from stdout first (expected output)
         try:
@@ -587,7 +581,7 @@ def run_inspection_script(
             return result_json
         except json.JSONDecodeError:
             # If stdout is not JSON, return an error with stderr content
-            error_message = f"Script execution failed or produced invalid output."
+            error_message = "Script execution failed or produced invalid output."
             if process.stderr:
                 error_message += f" Error details: {process.stderr.strip()}"
             elif process.stdout:

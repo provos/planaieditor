@@ -2,7 +2,7 @@ import traceback
 from typing import List
 
 # Attempt to import PlanAI components. Handle gracefully if not found initially.
-from planai import LLMInterface, llm_from_config
+from planai import llm_from_config
 
 
 def list_models_for_provider(provider_name: str) -> List[str]:

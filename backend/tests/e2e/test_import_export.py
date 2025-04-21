@@ -1,12 +1,9 @@
-import importlib.util
 import json
 import os
 import subprocess
 import sys
-import tempfile
 import time
 from pathlib import Path
-from typing import Optional
 
 import pytest
 from playwright.sync_api import APIResponse, Page, Route, expect
@@ -14,10 +11,9 @@ from playwright.sync_api import APIResponse, Page, Route, expect
 # Ensure planaieditor can be imported (adjust if your structure differs)
 # This might be handled by running pytest from the 'backend' dir
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-from planaieditor.patch import get_definitions_from_file  # Import the parser
+from planaieditor.patch import get_definitions_from_file  # noqa: E402
 
 # --- Configuration ---
-os.environ["FLASK_ENV"] = "development"
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
 # Use a different port for the test backend server to avoid conflicts
 BACKEND_TEST_PORT = os.environ.get("BACKEND_TEST_PORT", "5001")
@@ -205,10 +201,6 @@ def verify_functional_equivalence(original_code: str, exported_code: str) -> boo
         not exported_defs.get("tasks") and not exported_defs.get("workers")
     ):
         print("ERROR: Failed to parse exported code or no definitions found.")
-        # Optionally print the exported code here for debugging
-        # print("--- Exported Code Start ---")
-        # print(exported_code)
-        # print("--- Exported Code End ---")
         return False
 
     # Compare the parsed structures
@@ -223,10 +215,6 @@ def backend_server():
     """Starts the backend Flask server for the test session on a specific port."""
     print(f"Starting backend server on port {BACKEND_TEST_PORT}...")
     # Command to run Flask development server from the backend directory
-    # Ensure environment variables like FLASK_APP are set if needed by your setup
-    # We assume running pytest from the 'backend' directory context
-    # or that the path to app.py is correctly resolved.
-    flask_app_path = Path(__file__).parent.parent / "app.py"
     cmd = [
         sys.executable,  # Use the same python interpreter pytest is using
         "-m",
@@ -239,15 +227,12 @@ def backend_server():
         **os.environ,
         "FLASK_APP": "app.py",  # Use filename relative to backend dir
         "FLASK_DEBUG": "0",  # Ensure debug mode is off for stability if needed
+        "FLASK_ENV": "development",
     }
 
     # Start Flask server as a non-blocking subprocess
-    # Run from the parent of the 'backend' dir to allow correct module resolution?
-    # Or assume pytest is run *from* backend dir. Let's assume the latter for now.
-    # cwd = str(Path(__file__).parent.parent) # Directory containing app.py
     server_process = subprocess.Popen(
         cmd,
-        # cwd=cwd, # Run flask from the directory containing app.py
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         env=env,
@@ -525,7 +510,7 @@ def test_releasenotes_roundtrip(page: Page, backend_server):
     assert exported_code is not None and isinstance(
         exported_code, str
     ), "Exported Python code not found or invalid in backend response."
-    print(f"Successfully received exported code from backend API.")
+    print("Successfully received exported code from backend API.")
 
     # 9. Verify Functional Equivalence
     assert verify_functional_equivalence(
