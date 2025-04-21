@@ -8,7 +8,7 @@
 		deleteLLMConfig,
 		validLLMProviders,
 		llmConfigsFromCode,
-		type LLMConfig,
+		type LLMConfig
 	} from '$lib/stores/llmConfigsStore';
 	import { getProviderVisuals } from '$lib/utils/providerVisuals';
 
@@ -139,6 +139,24 @@
 		showModal = false;
 	}
 
+	// Add a global keydown listener for the Escape key when the modal is shown
+	$effect(() => {
+		if (showModal) {
+			const handleKeydown = (e: KeyboardEvent) => {
+				if (e.key === 'Escape') {
+					closeModal();
+				}
+			};
+
+			window.addEventListener('keydown', handleKeydown);
+
+			// Cleanup function to remove the listener when the modal is hidden
+			return () => {
+				window.removeEventListener('keydown', handleKeydown);
+			};
+		}
+	});
+
 	// Function to format the imported LLM config for display (similar to LLMTaskWorkerNode)
 	function formatImportedLLMConfigDetails(configData: Record<string, any>): string {
 		const parts = [];
@@ -156,6 +174,7 @@
 
 {#if showModal}
 	<!-- Modal Backdrop -->
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<div
 		class="fixed inset-0 z-40 bg-gray-900/50 backdrop-blur-sm"
 		onclick={closeModal}
@@ -168,7 +187,7 @@
 		<div class="relative w-full max-w-3xl rounded-lg bg-white p-6 shadow-xl">
 			<!-- Close Button -->
 			<button
-				class="absolute right-4 top-4 text-gray-500 hover:text-gray-800"
+				class="absolute right-4 top-4 text-gray-500 hover:text-red-800"
 				onclick={closeModal}
 				title="Close"
 			>
