@@ -7,7 +7,6 @@ from textwrap import dedent, indent
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import black
-
 from planaieditor.utils import is_valid_python_class_name
 
 CODE_SNIPPETS_DIR = os.path.join(os.path.dirname(__file__), "codesnippets")
@@ -293,23 +292,31 @@ def create_llm_args(llm_config: Dict[str, Any]) -> List[str]:
     remote_hostname = llm_config.get("remoteHostname")  # For remote_ollama
     remote_username = llm_config.get("remoteUsername")  # For remote_ollama
 
+    if not llm_config.get("fromCode"):
+        # If the LLM config was not created from code, we need to quote the values
+        provider = f'"{provider}"'
+        model_name = f'"{model_name}"'
+        base_url = f'"{base_url}"'
+        remote_hostname = f'"{remote_hostname}"'
+        remote_username = f'"{remote_username}"'
+
     llm_args_list = []
     if provider:
-        llm_args_list.append(f'provider="{provider}"')
+        llm_args_list.append(f'provider={provider}')
     if model_name:
-        llm_args_list.append(f'model_name="{model_name}"')
+        llm_args_list.append(f'model_name={model_name}')
     if max_tokens is not None:
         llm_args_list.append(f"max_tokens={int(max_tokens)}")  # Ensure it's an int
 
     # Add provider-specific args
     if provider == "ollama":
         if base_url:  # Map frontend 'baseUrl' to backend 'host' for ollama
-            llm_args_list.append(f'host="{base_url}"')
+            llm_args_list.append(f'host={base_url}')
     elif provider == "remote_ollama":
         if remote_hostname:
-            llm_args_list.append(f'hostname="{remote_hostname}"')
+            llm_args_list.append(f'hostname={remote_hostname}')
         if remote_username:
-            llm_args_list.append(f'username="{remote_username}"')
+            llm_args_list.append(f'username={remote_username}')
     return llm_args_list
 
 

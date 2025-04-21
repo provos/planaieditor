@@ -96,7 +96,8 @@ function convertGraphtoJSON(nodes: Node[], edges: Edge[]): GraphData {
                 processedData.llmConfig = {
                     provider: data.llmConfigFromCode.provider,
                     modelId: data.llmConfigFromCode.model_name, // Backend uses 'modelId' key
-                    max_tokens: data.llmConfigFromCode.max_tokens
+                    max_tokens: data.llmConfigFromCode.max_tokens,
+                    fromCode: true
                 };
 
                 // If host is present, map it to baseUrl
