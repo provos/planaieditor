@@ -8,9 +8,14 @@
 	import { useUpdateNodeInternals } from '@xyflow/svelte';
 	import { tick } from 'svelte';
 	import type { Action } from 'svelte/action';
-	import { llmConfigs } from '$lib/stores/llmConfigsStore';
-	import { getProviderVisuals } from '$lib/utils/providerVisuals';
-	import { getLLMConfigByName } from '$lib/stores/llmConfigsStore';
+	import {
+		llmConfigs,
+		llmConfigsFromCode,
+		getLLMConfigById,
+		getLLMConfigFromCodeById,
+		type LLMConfigBasic
+	} from '$lib/stores/llmConfigsStore';
+	import { getProviderVisuals, type ProviderVisuals } from '$lib/utils/providerVisuals';
 
 	// Extend the base data interface
 	export interface LLMWorkerData extends BaseWorkerData {
@@ -30,19 +35,14 @@
 			postProcess: boolean;
 		};
 		isCached?: boolean;
-		// Add simple boolean flags
 		use_xml: boolean;
 		debug_mode: boolean;
 		llmConfigName?: string;
-		// Added for imported LLM configs from code
 		llmConfigFromCode?: Record<string, any>;
-		llmConfigDescription?: string;
+		llmConfigVar?: string;
 	}
 
-	let { id, data } = $props<{
-		id: string;
-		data: LLMWorkerData;
-	}>();
+	let { id, data } = $props<{ id: string; data: LLMWorkerData }>();
 
 	const updateNodeInternals = useUpdateNodeInternals();
 
@@ -103,19 +103,54 @@
 	let useXml = $state(data.use_xml);
 	let debugMode = $state(data.debug_mode);
 
-	// Local reactive state for the LLM config name selection
-	let selectedLLMConfigName = $state(data.llmConfigName);
+	// State for the combined selection identifier (e.g., "user:uuid" or "code:uuid")
+	let selectedConfigName = $state<string | undefined>(data.llmConfigName || data.llmConfigVar);
 
-	// Derived state for selected config visuals
-	let selectedConfigVisuals = $derived.by(() => {
-		if (selectedLLMConfigName) {
-			// Depend on the local reactive state
-			const config = getLLMConfigByName(selectedLLMConfigName);
-			if (config) {
-				return getProviderVisuals(config.provider);
-			}
+	// Combine user and code configs for the dropdown
+	const combinedConfigs = $derived<LLMConfigBasic[]>([...$llmConfigs, ...$llmConfigsFromCode]);
+
+	// Helper to get visuals for a given identifier
+	function getVisualsForIdentifier(identifier: string | undefined): ProviderVisuals | null {
+		if (!identifier) return null;
+		const config = combinedConfigs.find((c) => c.name === identifier);
+		if (!config) return null;
+
+		let provider: string | undefined;
+		if (config.source === 'user') {
+			const visualConfig = getLLMConfigById(config.id);
+			provider = visualConfig?.provider;
 		}
-		return null;
+
+		return getProviderVisuals(provider as any);
+	}
+
+	// Reactive visuals based on the selected identifier
+	let selectedConfigVisuals = $derived(getVisualsForIdentifier(selectedConfigName));
+
+	// Effect to update data prop when selection changes
+	$effect(() => {
+		if (selectedConfigName) {
+			let sourceConfig = combinedConfigs.find((c) => c.name === selectedConfigName);
+			if (sourceConfig?.source === 'user') {
+				const config = getLLMConfigById(sourceConfig.id);
+				if (config) {
+					data.llmConfigName = config.name;
+					data.llmConfigFromCode = undefined; // Clear the other
+				}
+			} else if (sourceConfig?.source === 'code') {
+				const config = getLLMConfigFromCodeById(sourceConfig.id);
+				if (config) {
+					data.llmConfigName = undefined; // Clear the other
+					data.llmConfigFromCode = config.llmConfigFromCode;
+					data.llmConfigVar = config.name;
+				}
+			}
+		} else {
+			// No selection or invalid identifier
+			data.llmConfigName = undefined;
+			data.llmConfigFromCode = undefined;
+			data.llmConfigVar = undefined;
+		}
 	});
 
 	// Subscribe to the taskClassNamesStore for output type selection
@@ -146,11 +181,6 @@
 
 	$effect(() => {
 		data.debug_mode = debugMode;
-	});
-
-	// Sync local state back to the data prop when the user changes the selection
-	$effect(() => {
-		data.llmConfigName = selectedLLMConfigName;
 	});
 
 	// Handle code updates
@@ -215,11 +245,6 @@
 		}
 	}
 
-	// Add a function to check if we have an imported LLM config
-	function hasImportedLLMConfig() {
-		return data.llmConfigFromCode && Object.keys(data.llmConfigFromCode).length > 0;
-	}
-
 	// Add a function to format the imported LLM config for display
 	function formatImportedLLMConfig(): string {
 		if (!data.llmConfigFromCode) return '';
@@ -247,42 +272,34 @@
 	<!-- LLM Configuration Selector -->
 	<div class="mb-2 flex-none">
 		<label for="llm-config-{id}" class="label flex-none">LLM Config</label>
-		<div class="mt-1 flex items-center gap-2">
+		<div
+			class="mt-1 flex items-center gap-2 {data.llmConfigFromCode ? 'bg-gray-100' : 'bg-green-100'}"
+		>
 			{#if selectedConfigVisuals}
-				<div class="flex-none" title={data.llmConfigName}>
+				<div class="flex-none" title={data.llmConfigName || data.llmConfigFromCode?.name}>
 					<selectedConfigVisuals.icon size={12} class={selectedConfigVisuals.colorClass} />
 				</div>
 			{/if}
 			<select
 				id="llm-config-{id}"
 				class="text-2xs nodrag select select-bordered select-sm w-full flex-grow"
-				bind:value={selectedLLMConfigName}
+				bind:value={selectedConfigName}
 			>
 				<option value={undefined}>-- Select --</option>
-				{#if $llmConfigs.length === 0}
-					<option disabled>No configs defined</option>
+				{#if combinedConfigs.length === 0}
+					<option disabled>No configs defined or imported</option>
+				{:else}
+					{#each combinedConfigs as config (config.id)}
+						{#if config.source === 'user'}
+							<option value={config.name}>{config.name}</option>
+						{:else}
+							<option value={config.name}>{config.name} ({formatImportedLLMConfig()})</option>
+						{/if}
+					{/each}
 				{/if}
-				{#each $llmConfigs as config (config.id)}
-					<option value={config.name}>{config.name}</option>
-				{/each}
 			</select>
 		</div>
 	</div>
-
-	<!-- Display imported LLM Config if available -->
-	{#if hasImportedLLMConfig()}
-		<div class="mb-3 mt-1 flex-none">
-			<div class="text-2xs rounded border border-blue-200 bg-blue-50 p-2">
-				<div class="font-semibold text-blue-700">Imported LLM Configuration</div>
-				<div class="mt-1 text-blue-600">
-					{formatImportedLLMConfig()}
-				</div>
-				<div class="mt-1 text-xs italic text-blue-500">
-					Select a config above to override this imported configuration.
-				</div>
-			</div>
-		</div>
-	{/if}
 
 	<!-- LLM Output Type Section -->
 	<div class="mb-2 flex-none">
@@ -392,7 +409,7 @@
 	</div>
 </BaseWorkerNode>
 
-<style>
+<style lang="postcss">
 	@reference "tailwindcss";
 
 	.text-2xs {

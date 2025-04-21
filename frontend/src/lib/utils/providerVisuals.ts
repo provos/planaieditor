@@ -1,9 +1,9 @@
-import { Cube, Cpu, GoogleLogo, Atom, Cloud, Globe, OpenAiLogo } from 'phosphor-svelte';
+import { Cpu, GoogleLogo, Atom, Cloud, Globe, OpenAiLogo, Code } from 'phosphor-svelte';
 import type { Component } from 'svelte';
 import type { LLMConfig } from '$lib/stores/llmConfigsStore'; // Import the type
 
 // Define a mapping from provider names to icons and tailwind colors
-interface ProviderVisuals {
+export interface ProviderVisuals {
     icon: Component;
     colorClass: string; // Tailwind CSS class for text color
 }
@@ -19,5 +19,5 @@ export const providerVisualsMap: Record<LLMConfig['provider'], ProviderVisuals> 
 
 // Helper function to get visuals for a provider
 export function getProviderVisuals(provider: LLMConfig['provider']): ProviderVisuals {
-    return providerVisualsMap[provider] || { icon: Cube, colorClass: 'text-gray-500' }; // Default fallback
+    return providerVisualsMap[provider] || { icon: Code, colorClass: 'text-gray-500' }; // Default fallback
 }

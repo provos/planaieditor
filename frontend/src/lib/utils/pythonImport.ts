@@ -343,6 +343,7 @@ export async function importPythonCode(
             // Store the llmConfigFromCode if present for display in the UI
             if (worker.llmConfigFromCode) {
                 nodeData.llmConfigFromCode = worker.llmConfigFromCode;
+                nodeData.llmConfigVar = worker.llmConfigVar;
 
                 // Add a human-readable description of the imported LLM config
                 const provider = worker.llmConfigFromCode.provider || 'unknown';

@@ -4,6 +4,7 @@ import type { Writable } from 'svelte/store';
 export interface LLMConfigBasic {
     id: string; // Unique ID for the config (e.g., uuid)
     name: string; // User-defined name (e.g., "My OpenAI GPT-4")
+    source: 'user' | 'code';
 }
 
 // Define the structure for an LLM Configuration
@@ -36,9 +37,9 @@ export const llmConfigs: Writable<LLMConfig[]> = persisted<LLMConfig[]>('llmConf
 export const llmConfigsFromCode: Writable<LLMConfigFromCode[]> = persisted<LLMConfigFromCode[]>('llmConfigsFromCode', []);
 
 // Helper function to add a new configuration
-export function addLLMConfig(config: Omit<LLMConfig, 'id'>): string {
+export function addLLMConfig(config: Omit<LLMConfig, 'id' | 'source'>): string {
     const newId = crypto.randomUUID();
-    const newConfig = { ...config, id: newId };
+    const newConfig = { ...config, id: newId, source: 'user' as const };
     llmConfigs.update(configs => {
         // Optional: Check for name collision before adding
         if (configs.some(c => c.name === newConfig.name)) {
@@ -91,8 +92,18 @@ export function getLLMConfigByName(name: string): LLMConfig | undefined {
     return config;
 }
 
+// Helper function to get a code-defined configuration by ID
+export function getLLMConfigFromCodeById(id: string): LLMConfigFromCode | undefined {
+    let config: LLMConfigFromCode | undefined;
+    const unsubscribe = llmConfigsFromCode.subscribe(value => {
+        config = value.find(c => c.id === id);
+    });
+    unsubscribe(); // Immediately unsubscribe
+    return config;
+}
+
 // Helper function to add a new configuration from code - only if the config is not already in the store
-export function addLLMConfigFromCode(config: Omit<LLMConfigFromCode, 'id'>): string {
+export function addLLMConfigFromCode(config: Omit<LLMConfigFromCode, 'id' | 'source'>): string {
     let existingConfig: LLMConfigFromCode | undefined;
     const unsubscribe = llmConfigsFromCode.subscribe(configs => {
         existingConfig = configs.find((c: LLMConfigFromCode) => c.name === config.name);
@@ -103,7 +114,7 @@ export function addLLMConfigFromCode(config: Omit<LLMConfigFromCode, 'id'>): str
         return existingConfig.id;
     }
     const newId = crypto.randomUUID();
-    const newConfig = { ...config, id: newId };
+    const newConfig = { ...config, id: newId, source: 'code' as const };
     llmConfigsFromCode.update(configs => [...configs, newConfig]);
     return newId;
 }
