@@ -34,6 +34,9 @@
 		use_xml: boolean;
 		debug_mode: boolean;
 		llmConfigName?: string;
+		// Added for imported LLM configs from code
+		llmConfigFromCode?: Record<string, any>;
+		llmConfigDescription?: string;
 	}
 
 	let { id, data } = $props<{
@@ -211,6 +214,26 @@
 			event.stopPropagation();
 		}
 	}
+
+	// Add a function to check if we have an imported LLM config
+	function hasImportedLLMConfig() {
+		return data.llmConfigFromCode && Object.keys(data.llmConfigFromCode).length > 0;
+	}
+
+	// Add a function to format the imported LLM config for display
+	function formatImportedLLMConfig(): string {
+		if (!data.llmConfigFromCode) return '';
+
+		const config = data.llmConfigFromCode;
+		const parts = [];
+
+		if (config.provider) parts.push(`Provider: ${config.provider}`);
+		if (config.model_name) parts.push(`Model: ${config.model_name}`);
+		if (config.max_tokens) parts.push(`Max Tokens: ${config.max_tokens}`);
+		if (config.host) parts.push(`Host: ${config.host}`);
+
+		return parts.join(', ');
+	}
 </script>
 
 <BaseWorkerNode
@@ -245,6 +268,21 @@
 			</select>
 		</div>
 	</div>
+
+	<!-- Display imported LLM Config if available -->
+	{#if hasImportedLLMConfig()}
+		<div class="mb-3 mt-1 flex-none">
+			<div class="text-2xs rounded border border-blue-200 bg-blue-50 p-2">
+				<div class="font-semibold text-blue-700">Imported LLM Configuration</div>
+				<div class="mt-1 text-blue-600">
+					{formatImportedLLMConfig()}
+				</div>
+				<div class="mt-1 text-xs italic text-blue-500">
+					Select a config above to override this imported configuration.
+				</div>
+			</div>
+		</div>
+	{/if}
 
 	<!-- LLM Output Type Section -->
 	<div class="mb-2 flex-none">

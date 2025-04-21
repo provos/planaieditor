@@ -52,7 +52,7 @@ function convertGraphtoJSON(nodes: Node[], edges: Edge[]): GraphData {
         }
     });
 
-    // replace workerName with className in nodes
+    // replace workerName with className for worker nodes
     const exportedNodes = nodes.map(node => {
         const data = node.data as any; // Use any for easier manipulation
         let processedData = { ...data };
@@ -63,25 +63,52 @@ function convertGraphtoJSON(nodes: Node[], edges: Edge[]): GraphData {
             delete processedData.workerName;
         }
 
-        // If it's an LLM worker node, resolve llmConfigName to the full config object
-        if ((node.type === 'llmtaskworker' || node.type === 'cachedllmtaskworker') && data?.llmConfigName) {
-            const configName = data.llmConfigName;
-            const allConfigs = get(llmConfigs); // Get current value of the store
-            const foundConfig = allConfigs.find(c => c.name === configName);
+        // If it's an LLM worker node, handle LLM configuration
+        if ((node.type === 'llmtaskworker' || node.type === 'cachedllmtaskworker')) {
+            // Priority 1: If user selected an LLM config in the UI, use that
+            if (data?.llmConfigName) {
+                const configName = data.llmConfigName;
+                const allConfigs = get(llmConfigs); // Get current value of the store
+                const foundConfig = allConfigs.find(c => c.name === configName);
 
-            if (foundConfig) {
-                // Add the full config object to the data being exported
-                processedData.llmConfig = foundConfig;
-                // Optionally remove the name now that we have the full object
-                delete processedData.llmConfigName;
-            } else {
-                // Handle case where config name exists but config is not found (shouldn't happen ideally)
-                console.warn(`LLM Configuration named '${configName}' selected but not found in store. Skipping LLM config export for node ${node.id}`);
-                // Ensure llmConfig is not present if not found
-                delete processedData.llmConfig;
-                // Keep llmConfigName? Or delete it? Deleting might be cleaner for backend.
-                delete processedData.llmConfigName;
+                if (foundConfig) {
+                    // Add the full config object to the data being exported
+                    processedData.llmConfig = foundConfig;
+                    // Remove the name now that we have the full object
+                    delete processedData.llmConfigName;
+
+                    // If there was an imported config, we're now overriding it
+                    if (processedData.llmConfigFromCode) {
+                        console.log(`Overriding imported LLM config with user-selected config: ${configName}`);
+                    }
+                } else {
+                    // Handle case where config name exists but config is not found (shouldn't happen ideally)
+                    console.warn(`LLM Configuration named '${configName}' selected but not found in store. Skipping LLM config export for node ${node.id}`);
+                    // Ensure llmConfig is not present if not found
+                    delete processedData.llmConfig;
+                    // Keep llmConfigName? Or delete it? Deleting might be cleaner for backend.
+                    delete processedData.llmConfigName;
+                }
             }
+            // Priority 2: If no user-selected config but we have an imported config, use that
+            else if (data?.llmConfigFromCode) {
+                // The backend expects 'llmConfig' for code generation, so we convert the imported format
+                processedData.llmConfig = {
+                    provider: data.llmConfigFromCode.provider,
+                    modelId: data.llmConfigFromCode.model_name, // Backend uses 'modelId' key
+                    max_tokens: data.llmConfigFromCode.max_tokens
+                };
+
+                // If host is present, map it to baseUrl
+                if (data.llmConfigFromCode.host) {
+                    processedData.llmConfig.baseUrl = data.llmConfigFromCode.host;
+                }
+
+                console.log(`Using imported LLM config for node ${node.id}`);
+            }
+
+            // Clean up display-only properties
+            delete processedData.llmConfigDescription;
         }
 
         // Consolidate known class variables into classVars for worker nodes

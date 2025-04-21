@@ -59,6 +59,7 @@ export interface ImportedWorker {
     variableName?: string; // Optional: Variable name assigned in graph func
     factoryFunction?: string; // Name of the factory function if applicable
     factoryInvocation?: string; // Combined invocation string
+    llmConfigFromCode?: Record<string, any>; // LLM configuration parsed from code
 }
 
 // Result type for the Python import operation
@@ -336,6 +337,19 @@ export async function importPythonCode(
                 otherMembersSource: worker.otherMembersSource || '', // Store consolidated source
                 classVars: worker.classVars || {}, // Store the rest of class vars for now
             };
+
+            // Store the llmConfigFromCode if present for display in the UI
+            if (worker.llmConfigFromCode) {
+                nodeData.llmConfigFromCode = worker.llmConfigFromCode;
+
+                // Add a human-readable description of the imported LLM config
+                const provider = worker.llmConfigFromCode.provider || 'unknown';
+                const modelName = worker.llmConfigFromCode.model_name || 'unknown';
+                nodeData.llmConfigDescription = `Imported: ${provider} / ${modelName}`;
+
+                // Log the imported LLM config for debugging
+                console.log(`Imported LLM config for ${worker.className}:`, worker.llmConfigFromCode);
+            }
 
             // Type-specific mappings
             switch (worker.workerType) {

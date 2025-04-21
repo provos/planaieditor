@@ -295,9 +295,6 @@ def create_llm_args(llm_config: Dict[str, Any]) -> List[str]:
 
     llm_args_list = []
     if provider:
-        if provider not in VALID_LLM_PROVIDERS:
-            # This should ideally be caught earlier, but as a safety check
-            raise ValueError(f"Invalid LLM provider specified in config: {provider}")
         llm_args_list.append(f'provider="{provider}"')
     if model_name:
         llm_args_list.append(f'model_name="{model_name}"')
