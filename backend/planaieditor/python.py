@@ -247,7 +247,7 @@ def create_factory_worker_instance(
     )
 
 
-def create_worker_instance(node: Dict[str, Any]) -> str:
+def create_worker_instance(node: Dict[str, Any], llm_name: Optional[str] = None) -> str:
     data = node.get("data", {})
     worker_class_name = data.get("className")
     instance_name = worker_to_instance_name(worker_class_name)
@@ -259,16 +259,19 @@ def create_worker_instance(node: Dict[str, Any]) -> str:
 
     # Basic LLM assignment - needs refinement based on node config/needs
     if worker_type in ["llmtaskworker", "cachedllmtaskworker"]:
-        llm_arg = "llm=None"
-        llm_config = data.get("llmConfig")
+        if llm_name:
+            llm_arg = f"llm={llm_name}"
+        else:
+            llm_arg = "llm=None"
+            llm_config = data.get("llmConfig")
 
-        if llm_config:
-            llm_args_list = create_llm_args(llm_config)
+            if llm_config:
+                llm_args_list = create_llm_args(llm_config)
 
-            llm_args_str = ", ".join(llm_args_list)
-            llm_arg = (
-                f"llm=llm_from_config({llm_args_str})"  # Construct the llm argument
-            )
+                llm_args_str = ", ".join(llm_args_list)
+                llm_arg = (
+                    f"llm=llm_from_config({llm_args_str})"  # Construct the llm argument
+                )
 
         code.append(f"{instance_name} = {worker_class_name}({llm_arg})")
     else:
@@ -299,21 +302,21 @@ def create_llm_args(llm_config: Dict[str, Any]) -> List[str]:
 
     llm_args_list = []
     if provider:
-        llm_args_list.append(f'provider={provider}')
+        llm_args_list.append(f"provider={provider}")
     if model_name:
-        llm_args_list.append(f'model_name={model_name}')
+        llm_args_list.append(f"model_name={model_name}")
     if max_tokens is not None:
         llm_args_list.append(f"max_tokens={int(max_tokens)}")  # Ensure it's an int
 
     # Add provider-specific args
     if provider == "ollama":
         if base_url:  # Map frontend 'baseUrl' to backend 'host' for ollama
-            llm_args_list.append(f'host={base_url}')
+            llm_args_list.append(f"host={base_url}")
     elif provider == "remote_ollama":
         if remote_hostname:
-            llm_args_list.append(f'hostname={remote_hostname}')
+            llm_args_list.append(f"hostname={remote_hostname}")
         if remote_username:
-            llm_args_list.append(f'username={remote_username}')
+            llm_args_list.append(f"username={remote_username}")
     return llm_args_list
 
 
@@ -512,6 +515,8 @@ def generate_python_module(
     # 4. Graph Creation Function
     worker_setup = []
     worker_names = []
+    llm_configs = []
+    llm_names_used = set()
 
     # Track factory-created workers for special handling and imports
     factories_used = set()  # Track factory function names used
@@ -534,7 +539,14 @@ def generate_python_module(
             # Handle factory-created SubGraphWorker
             worker_setup.append(create_factory_worker_instance(node, factories_used))
         else:  # Only process regular workers here
-            worker_setup.append(create_worker_instance(node))
+            llm_config = data.get("llmConfig")
+            llm_name = data.get("llmConfigVar")
+            if llm_config and llm_name and llm_name not in llm_names_used:
+                llm_configs.append(
+                    f"    {llm_name} = llm_from_config({', '.join(create_llm_args(llm_config))})"
+                )
+                llm_names_used.add(llm_name)
+            worker_setup.append(create_worker_instance(node, llm_name))
 
     # Make sure all worker names are included in add_workers
     if worker_nodes:  # Only add if there are workers
@@ -608,6 +620,7 @@ def generate_python_module(
         ),
         task_definitions="\n".join(tasks_code),
         worker_definitions="\n".join(workers),
+        llm_configs="\n".join(llm_configs)[4:],
         worker_instantiation=indent(dedent("\n".join(worker_setup)), "    ")[4:],
         dependency_setup=indent(dedent("\n".join(dep_code_lines)), "    ")[4:],
     )

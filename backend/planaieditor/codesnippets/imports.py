@@ -46,6 +46,10 @@ from pydantic import ConfigDict, Field, PrivateAttr  # noqa: F401
 def create_graph() -> Graph:
     graph = Graph(name="GeneratedPlan")
 
+    # --- LLM Configs ---
+
+    # {llm_configs}
+
     # --- Worker Instantiation with Error Handling ---
 
     # {worker_instantiation}
@@ -55,60 +59,12 @@ def create_graph() -> Graph:
     return graph
 
 
-def setup_graph() -> Tuple[Graph, Dict[str, TaskWorker]]:
-    # TODO: Replace with your actual LLM configuration using llm_from_config
-    print("Warning: Using dummy LLM configurations. Replace with llm_from_config.")
-
-    graph = None  # Initialize
-    try:
-        graph = create_graph()
-    except (
-        Exception
-    ) as e:  # Catch errors during create_graph itself (e.g., invalid class name, edge setup)
-        error_info_dict = {
-            "success": False,
-            "error": {
-                "message": f"Error during graph creation/setup: {repr(str(e))}",
-                "nodeName": None,
-                "fullTraceback": traceback.format_exc(),
-            },
-        }
-
-        print("##ERROR_JSON_START##", flush=True)
-        print(json.dumps(error_info_dict), flush=True)
-        print("##ERROR_JSON_END##", flush=True)
-        sys.exit(1)
-
-    # TODO: Configure sinks if needed, e.g.:
-    # response_publisher = workers.get('responsePublisher')
-    # if response_publisher and notify:
-    #     response_publisher.add_sink(notify)
-
-    if graph is None:
-        # Handle case where create_graph failed internally and exited
-        # This path might not be strictly necessary if create_graph always sys.exits
-        error_info_dict = {
-            "success": False,
-            "error": {
-                "message": "Graph creation failed internally.",
-                "nodeName": None,
-                "fullTraceback": "",
-            },
-        }
-        print("##ERROR_JSON_START##", flush=True)
-        print(json.dumps(error_info_dict), flush=True)
-        print("##ERROR_JSON_END##", flush=True)
-        sys.exit(1)
-
-    return graph
-
-
 if __name__ == "__main__":
     print("Setting up and running the generated PlanAI graph...")
     graph = None
     try:
         # Pass notify=None for now, can be configured later
-        workers = setup_graph()
+        workers = create_graph()
         # If setup completes without error (no sys.exit), print success JSON
         success_info = {"success": True, "message": "Graph setup successful."}
         print("##SUCCESS_JSON_START##", flush=True)

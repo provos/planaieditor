@@ -104,12 +104,15 @@ function convertGraphtoJSON(nodes: Node[], edges: Edge[]): GraphData {
                 if (data.llmConfigFromCode.host) {
                     processedData.llmConfig.baseUrl = data.llmConfigFromCode.host;
                 }
-
+                delete processedData.llmConfigFromCode;
                 console.log(`Using imported LLM config for node ${node.id}`);
             }
 
             // Clean up display-only properties
             delete processedData.llmConfigDescription;
+
+            console.log("LLM Config Node", processedData)
+
         }
 
         // Consolidate known class variables into classVars for worker nodes
