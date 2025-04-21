@@ -1269,7 +1269,6 @@ def get_definitions_from_file(
                     if llm_var != f"inline_{var_name}":
                         worker_details_map[class_name]["llmConfigVar"] = llm_var
 
-
             elif instance_info["type"] == "factory":
                 factory_name = instance_info["factory_name"]
                 factory_config = SUBGRAPH_FACTORIES.get(factory_name)
