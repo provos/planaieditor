@@ -270,7 +270,6 @@
 			{#if $llmConfigsFromCode.length > 0}
 				<div class="mb-4 border-t border-gray-300 pt-4">
 					<h3 class="mb-2 flex items-center text-base font-semibold text-gray-700">
-						<Code size={18} class="mr-2 text-gray-500" />
 						Imported from Code
 					</h3>
 					<div class="max-h-40 overflow-y-auto rounded border border-gray-200 bg-gray-50/50">
