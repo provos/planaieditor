@@ -726,8 +726,41 @@ def get_llm_assignments(
     """
     Extracts variable assignments for llm_from_config calls within a function.
     Returns a dictionary mapping variable names to parsed keyword arguments.
+    Also identifies inline llm_from_config calls in worker constructors.
     """
     assignments = {}
+
+    def extract_llm_from_config_args(call_node: ast.Call) -> Optional[Dict[str, Any]]:
+        """Extract kwargs from an llm_from_config call node, if it is one."""
+        func_name = None
+        if (
+            isinstance(call_node.func, ast.Name)
+            and call_node.func.id == "llm_from_config"
+        ):
+            func_name = "llm_from_config"
+        elif (
+            isinstance(call_node.func, ast.Attribute)
+            and call_node.func.attr == "llm_from_config"
+        ):
+            # Handle cases like planai.llm_from_config(...)
+            func_name = "llm_from_config"
+
+        if func_name == "llm_from_config":
+            # Parse keyword arguments
+            llm_args = {}
+            for kw in call_node.keywords:
+                if kw.arg:
+                    # Try to evaluate simple constants, otherwise store as string repr
+                    value = _safe_eval_constant(kw.value)
+                    if value is None:
+                        try:
+                            # Fallback to unparsing complex values or variables
+                            value = ast.unparse(kw.value)
+                        except Exception:
+                            value = "<Unparse Error>"
+                    llm_args[kw.arg] = value
+            return llm_args
+        return None
 
     def find_assignments_in_body(body: List[ast.stmt]):
         for stmt in body:
@@ -744,41 +777,31 @@ def get_llm_assignments(
                 target_stmt
                 and len(target_stmt.targets) == 1
                 and isinstance(target_stmt.targets[0], ast.Name)
-                and isinstance(target_stmt.value, ast.Call)
             ):
                 var_name = target_stmt.targets[0].id
-                call_node = target_stmt.value
-                func_name = None
 
-                # Check for llm_from_config call
-                if (
-                    isinstance(call_node.func, ast.Name)
-                    and call_node.func.id == "llm_from_config"
-                ):
-                    func_name = "llm_from_config"
-                elif (
-                    isinstance(call_node.func, ast.Attribute)
-                    and call_node.func.attr == "llm_from_config"
-                ):
-                    # Handle cases like planai.llm_from_config(...) - unlikely but possible
-                    func_name = "llm_from_config"
+                # Case 1: Direct llm_from_config assignment to a variable
+                if isinstance(target_stmt.value, ast.Call):
+                    call_node = target_stmt.value
+                    llm_args = extract_llm_from_config_args(call_node)
 
-                if func_name == "llm_from_config":
-                    # Parse keyword arguments
-                    llm_args = {}
+                    if llm_args:
+                        assignments[var_name] = llm_args
+                        print(
+                            f"Found llm_from_config assignment: {var_name} = {llm_args}"
+                        )
+
+                    # Case 2: Worker constructor with inline llm_from_config
                     for kw in call_node.keywords:
-                        if kw.arg:
-                            # Try to evaluate simple constants, otherwise store as string repr
-                            value = _safe_eval_constant(kw.value)
-                            if value is None:
-                                try:
-                                    # Fallback to unparsing complex values or variables
-                                    value = ast.unparse(kw.value)
-                                except Exception:
-                                    value = "<Unparse Error>"
-                            llm_args[kw.arg] = value
-                    assignments[var_name] = llm_args
-                    print(f"Found llm_from_config assignment: {var_name} = {llm_args}")
+                        if kw.arg == "llm" and isinstance(kw.value, ast.Call):
+                            llm_args = extract_llm_from_config_args(kw.value)
+                            if llm_args:
+                                # Use special key format to indicate this is an inline LLM for this worker
+                                inline_key = f"inline_{var_name}"
+                                assignments[inline_key] = llm_args
+                                print(
+                                    f"Found inline llm_from_config in worker constructor: {var_name} with {llm_args}"
+                                )
 
     find_assignments_in_body(func_node.body)
     return assignments
@@ -1207,6 +1230,10 @@ def get_definitions_from_file(
         )
         print(f"Worker instances found: {worker_instances}")
 
+        # Get LLM variable assignments first
+        llm_assignments = get_llm_assignments(graph_func_node)
+        print(f"Found LLM assignments: {llm_assignments}")
+
         # Process directly defined workers first
         for var_name, instance_info in worker_instances.items():
             if instance_info["type"] == "direct":
@@ -1220,9 +1247,30 @@ def get_definitions_from_file(
                 if worker_entry:
                     worker_entry["variableName"] = var_name
 
-        # Process factory-created workers - add these to the combined worker definitions
-        for var_name, instance_info in worker_instances.items():
-            if instance_info["type"] == "factory":
+                # Check for standard LLM variable reference
+                llm_var = instance_info.get("llm_variable_name")
+                if not llm_var:
+                    # check if there is an inline llm assignment for this worker
+                    llm_var = f"inline_{var_name}"
+
+                # Handle standard llm variable reference
+                if (
+                    llm_var
+                    and llm_var in llm_assignments
+                    and class_name
+                    and class_name in worker_details_map
+                ):
+                    print(
+                        f"Associating LLM config from '{llm_var}' with worker '{class_name}' (var: {var_name})"
+                    )
+                    worker_details_map[class_name]["llmConfigFromCode"] = (
+                        llm_assignments[llm_var]
+                    )
+                    if llm_var != f"inline_{var_name}":
+                        worker_details_map[class_name]["llmConfigVar"] = llm_var
+
+
+            elif instance_info["type"] == "factory":
                 factory_name = instance_info["factory_name"]
                 factory_config = SUBGRAPH_FACTORIES.get(factory_name)
                 if factory_config:
@@ -1280,30 +1328,6 @@ def get_definitions_from_file(
                 else:
                     print(
                         f"Warning: Factory function '{factory_name}' assigned to '{var_name}' not found in SUBGRAPH_FACTORIES configuration."
-                    )
-
-            # --- Associate LLM Configs with Workers --- #
-            # Get LLM variable assignments first
-            llm_assignments = get_llm_assignments(graph_func_node)
-            print(f"Found LLM assignments: {llm_assignments}")
-
-        # Now iterate through worker instances again to attach LLM config
-        for var_name, instance_info in worker_instances.items():
-            llm_var = instance_info.get("llm_variable_name")
-            if llm_var and llm_var in llm_assignments:
-                worker_class_name = var_to_class_map.get(
-                    var_name
-                )  # Use the generated class name
-                if worker_class_name and worker_class_name in worker_details_map:
-                    print(
-                        f"Associating LLM config from '{llm_var}' with worker '{worker_class_name}' (var: {var_name})"
-                    )
-                    worker_details_map[worker_class_name]["llmConfigFromCode"] = (
-                        llm_assignments[llm_var]
-                    )
-                else:
-                    print(
-                        f"Warning: Could not find worker details for className '{worker_class_name}' (from var '{var_name}') to attach LLM config."
                     )
 
         # --- Parse Edges using the variable -> className Map ---

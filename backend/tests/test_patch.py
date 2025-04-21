@@ -842,6 +842,8 @@ class BasicLLMWorker3(BasicLLMWorker):
 class BasicLLMWorker4(BasicLLMWorker):
     pass
 
+class BasicLLMWorker5(BasicLLMWorker):
+    pass
 
 def build_graph():
     # Create graph
@@ -879,7 +881,10 @@ def build_graph():
     # Instantiate worker without LLM
     worker4 = BasicLLMWorker4()
 
-    graph.add_workers(worker1, worker2, worker3, worker4)
+    # Instantiate inline
+    worker5 = BasicLLMWorker5(llm=llm_from_config(provider="openai", model_name="gpt-4"))
+
+    graph.add_workers(worker1, worker2, worker3, worker4, worker5)
     return graph
 """
     file_path = temp_python_file(code)
@@ -887,27 +892,40 @@ def build_graph():
 
     assert "workers" in definitions
     workers = definitions["workers"]
-    assert len(workers) == 4  # We expect 4 worker definitions
+    assert len(workers) == 5  # We expect 5 worker definitions
 
     # Find workers by variable name
     worker1 = next((w for w in workers if w.get("variableName") == "worker1"), None)
     worker2 = next((w for w in workers if w.get("variableName") == "worker2"), None)
     worker3 = next((w for w in workers if w.get("variableName") == "worker3"), None)
     worker4 = next((w for w in workers if w.get("variableName") == "worker4"), None)
+    worker5 = next((w for w in workers if w.get("variableName") == "worker5"), None)
 
     # Verify workers were found
     assert worker1 is not None, "worker1 not found"
     assert worker2 is not None, "worker2 not found"
     assert worker3 is not None, "worker3 not found"
     assert worker4 is not None, "worker4 not found"
-
+    assert worker5 is not None, "worker5 not found"
     # Check for llmConfigFromCode
     assert "llmConfigFromCode" in worker1, "llmConfigFromCode missing from worker1"
     assert "llmConfigFromCode" in worker2, "llmConfigFromCode missing from worker2"
     assert "llmConfigFromCode" in worker3, "llmConfigFromCode missing from worker3"
     assert (
         "llmConfigFromCode" not in worker4
-    ), "worker4 should not have llmConfigFromCode"
+    ), "worker4 shouldn't have llmConfigFromCode"
+    assert "llmConfigFromCode" in worker5, "llmConfigFromCode missing from worker5"
+
+    # Check for llmConfigVar
+    assert "llmConfigVar" in worker1, "llmConfigVar missing from worker1"
+    assert "llmConfigVar" in worker2, "llmConfigVar missing from worker2"
+    assert "llmConfigVar" in worker3, "llmConfigVar missing from worker3"
+    assert (
+        "llmConfigVar" not in worker4
+    ), "llmConfigVar should not be present for worker4"
+    assert (
+        "llmConfigVar" not in worker5
+    ), "llmConfigVar should not be present for worker5"
 
     # Check parsed LLM configs for worker1 (string literals)
     llm_config1 = worker1["llmConfigFromCode"]
@@ -915,14 +933,22 @@ def build_graph():
     assert llm_config1["model_name"] == "gpt-4"
     assert llm_config1["max_tokens"] == 1024
     assert llm_config1["host"] == "https://api.openai.com"
+    assert worker1["llmConfigVar"] == "llm1"
 
     # Check parsed LLM configs for worker2 (variables)
     llm_config2 = worker2["llmConfigFromCode"]
     assert llm_config2["provider"] == "provider_var"
     assert llm_config2["model_name"] == "model_var"
     assert llm_config2["max_tokens"] == 2048
+    assert worker2["llmConfigVar"] == "llm2"
 
     # Check parsed LLM configs for worker3 (inside try block)
     llm_config3 = worker3["llmConfigFromCode"]
     assert llm_config3["provider"] == "ollama"
     assert llm_config3["model_name"] == "llama3"
+    assert worker3["llmConfigVar"] == "llm3"
+
+    # Check parsed LLM configs for worker5 (inline instantiation)
+    llm_config5 = worker5["llmConfigFromCode"]
+    assert llm_config5["provider"] == "openai"
+    assert llm_config5["model_name"] == "gpt-4"

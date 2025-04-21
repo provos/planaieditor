@@ -60,6 +60,7 @@ export interface ImportedWorker {
     factoryFunction?: string; // Name of the factory function if applicable
     factoryInvocation?: string; // Combined invocation string
     llmConfigFromCode?: Record<string, any>; // LLM configuration parsed from code
+    llmConfigVar?: string; // Variable name assigned to the LLM config if applicable
 }
 
 // Result type for the Python import operation
