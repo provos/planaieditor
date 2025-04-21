@@ -43,37 +43,25 @@ from pydantic import ConfigDict, Field, PrivateAttr  # noqa: F401
 # --- Graph Setup ---
 
 
-def create_graph(
-    *, llm_fast: LLMInterface, llm_code: LLMInterface, llm_writing: LLMInterface
-) -> Tuple[Graph, Dict[str, TaskWorker]]:
+def create_graph() -> Graph:
     graph = Graph(name="GeneratedPlan")
 
     # --- Worker Instantiation with Error Handling ---
-
-    workers_dict = {}
 
     # {worker_instantiation}
 
     # {dependency_setup}
 
-    return graph, workers_dict
+    return graph
 
 
-def setup_graph(
-    notify: Optional[Callable[Dict[str, Any], None]] = None,
-) -> Tuple[Graph, Dict[str, TaskWorker]]:
+def setup_graph() -> Tuple[Graph, Dict[str, TaskWorker]]:
     # TODO: Replace with your actual LLM configuration using llm_from_config
     print("Warning: Using dummy LLM configurations. Replace with llm_from_config.")
-    # Example: llm_config = {"provider": "openai", "model": "gpt-3.5-turbo"}
-    # llm_fast = llm_from_config(llm_config)
-    llm_fast = llm_code = llm_writing = LLMInterface()  # Placeholder
 
     graph = None  # Initialize
-    workers = None
     try:
-        graph, workers = create_graph(
-            llm_fast=llm_fast, llm_code=llm_code, llm_writing=llm_writing
-        )
+        graph = create_graph()
     except (
         Exception
     ) as e:  # Catch errors during create_graph itself (e.g., invalid class name, edge setup)
@@ -112,16 +100,15 @@ def setup_graph(
         print("##ERROR_JSON_END##", flush=True)
         sys.exit(1)
 
-    return graph, workers
+    return graph
 
 
 if __name__ == "__main__":
     print("Setting up and running the generated PlanAI graph...")
     graph = None
-    workers = None
     try:
         # Pass notify=None for now, can be configured later
-        graph, workers = setup_graph(notify=None)
+        workers = setup_graph()
         # If setup completes without error (no sys.exit), print success JSON
         success_info = {"success": True, "message": "Graph setup successful."}
         print("##SUCCESS_JSON_START##", flush=True)

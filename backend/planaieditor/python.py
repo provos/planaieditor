@@ -239,7 +239,6 @@ def create_factory_worker_instance(
     code.append(f"\n# Create SubGraphWorker using {factory_function}")
     # Use the directly retrieved invocation string
     code.append(f"{instance_name} = {factory_function}({factory_invocation})")
-    code.append(f"workers_dict['{instance_name}'] = {instance_name}")
 
     return wrap_instantiation_in_try_except(
         "\n".join(code),
@@ -274,8 +273,6 @@ def create_worker_instance(node: Dict[str, Any]) -> str:
         code.append(f"{instance_name} = {worker_class_name}({llm_arg})")
     else:
         code.append(f"{instance_name} = {worker_class_name}()")
-
-    code.append(f"workers_dict['{instance_name}'] = {instance_name}")
 
     return wrap_instantiation_in_try_except(
         "\n".join(code), worker_class_name, f"Failed to instantiate {worker_class_name}"
