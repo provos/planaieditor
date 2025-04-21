@@ -17,7 +17,7 @@ The main entry point for the python backend is @app.py. The main entry point for
 
 # PlanAI Best Practices for LLM-Assisted Coding
 
-This document outlines best practices for using PlanAI, a Python framework for building complex, AI-enhanced workflows using a graph-based, data-flow architecture. It leverages insights from the PlanAI codebase, including examples like DeepSearch.
+This document outlines best practices for using PlanAI, a Python framework for building complex, AI-enhanced workflows using a graph-based, data-flow architecture. PlanAI assumes TaskWorker classes to be unique. They don't get instantiated multiple times.
 
 ## Core Concepts & Best Practices
 
