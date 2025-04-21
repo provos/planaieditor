@@ -911,3 +911,173 @@ def get_llm():
     assert (
         len(regen_edges) == 3
     ), f"Expected 3 edges in regenerated code, got {len(regen_edges)}"
+
+
+def test_llm_config_roundtrip(temp_file):
+    """Test roundtrip conversion of LLM configurations between Python and JSON."""
+    original_code = """
+from planai import Task, LLMTaskWorker, Graph, llm_from_config
+from typing import Type
+
+class QueryTask(Task):
+    query: str
+
+class ResponseTask(Task):
+    answer: str
+
+class OpenAIProcessor(LLMTaskWorker):
+    llm_input_type: Type[Task] = QueryTask
+    output_types = [ResponseTask]
+    prompt = "Answer the query: {task.query}"
+
+    def post_process(self, response, input_task):
+        return ResponseTask(answer=response.content)
+
+class AnthropicProcessor(LLMTaskWorker):
+    llm_input_type = QueryTask
+    output_types = [ResponseTask]
+    prompt = "Process this question: {task.query}"
+    system_prompt = "You are a helpful assistant."
+
+    def post_process(self, response, input_task):
+        return ResponseTask(answer=response.content)
+
+def build_graph():
+    graph = Graph(name="LLM Config Test")
+
+    # Create LLMs
+    openai_llm = llm_from_config(
+        provider="openai",
+        model_name="gpt-4",
+        max_tokens=1024
+    )
+
+    claude_llm = llm_from_config(
+        provider="anthropic",
+        model_name="claude-3-opus-20240229",
+        max_tokens=2048
+    )
+
+    # Create workers with LLMs
+    openai_worker = OpenAIProcessor(llm=openai_llm)
+    anthropic_worker = AnthropicProcessor(llm=claude_llm)
+
+    graph.add_workers(openai_worker, anthropic_worker)
+    return graph
+"""
+    original_file = temp_file(original_code)
+
+    # Step 1: Parse original file
+    definitions = get_definitions_from_file(original_file)
+    task_defs = definitions["tasks"]
+    worker_defs = definitions["workers"]
+
+    print("\nParsed Worker definitions:")
+    for worker in worker_defs:
+        print(f"  {worker['className']} ({worker['workerType']})")
+        if "llmConfigFromCode" in worker:
+            print(f"    LLM Config: {worker['llmConfigFromCode']}")
+
+    # Verify that we parsed the LLM configurations
+    assert len(worker_defs) == 2, "Expected 2 worker classes"
+    openai_worker = next(
+        (w for w in worker_defs if w["className"] == "OpenAIProcessor"), None
+    )
+    anthropic_worker = next(
+        (w for w in worker_defs if w["className"] == "AnthropicProcessor"), None
+    )
+
+    assert openai_worker is not None, "OpenAIProcessor not found"
+    assert anthropic_worker is not None, "AnthropicProcessor not found"
+
+    assert (
+        "llmConfigFromCode" in openai_worker
+    ), "LLM config missing from OpenAIProcessor"
+    assert (
+        "llmConfigFromCode" in anthropic_worker
+    ), "LLM config missing from AnthropicProcessor"
+
+    # Check config values
+    assert openai_worker["llmConfigFromCode"]["provider"] == "openai"
+    assert openai_worker["llmConfigFromCode"]["model_name"] == "gpt-4"
+    assert openai_worker["llmConfigFromCode"]["max_tokens"] == 1024
+
+    assert anthropic_worker["llmConfigFromCode"]["provider"] == "anthropic"
+    assert (
+        anthropic_worker["llmConfigFromCode"]["model_name"] == "claude-3-opus-20240229"
+    )
+    assert anthropic_worker["llmConfigFromCode"]["max_tokens"] == 2048
+
+    # Step 2: Create graph data for regeneration
+    task_nodes = []
+    for i, task_def in enumerate(task_defs):
+        task_nodes.append({"id": f"task_{i}", "type": "task", "data": task_def})
+
+    worker_nodes = []
+    for i, worker_def in enumerate(worker_defs):
+        # For LLM worker nodes, convert llmConfigFromCode to llmConfig
+        # to simulate frontend behavior (pythonExport.ts)
+        if "llmConfigFromCode" in worker_def:
+            # Create a synthetic llmConfig similar to what the frontend would produce
+            if "llmConfig" not in worker_def:
+                worker_def["llmConfig"] = {
+                    "provider": worker_def["llmConfigFromCode"]["provider"],
+                    "modelId": worker_def["llmConfigFromCode"]["model_name"],
+                    "max_tokens": worker_def["llmConfigFromCode"]["max_tokens"],
+                }
+                # Add any other params if they exist
+                if "host" in worker_def["llmConfigFromCode"]:
+                    worker_def["llmConfig"]["baseUrl"] = worker_def[
+                        "llmConfigFromCode"
+                    ]["host"]
+
+        worker_nodes.append(
+            {
+                "id": f"worker_{i}",
+                "type": worker_def["workerType"],
+                "data": worker_def,
+            }
+        )
+
+    graph_data = {"nodes": task_nodes + worker_nodes, "edges": []}
+
+    # Step 3: Regenerate Python code
+    python_code, _, error = generate_python_module(graph_data)
+    assert error is None, f"Error generating Python code: {error}"
+    assert python_code is not None, "No Python code generated"
+
+    # Print the generated code for debugging
+    print("\nRegenerated Python code:")
+    print(python_code)
+
+    # Step 4: Write and parse regenerated code
+    regen_file = temp_file(python_code)
+    regen_definitions = get_definitions_from_file(regen_file)
+    regen_worker_defs = regen_definitions["workers"]
+
+    print("\nRegenerated Worker definitions:")
+    for worker in regen_worker_defs:
+        print(f"  {worker['className']} ({worker['workerType']})")
+
+    # Step 5: Verify that the regenerated code contains the LLM instantiations
+    assert (
+        "llm_from_config(" in python_code
+    ), "llm_from_config call missing in generated code"
+    assert (
+        'provider="openai"' in python_code
+    ), "OpenAI provider missing in generated code"
+    assert (
+        'provider="anthropic"' in python_code
+    ), "Anthropic provider missing in generated code"
+    assert (
+        'model_name="gpt-4"' in python_code
+    ), "GPT-4 model name missing in generated code"
+    assert (
+        'model_name="claude-3-opus-20240229"' in python_code
+    ), "Claude model name missing in generated code"
+    assert (
+        "max_tokens=1024" in python_code
+    ), "OpenAI max_tokens missing in generated code"
+    assert (
+        "max_tokens=2048" in python_code
+    ), "Anthropic max_tokens missing in generated code"

@@ -809,3 +809,120 @@ def build_graph_with_factory():
     assert len(entry_edges) == 1
     assert entry_edges[0]["sourceTask"] == "PlanRequest"
     assert entry_edges[0]["targetWorker"] == "InputPreprocessor"
+
+
+def test_extract_llm_configuration(temp_python_file):
+    """Test parsing of llm_from_config and associating it with workers."""
+    code = """
+from planai import Task, LLMTaskWorker, Graph, llm_from_config
+
+class UserQuery(Task):
+    query: str
+
+class AnalyzedResponse(Task):
+    response: str
+
+class BasicLLMWorker(LLMTaskWorker):
+    llm_input_type = UserQuery
+    prompt = "Please analyze: {task.query}"
+
+    def consume_work(self, task: UserQuery):
+        # Process the query
+        self.publish_work(
+            AnalyzedResponse(response="Analysis of: " + task.query),
+            input_task=task
+        )
+
+class BasicLLMWorker2(BasicLLMWorker):
+    pass
+
+class BasicLLMWorker3(BasicLLMWorker):
+    pass
+
+class BasicLLMWorker4(BasicLLMWorker):
+    pass
+
+
+def build_graph():
+    # Create graph
+    graph = Graph(name="LLM Config Test")
+
+    # Create LLM with string literals
+    llm1 = llm_from_config(
+        provider="openai",
+        model_name="gpt-4",
+        max_tokens=1024,
+        host="https://api.openai.com"
+    )
+
+    # Create LLM with variables
+    provider_var = "anthropic"
+    model_var = "claude-3-opus-20240229"
+    llm2 = llm_from_config(
+        provider=provider_var,
+        model_name=model_var,
+        max_tokens=2048
+    )
+
+    # Try block example
+    try:
+        # This should still be parsed
+        llm3 = llm_from_config(provider="ollama", model_name="llama3")
+    except Exception as e:
+        print(f"Error: {e}")
+
+    # Create workers
+    worker1 = BasicLLMWorker(llm=llm1)
+    worker2 = BasicLLMWorker2(llm=llm2)
+    worker3 = BasicLLMWorker3(llm=llm3)
+
+    # Instantiate worker without LLM
+    worker4 = BasicLLMWorker4()
+
+    graph.add_workers(worker1, worker2, worker3, worker4)
+    return graph
+"""
+    file_path = temp_python_file(code)
+    definitions = get_definitions_from_file(str(file_path))
+
+    assert "workers" in definitions
+    workers = definitions["workers"]
+    assert len(workers) == 4  # We expect 4 worker definitions
+
+    # Find workers by variable name
+    worker1 = next((w for w in workers if w.get("variableName") == "worker1"), None)
+    worker2 = next((w for w in workers if w.get("variableName") == "worker2"), None)
+    worker3 = next((w for w in workers if w.get("variableName") == "worker3"), None)
+    worker4 = next((w for w in workers if w.get("variableName") == "worker4"), None)
+
+    # Verify workers were found
+    assert worker1 is not None, "worker1 not found"
+    assert worker2 is not None, "worker2 not found"
+    assert worker3 is not None, "worker3 not found"
+    assert worker4 is not None, "worker4 not found"
+
+    # Check for llmConfigFromCode
+    assert "llmConfigFromCode" in worker1, "llmConfigFromCode missing from worker1"
+    assert "llmConfigFromCode" in worker2, "llmConfigFromCode missing from worker2"
+    assert "llmConfigFromCode" in worker3, "llmConfigFromCode missing from worker3"
+    assert (
+        "llmConfigFromCode" not in worker4
+    ), "worker4 should not have llmConfigFromCode"
+
+    # Check parsed LLM configs for worker1 (string literals)
+    llm_config1 = worker1["llmConfigFromCode"]
+    assert llm_config1["provider"] == "openai"
+    assert llm_config1["model_name"] == "gpt-4"
+    assert llm_config1["max_tokens"] == 1024
+    assert llm_config1["host"] == "https://api.openai.com"
+
+    # Check parsed LLM configs for worker2 (variables)
+    llm_config2 = worker2["llmConfigFromCode"]
+    assert llm_config2["provider"] == "provider_var"
+    assert llm_config2["model_name"] == "model_var"
+    assert llm_config2["max_tokens"] == 2048
+
+    # Check parsed LLM configs for worker3 (inside try block)
+    llm_config3 = worker3["llmConfigFromCode"]
+    assert llm_config3["provider"] == "ollama"
+    assert llm_config3["model_name"] == "llama3"
