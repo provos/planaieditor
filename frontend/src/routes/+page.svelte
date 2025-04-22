@@ -92,6 +92,9 @@
 	// Ref for the hidden file input
 	let fileInputRef: HTMLInputElement;
 
+	// How often we tried to lay out
+	let layoutAttempts: number = 0;
+
 	onMount(() => {
 		if (dev) {
 			// Define the convertGraphToJSON function so it can be used in the backend tests
@@ -194,6 +197,8 @@
 
 	// When nodes change, update the class name map
 	$effect(() => {
+		layoutAttempts = 0;
+
 		let nameMap = new Map<string, string>();
 		let taskNameSet = new Set<string>(); // Set for task class names
 
@@ -628,11 +633,13 @@ Analyze the following information and provide a response.`,
 				node.measured.height > 0
 		);
 
-		if (!allNodesHaveDimensions) {
+		if (!allNodesHaveDimensions && layoutAttempts < 10) {
 			console.warn('Node dimensions not available yet, retrying layout shortly...');
-			setTimeout(runElkLayout, 200); // Increased retry delay
+			setTimeout(runElkLayout, 200 + layoutAttempts * 100); // Increased retry delay
+			layoutAttempts++;
 			return;
 		}
+		layoutAttempts = 0;
 
 		try {
 			const { nodes: layoutedNodes, edges: layoutedEdges } = await layoutGraph(
