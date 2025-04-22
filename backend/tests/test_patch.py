@@ -166,6 +166,40 @@ class MyLLMWorkerWithDedent(LLMTaskWorker):
         This is the first line.
           This is the second line, indented.
         This is the third line.
+    \""")
+"""
+    file_path = temp_python_file(code)
+    definitions = get_definitions_from_file(str(file_path))
+
+    assert len(definitions["workers"]) == 1
+    worker = definitions["workers"][0]
+    expected_prompt = (
+        "This is the first line.\n"
+        "  This is the second line, indented.\n"
+        "This is the third line."
+    )
+    actual_prompt = dedent(worker["classVars"].get("prompt")).strip()
+    print(f"Expected Prompt:\n{expected_prompt}")  # Debug print
+    print(f"Actual Prompt:\n{actual_prompt}")  # Debug print
+    assert actual_prompt == expected_prompt
+    assert "dedent(" not in actual_prompt  # Ensure helper calls are removed
+
+
+def test_extract_dedented_prompt_with_strip(temp_python_file):
+    """Test extraction of prompt defined with dedent().strip()."""
+    code = """
+from planai import Task, LLMTaskWorker
+from textwrap import dedent
+
+class PromptTask(Task):
+    input: str
+
+class MyLLMWorkerWithDedent(LLMTaskWorker):
+    llm_input_type = PromptTask
+    prompt: str = dedent(\"""
+        This is the first line.
+          This is the second line, indented.
+        This is the third line.
     \""").strip()
 """
     file_path = temp_python_file(code)

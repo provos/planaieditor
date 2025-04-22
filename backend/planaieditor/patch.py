@@ -472,20 +472,28 @@ def extract_worker_details(
         if not value_node:
             return None
 
-        # Handle dedent("...").strip() for prompts/system_prompts
-        if (
-            var_name in ("prompt", "system_prompt")
-            and isinstance(value_node, ast.Call)
-            and isinstance(value_node.func, ast.Attribute)
-            and value_node.func.attr == "strip"
-            and isinstance(value_node.func.value, ast.Call)
-            and isinstance(value_node.func.value.func, ast.Name)
-            and value_node.func.value.func.id == "dedent"
-            and value_node.func.value.args
-            and isinstance(value_node.func.value.args[0], ast.Constant)
-        ):
-            # Extract the raw string from inside dedent()
-            return dedent(value_node.func.value.args[0].value).strip()
+        if var_name in ("prompt", "system_prompt"):
+            # Handle dedent("...")
+            if (
+                isinstance(value_node, ast.Call)
+                and isinstance(value_node.func, ast.Name)
+                and value_node.func.id == "dedent"
+            ):
+                return dedent(value_node.args[0].value).strip()
+
+            # Handle dedent("...").strip()
+            if (
+                isinstance(value_node, ast.Call)
+                and isinstance(value_node.func, ast.Attribute)
+                and value_node.func.attr == "strip"
+                and isinstance(value_node.func.value, ast.Call)
+                and isinstance(value_node.func.value.func, ast.Name)
+                and value_node.func.value.func.id == "dedent"
+                and value_node.func.value.args
+                and isinstance(value_node.func.value.args[0], ast.Constant)
+            ):
+                # Extract the raw string from inside dedent()
+                return dedent(value_node.func.value.args[0].value).strip()
 
         # Standard Constant (str, int, bool, etc.)
         if isinstance(value_node, ast.Constant):
