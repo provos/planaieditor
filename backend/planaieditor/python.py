@@ -164,11 +164,14 @@ def create_worker_class(node: Dict[str, Any]) -> Optional[str]:
             # Add more method signatures as needed
             else:
                 # Fallback: try to extract signature from source (simple cases)
-                match = re.match(r"^\s*def\s+(\w+)\s*\((.*?)\):", method_source)
+                match = re.match(
+                    r"^\s*def\s+(\w+)\s*\((.*?)\)(?:\s*->\s*(\w+))?\s*:",
+                    method_source,
+                )
                 if match:
-                    signature = f"def {match.group(1)}({match.group(2)}):"
+                    signature = f"def {match.group(1)}({match.group(2)}){' -> ' + match.group(3) if match.group(3) else ''}:"
                 else:
-                    signature = f"def {method_name}(self, ...):"  # Generic fallback
+                    raise ValueError(f"Failed to extract signature for method: {method_name}")
 
             # Dedent and prepare the body code lines
             dedented_code = dedent(method_source).strip()
