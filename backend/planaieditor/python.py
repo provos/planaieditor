@@ -1,4 +1,5 @@
 # Updated function to generate PlanAI Python code from graph data
+import ast
 import json
 import os
 import re
@@ -163,34 +164,24 @@ def create_worker_class(node: Dict[str, Any]) -> Optional[str]:
                 )
             # Add more method signatures as needed
             else:
-                # Fallback: try to extract signature from source (simple cases)
-                match = re.match(
-                    r"^\s*def\s+(\w+)\s*\((.*?)\)(?:\s*->\s*(\w+))?\s*:",
-                    method_source,
-                )
-                if match:
-                    signature = f"def {match.group(1)}({match.group(2)}){' -> ' + match.group(3) if match.group(3) else ''}:"
-                else:
-                    raise ValueError(f"Failed to extract signature for method: {method_name}")
+                # For unknown methods, we don't have an expected signature
+                signature = None
 
-            # Dedent and prepare the body code lines
-            dedented_code = dedent(method_source).strip()
-            body_lines = dedented_code.splitlines()
+            # Use the new helper function to split signature and body
+            found_signature, body_lines = split_method_signature_body(method_source)
 
-            # Remove the signature line if it exists in the source already
-            if body_lines and body_lines[0].strip().startswith(
-                signature.split("(")[0].strip()
-            ):
-                body_lines = body_lines[1:]
-
-            # Ensure body is not empty
-            if not body_lines or all(not line.strip() for line in body_lines):
-                body_lines = ["pass"]
-
-            class_body.append(f"\n    {signature}")
-            # Indent each line of the body correctly
-            for line in body_lines:
-                class_body.append(f"        {line.rstrip()}")  # Indent with 8 spaces
+            if found_signature is not None:
+                # AST parsing succeeded or fallback used expected_signature
+                class_body.append(f"\n    {found_signature}")
+                # Indent each line of the body correctly
+                for line in body_lines:
+                    class_body.append(f"        {line.rstrip()}")
+            elif signature is not None:
+                # Not signature included, so we use the expected signature
+                class_body.append(f"\n    {signature}")
+                class_body.append(indent(dedent(method_source).strip(), " " * 8))
+            else:
+                raise ValueError(f"Failed to parse method: {method_name}")
 
     # --- Process Other Members Source ---
     other_source = data.get("otherMembersSource", None)
@@ -680,3 +671,73 @@ def worker_to_instance_name(node: Dict[str, Any]) -> str:
         return data.get("variableName")
     worker_class_name = data.get("className")
     return worker_class_name.lower() + "_worker"
+
+
+def split_method_signature_body(method_source: str) -> Tuple[Optional[str], List[str]]:
+    """
+    Splits Python method source code into its signature and body lines using ast.
+
+    Args:
+        method_source: The source code of the method.
+
+    Returns:
+        A tuple containing:
+        - The signature string or None if parsing failed.
+        - A list of strings representing the body lines (dedented).
+          If parsing failed, returns original lines.
+    """
+    try:
+        # Dedent source before parsing to handle indentation correctly
+        dedented_source = dedent(method_source).strip()
+
+        # Using a simpler but reliable approach for splitting signature and body
+        # Look for the first occurrence of "):", ")->" or ") ->" which typically marks the end of a signature
+        lines = dedented_source.splitlines()
+        signature_lines = []
+        body_lines = []
+
+        # Track if we're in the signature part
+        in_signature = True
+        paren_level = 0
+
+        for i, line in enumerate(lines):
+            if in_signature:
+                # Count opening and closing parentheses
+                paren_level += line.count("(") - line.count(")")
+
+                # Add to signature if we're still in the signature part
+                signature_lines.append(line)
+
+                # Check if this line contains the end of the signature
+                if paren_level <= 0 and ":" in line:
+                    # This line contains the end of the signature
+                    in_signature = False
+
+                    # The rest of the lines are body
+                    body_lines = lines[i + 1 :] if i + 1 < len(lines) else []
+                    break
+            else:
+                # Already in body, just append
+                body_lines.append(line)
+
+        # If we never found the end of the signature, parsing failed
+        if in_signature:
+            raise ValueError(
+                "Could not find end of signature (closing parenthesis and colon)"
+            )
+
+        # Join the signature lines
+        signature = "\n".join(signature_lines)
+
+        # Handle empty body
+        if not body_lines:
+            body_lines = ["pass"]
+        else:
+            body_lines = dedent("\n".join(body_lines)).strip().splitlines()
+
+        return signature, body_lines
+
+    except (SyntaxError, ValueError, IndexError) as e:
+        print(f"Info: Splitting failed: {e}")
+        # Parsing failed, return None for signature, and original lines as body
+        return None, method_source.splitlines()
