@@ -1,14 +1,11 @@
 import json
 import os
-import re
-import subprocess
+import pprint
 import sys
-import time
 from pathlib import Path
 
 import pytest
 from playwright.sync_api import APIResponse, Page, Route, expect
-import pprint
 
 # Ensure planaieditor can be imported (adjust if your structure differs)
 # This might be handled by running pytest from the 'backend' dir
@@ -21,11 +18,15 @@ FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
 BACKEND_TEST_PORT = os.environ.get("BACKEND_TEST_PORT", "5001")
 BACKEND_TEST_URL = f"http://localhost:{BACKEND_TEST_PORT}"
 # Path relative to the backend directory
-TEST_FIXTURE_PATH = Path(__file__).parent / "fixtures/releasenotes_fixture.py"
+TEST_FIXTURE_PATHS = [
+    Path(__file__).parent / "fixtures/releasenotes_fixture.py",
+    Path(__file__).parent / "fixtures/deepsearch_fixture.py",
+]
 # Timeout for waiting for elements or status changes (in milliseconds)
 TIMEOUT = 15000  # Increased timeout slightly
 
 # --- Helper Functions / Verification Logic --- #
+
 
 # Helper function for recursive comparison
 def _recursive_compare(obj1, obj2, path=""):
@@ -34,10 +35,14 @@ def _recursive_compare(obj1, obj2, path=""):
 
     # --- Type Mismatch ---
     if type(obj1) != type(obj2):
-        diffs.append({
-            "path": path, "type": "type_mismatch",
-            "old_type": type(obj1).__name__, "new_type": type(obj2).__name__
-        })
+        diffs.append(
+            {
+                "path": path,
+                "type": "type_mismatch",
+                "old_type": type(obj1).__name__,
+                "new_type": type(obj2).__name__,
+            }
+        )
         # Cannot compare further if types are different
         return diffs
 
@@ -65,65 +70,69 @@ def _recursive_compare(obj1, obj2, path=""):
         len1, len2 = len(obj1), len(obj2)
         # Compare common elements recursively
         for i in range(min(len1, len2)):
-             item_path = f"{path}[{i}]"
-             diffs.extend(_recursive_compare(obj1[i], obj2[i], item_path))
+            item_path = f"{path}[{i}]"
+            diffs.extend(_recursive_compare(obj1[i], obj2[i], item_path))
         # Report elements only in the longer list
         if len1 > len2:
-             for i in range(len2, len1):
-                 item_path = f"{path}[{i}]"
-                 diffs.append({"path": item_path, "type": "removed", "value": obj1[i]})
+            for i in range(len2, len1):
+                item_path = f"{path}[{i}]"
+                diffs.append({"path": item_path, "type": "removed", "value": obj1[i]})
         elif len2 > len1:
-             for i in range(len1, len2):
-                 item_path = f"{path}[{i}]"
-                 diffs.append({"path": item_path, "type": "added", "value": obj2[i]})
+            for i in range(len1, len2):
+                item_path = f"{path}[{i}]"
+                diffs.append({"path": item_path, "type": "added", "value": obj2[i]})
         # Optional: Add a specific diff entry for length mismatch itself if desired
         # if len1 != len2:
         #      diffs.append({"path": path, "type": "list_length_mismatch", "old_len": len1, "new_len": len2})
 
-
     # --- Primitive/Other Comparison ---
     elif obj1 != obj2:
         # Use repr for potentially more informative diffs, especially with strings containing whitespace
-        diffs.append({"path": path, "type": "changed", "old": repr(obj1), "new": repr(obj2)})
+        diffs.append(
+            {"path": path, "type": "changed", "old": repr(obj1), "new": repr(obj2)}
+        )
 
     return diffs
 
+
 def format_diff(diff):
     """Formats a single difference dictionary into a readable string."""
-    path = diff['path'] if diff['path'] else "<root>" # Handle empty path for top level
-    dtype = diff['type']
+    path = diff["path"] if diff["path"] else "<root>"  # Handle empty path for top level
+    dtype = diff["type"]
     if dtype == "type_mismatch":
         return f"{path}: Type mismatch - {diff['old_type']} vs {diff['new_type']}"
     elif dtype == "added":
         # Indent multi-line values for clarity
-        value_str = pprint.pformat(diff['value'], indent=2, width=60)
-        if '\n' in value_str:
-            lines = value_str.split('\n')
+        value_str = pprint.pformat(diff["value"], indent=2, width=60)
+        if "\n" in value_str:
+            lines = value_str.split("\n")
             # Indent all lines after the first one
-            indented_lines = [lines[0]] + ['    ' + line for line in lines[1:]]
-            value_str = '\n    ' + '\n'.join(indented_lines) # Start on newline, indented
+            indented_lines = [lines[0]] + ["    " + line for line in lines[1:]]
+            value_str = "\n    " + "\n".join(
+                indented_lines
+            )  # Start on newline, indented
         return f"{path}: Added = {value_str}"
     elif dtype == "removed":
-        value_str = pprint.pformat(diff['value'], indent=2, width=60)
-        if '\n' in value_str:
-            lines = value_str.split('\n')
-            indented_lines = [lines[0]] + ['    ' + line for line in lines[1:]]
-            value_str = '\n    ' + '\n'.join(indented_lines) # Start on newline, indented
+        value_str = pprint.pformat(diff["value"], indent=2, width=60)
+        if "\n" in value_str:
+            lines = value_str.split("\n")
+            indented_lines = [lines[0]] + ["    " + line for line in lines[1:]]
+            value_str = "\n    " + "\n".join(
+                indented_lines
+            )  # Start on newline, indented
         return f"{path}: Removed = {value_str}"
-    elif dtype == "list_length_mismatch": # If you add this type back in _recursive_compare
+    elif (
+        dtype == "list_length_mismatch"
+    ):  # If you add this type back in _recursive_compare
         return f"{path}: List length mismatch - {diff['old_len']} vs {diff['new_len']}"
     elif dtype == "changed":
-        old_repr = diff['old']
-        new_repr = diff['new']
+        old_repr = diff["old"]
+        new_repr = diff["new"]
         # max_len = 100
         # if len(old_repr) > max_len: old_repr = old_repr[:max_len] + '...'
         # if len(new_repr) > max_len: new_repr = new_repr[:max_len] + '...'
         # Build string line by line to avoid f-string complexity with repr()
-        lines = [
-            f"{path}: Changed",
-            f"    Old: {old_repr}",
-            f"    New: {new_repr}"
-        ]
+        lines = [f"{path}: Changed", f"    Old: {old_repr}", f"    New: {new_repr}"]
         return "\n".join(lines)
     else:
         # Fallback for unknown diff types
@@ -136,9 +145,9 @@ def compare_dicts(dict1: dict, dict2: dict) -> bool:
     Returns True if they are equal, False otherwise.
     """
     if not isinstance(dict1, dict) or not isinstance(dict2, dict):
-         print("Error: Both inputs must be dictionaries for compare_dicts.")
-         # Return False as they are not 'equal' in the context of comparing dicts
-         return False
+        print("Error: Both inputs must be dictionaries for compare_dicts.")
+        # Return False as they are not 'equal' in the context of comparing dicts
+        return False
 
     # Start recursion with an empty path
     differences = _recursive_compare(dict1, dict2, path="")
@@ -171,7 +180,7 @@ def compare_definitions(defs1: dict, defs2: dict) -> bool:
     # Optionally use dicts_are_identical for early exit if desired,
     # but the detailed comparison below is more robust for this specific use case.
 
-    all_match = True # Assume match initially
+    all_match = True  # Assume match initially
 
     # Compare Tasks (name, fields - name, type, isList, required)
     tasks1 = {t["className"]: t for t in defs1.get("tasks", [])}
@@ -398,72 +407,41 @@ def verify_functional_equivalence(original_code: str, exported_code: str) -> boo
 # --- Pytest Fixtures ---
 
 
-@pytest.fixture(scope="session", autouse=True)
-def backend_server():
-    """Starts the backend Flask server for the test session on a specific port."""
-    print(f"Starting backend server on port {BACKEND_TEST_PORT}...")
-    # Command to run Flask development server from the backend directory
-    cmd = [
-        sys.executable,  # Use the same python interpreter pytest is using
-        "-m",
-        "flask",
-        "run",
-        "--port",
-        BACKEND_TEST_PORT,
-    ]
-    env = {
-        **os.environ,
-        "FLASK_APP": "app.py",  # Use filename relative to backend dir
-        "FLASK_DEBUG": "0",  # Ensure debug mode is off for stability if needed
-        "FLASK_ENV": "development",
-    }
-
-    # Start Flask server as a non-blocking subprocess
-    server_process = subprocess.Popen(
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        env=env,
-    )
-    # Wait a bit for the server to start - might need adjustment
-    time.sleep(5)
-    # Check if the server started successfully (poll() returns None if running)
-    if server_process.poll() is not None:
-        stdout, stderr = server_process.communicate()
-        print("Backend stdout:\n", stdout.decode(errors="ignore"))
-        print("Backend stderr:\n", stderr.decode(errors="ignore"))
-        print(
-            f"Backend server failed to start. Exit code: {server_process.returncode} - assuming the regular server is running"
-        )
-
-    print(f"Backend server assumed started on {BACKEND_TEST_URL}.")
-    yield server_process  # Provide the process object to the tests if needed
-
-    print("Stopping backend server...")
-    server_process.terminate()
-    try:
-        server_process.wait(timeout=5)  # Wait for graceful termination
-    except subprocess.TimeoutExpired:
-        print("Backend server did not terminate gracefully, killing.")
-        server_process.kill()
-    print("Backend server stopped.")
-
-
 # --- Test Case ---
 
 
-def test_releasenotes_roundtrip(page: Page, backend_server):
+@pytest.mark.parametrize(
+    "test_fixture_path",
+    TEST_FIXTURE_PATHS,
+    ids=[p.stem for p in TEST_FIXTURE_PATHS],  # Use filename stems for clearer test IDs
+)
+def test_import_export_roundtrip(page: Page, test_fixture_path: Path):
     """
-    Tests the import-export roundtrip for the releasenotes.py example.
+    Tests the import-export roundtrip for various fixture files.
     """
-    assert TEST_FIXTURE_PATH.exists(), f"Test fixture not found at {TEST_FIXTURE_PATH}"
-    original_code = TEST_FIXTURE_PATH.read_text()
+    assert test_fixture_path.exists(), f"Test fixture not found at {test_fixture_path}"
+    original_code = test_fixture_path.read_text()
+
+    # Pre-parse the fixture to get expected node count
+    print(f"Pre-parsing fixture {test_fixture_path.name} for node count...")
+    original_defs = get_definitions_from_file(code_string=original_code)
+    assert (
+        original_defs is not None
+    ), f"Failed to pre-parse fixture: {test_fixture_path}"
+    expected_task_count = len(original_defs.get("tasks", [])) + len(
+        original_defs.get("imported_tasks", [])
+    )
+    expected_worker_count = len(original_defs.get("workers", []))
+    expected_node_count = expected_task_count + expected_worker_count
+    print(
+        f"Expected nodes: {expected_node_count} ({expected_task_count} tasks, {expected_worker_count} workers)"
+    )
 
     # ** Simplified Route Handler **
     def handle_route(route: Route):
         # Only log the interception, let wait_for_response handle capturing
         if "/api/" in route.request.url:
-            print(f"Intercepted request: {route.request.url}")
+            print(f"Intercepted request: {route.request.method} {route.request.url}")
         route.continue_()
 
     page.route("**/*", handle_route)
@@ -471,24 +449,18 @@ def test_releasenotes_roundtrip(page: Page, backend_server):
     # 1. Navigate to the frontend
     print(f"Navigating to frontend: {FRONTEND_URL}")
     page.goto(FRONTEND_URL)
-    # Use a less specific title check if needed, or wait for an element
-    # expect(page).to_have_title(r"PlanAI Editor")
     expect(page.locator('[data-testid="toolshelf-container"]')).to_be_visible(
         timeout=TIMEOUT
     )  # Wait for tool shelf
     print("Frontend loaded.")
 
-    # 2. Clear any existing graph (find button by specific attribute if possible)
-    clear_button = page.locator(
-        'button[title="Clear Graph"]'
-    )  # Assuming title attribute
-    # Check if nodes exist before clearing
-    if page.locator(".svelte-flow__node").first.is_visible(
-        timeout=2000
-    ):  # Short timeout for check
+    # 2. Clear any existing graph
+    clear_button = page.locator('button[title="Clear Graph"]')
+    if page.locator(".svelte-flow__node").first.is_visible(timeout=2000):
         print("Clearing existing graph...")
-        clear_button.click()
-        # Accept confirmation dialog
+        # Use force=True if the button might be obscured sometimes
+        clear_button.click(force=True)
+        # Re-add dialog handler just in case it wasn't persistent
         page.once("dialog", lambda dialog: dialog.accept())
         # Wait for nodes to disappear
         expect(page.locator(".svelte-flow__node")).to_have_count(0, timeout=TIMEOUT)
@@ -497,37 +469,28 @@ def test_releasenotes_roundtrip(page: Page, backend_server):
         print("No existing graph detected, skipping clear.")
 
     # 3. Import the fixture file
-    print(f"Importing fixture: {TEST_FIXTURE_PATH}")
+    print(f"Importing fixture: {test_fixture_path}")
     try:
-        # Start waiting for the response *before* triggering the action
         with page.expect_response(
             lambda response: "/api/import-python" in response.url
             and response.request.method == "POST",
-            timeout=TIMEOUT * 2,  # Generous timeout for API response
+            timeout=TIMEOUT * 2,
         ) as response_info:
-
-            # --- Hybrid Approach: Click button, then interact with input ---
             import_button = page.locator('button[data-testid="import-button"]')
             expect(import_button).to_be_visible(timeout=TIMEOUT)
             expect(import_button).to_be_enabled(timeout=TIMEOUT)
             print("Clicking import button (standard)...")
             import_button.click()
-            print("Import button clicked (may not open chooser headless).")
+            page.wait_for_timeout(200)  # Brief pause
 
-            # Wait briefly for any state changes from the click
-            page.wait_for_timeout(200)
-
-            # Now interact directly with the hidden input
             file_input = page.locator('input[data-testid="file-input"]')
             expect(file_input).to_be_attached()
-            print(f"Setting input file directly: {TEST_FIXTURE_PATH}")
-            file_input.set_input_files(TEST_FIXTURE_PATH)
+            print(f"Setting input file directly: {test_fixture_path}")
+            file_input.set_input_files(test_fixture_path)
             print("Dispatching 'change' event directly...")
-            file_input.dispatch_event("change")  # Trigger Svelte's onchange
+            file_input.dispatch_event("change")
             print("Direct file input set and event dispatched.")
-            # --- End Hybrid Approach ---
 
-        # Now process the response (outside the expect_response block)
         api_response: APIResponse = response_info.value
         print(
             f"Received API response from {api_response.url} (Status: {api_response.status})"
@@ -542,17 +505,16 @@ def test_releasenotes_roundtrip(page: Page, backend_server):
         print("API import successful.")
 
     except Exception as e:
-        pytest.fail(f"Failed during file chooser or API wait: {e}")
+        # Print page content on error for debugging
+        # print("PAGE CONTENT ON ERROR:\n", page.content())
+        pytest.fail(f"Failed during file import or API wait: {e}")
 
-    # 4. Wait for graph to render after import
-    commit_collector_node_selector = (
-        'div.svelte-flow__node[data-id*="imported-taskworker-CommitCollector"]'
-    )
-    print(f"Waiting for node: {commit_collector_node_selector}")
-    expect(page.locator(commit_collector_node_selector)).to_be_visible(timeout=TIMEOUT)
-    # Wait for expected number of nodes
-    expect(page.locator(".svelte-flow__node")).to_have_count(10, timeout=TIMEOUT)
-    print("Expected number of nodes rendered after import.")
+    # 4. Wait for graph to render after import with the expected node count
+    print(f"Waiting for {expected_node_count} nodes to render...")
+    expect(page.locator(".svelte-flow__node")).to_have_count(
+        expected_node_count, timeout=TIMEOUT * 2
+    )  # Increased timeout slightly
+    print(f"{expected_node_count} nodes rendered after import.")
 
     # 5. Click Export Button to trigger frontend transformation
     export_button = page.locator('button[data-testid="export-button"]')
@@ -561,54 +523,50 @@ def test_releasenotes_roundtrip(page: Page, backend_server):
     print("Clicking export button...")
     export_button.click()
     print("Export button clicked.")
-    # Give a brief moment for any potential state updates triggered by the click
     page.wait_for_timeout(500)
 
-    # 6. Extract transformed data using page.evaluate and calling the frontend function via window
-
-    # Execute the transformation in the browser
+    # 6. Extract transformed data using page.evaluate
     try:
         print(
             "Retrieving data from localStorage and calling window.convertGraphToJSON..."
         )
-        # Get data from localStorage and execute the window function
         graph_data_transformed = page.evaluate(
             """
             async () => {
                 const nodes_raw = JSON.parse(localStorage.getItem('nodes'));
                 const edges_raw = JSON.parse(localStorage.getItem('edges'));
-
                 if (!nodes_raw || !edges_raw) {
-                    console.error('Missing nodes or edges in localStorage');
-                    return null;
+                    console.error('Missing nodes or edges in localStorage'); return null;
                 }
-
-                // Check if the function exists on window
                 if (typeof window.convertGraphToJSON !== 'function') {
-                    console.error('window.convertGraphToJSON is not defined or not a function');
-                    return null; // Indicate failure
+                    console.error('window.convertGraphToJSON is not defined'); return null;
                 }
-
                 console.log('Executing window.convertGraphToJSON...');
-                return window.convertGraphToJSON(nodes_raw, edges_raw);
+                try {
+                    const result = window.convertGraphToJSON(nodes_raw, edges_raw);
+                    console.log('window.convertGraphToJSON result:', result);
+                    return result;
+                } catch (error) {
+                    console.error('Error executing window.convertGraphToJSON:', error);
+                    return { error: error.message }; // Return error details
+                }
             }
             """
         )
 
         assert (
             graph_data_transformed is not None
-        ), "window.convertGraphToJSON returned null or had errors (check browser console)"
-
-        # Further check if the returned object looks like graph data
-        if (
-            not isinstance(graph_data_transformed, dict)
-            or "nodes" not in graph_data_transformed
-            or "edges" not in graph_data_transformed
-        ):
+        ), "window.convertGraphToJSON evaluation returned null"
+        if "error" in graph_data_transformed:
             pytest.fail(
-                f"window.convertGraphToJSON did not return expected structure. Got: {graph_data_transformed}"
+                f"Error in window.convertGraphToJSON: {graph_data_transformed['error']}"
             )
-
+        assert isinstance(
+            graph_data_transformed, dict
+        ), f"Expected dict from convertGraphToJSON, got {type(graph_data_transformed)}"
+        assert (
+            "nodes" in graph_data_transformed and "edges" in graph_data_transformed
+        ), f"convertGraphToJSON did not return expected structure. Got: {graph_data_transformed}"
         assert isinstance(graph_data_transformed["nodes"], list) and isinstance(
             graph_data_transformed["edges"], list
         ), "Transformed data structure is invalid"
@@ -621,7 +579,6 @@ def test_releasenotes_roundtrip(page: Page, backend_server):
     # 7. Trigger Export API Call with TRANSFORMED data
     export_api_url = f"{BACKEND_TEST_URL}/api/export-transformed"
     print(f"Triggering export API: {export_api_url}...")
-
     api_context = page.request
     try:
         response = api_context.post(
@@ -639,8 +596,6 @@ def test_releasenotes_roundtrip(page: Page, backend_server):
         response.ok
     ), f"Export API call failed with status {response.status}. Response: {response.text()}"
     response_json = response.json()
-
-    # Check backend response structure (needs to match what backend endpoint returns)
     assert (
         response_json.get("success") is True
     ), f"Backend export API reported failure: {response_json.get('error', 'Unknown error')}"
