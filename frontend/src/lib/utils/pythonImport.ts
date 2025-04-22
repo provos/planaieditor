@@ -57,7 +57,7 @@ export interface ImportedWorker {
     inputTypes?: string[]; // Optional: Parsed from consume_work type hint
     methods: Record<string, string>; // Dictionary of known method sources
     otherMembersSource: string; // Consolidated source code of other members
-    variableName?: string; // Optional: Variable name assigned in graph func
+    variableName?: string; // Optional: Variable name assigned
     factoryFunction?: string; // Name of the factory function if applicable
     factoryInvocation?: string; // Combined invocation string
     llmConfigFromCode?: Record<string, any>; // LLM configuration parsed from code
@@ -331,6 +331,7 @@ export async function importPythonCode(
             // Map backend data to frontend node data structure
             const nodeData: any = {
                 isCached: worker.workerType.startsWith('cached'), // Set flag based on type
+                variableName: worker.variableName, // Use variableName if it exists
                 workerName: worker.className, // Use className as workerName
                 nodeId: id,
                 // Initialize common fields, specific nodes might override

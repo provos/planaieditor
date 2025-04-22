@@ -13,6 +13,7 @@
 	// Base interface for worker node data
 	export interface BaseWorkerData {
 		workerName: string;
+		variableName?: string;
 		nodeId: string;
 		inputTypes: string[];
 		output_types: string[]; // we are exporting this back to python and are using python naming convention

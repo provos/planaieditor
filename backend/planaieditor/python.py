@@ -231,7 +231,7 @@ def create_factory_worker_instance(
     worker_class_name = data.get("className")
     factory_function = data.get("factoryFunction")
     factory_invocation = data.get("factoryInvocation", "")
-    instance_name = worker_to_instance_name(worker_class_name)
+    instance_name = worker_to_instance_name(node)
 
     # Handle factory-created SubGraphWorker
     factories_used.add(factory_function)  # Track factory usage for imports
@@ -253,7 +253,7 @@ def create_factory_worker_instance(
 def create_worker_instance(node: Dict[str, Any], llm_name: Optional[str] = None) -> str:
     data = node.get("data", {})
     worker_class_name = data.get("className")
-    instance_name = worker_to_instance_name(worker_class_name)
+    instance_name = worker_to_instance_name(node)
     worker_type = node.get("type")
 
     code = []
@@ -550,7 +550,7 @@ def generate_python_module(
             print(f"Warning: Skipping node {node_id} due to missing className.")
             continue
 
-        instance_name = worker_to_instance_name(worker_class_name)
+        instance_name = worker_to_instance_name(node)
         worker_names.append(instance_name)  # Keep track of all instance names
 
         # Check if this is a factory-created worker
@@ -595,7 +595,7 @@ def generate_python_module(
             class_name = data.get("className")
 
             if class_name:
-                instance_name = worker_to_instance_name(class_name)
+                instance_name = worker_to_instance_name(node)
                 worker_instance_by_class_name[class_name] = instance_name
 
         # Create the dependency setting code strings
@@ -671,5 +671,9 @@ def generate_python_module(
         )
 
 
-def worker_to_instance_name(worker_class_name: str) -> str:
+def worker_to_instance_name(node: Dict[str, Any]) -> str:
+    data = node.get("data", {})
+    if data.get("variableName"):
+        return data.get("variableName")
+    worker_class_name = data.get("className")
     return worker_class_name.lower() + "_worker"
