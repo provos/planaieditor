@@ -4,6 +4,7 @@
 	import type { NodeData as TaskNodeData } from './TaskNode.svelte';
 	import Spinner from 'phosphor-svelte/lib/Spinner';
 	import DownloadSimple from 'phosphor-svelte/lib/DownloadSimple';
+	import MagicWand from 'phosphor-svelte/lib/MagicWand';
 	import { onMount } from 'svelte';
 	import { selectedInterpreterPath } from '$lib/stores/pythonInterpreterStore.svelte'; // Import the store
 
@@ -160,7 +161,16 @@
 {#snippet ImportHeader()}
 	<!-- Snippet Content: Import Header -->
 	<div class="import-controls w-full">
-		<div class="mb-1 text-center text-2xs text-gray-700">Import Task from Module</div>
+		<div class="text-2xs mb-1 flex items-center justify-center gap-1 text-center text-gray-700">
+			{#if data.isImplicit}
+				<span>Implicitly Imported Task</span>
+				<span title="Implicitly imported Task">
+					<MagicWand size={10} weight="duotone" class="text-purple-600" />
+				</span>
+			{:else}
+				<span>Import Task from Module</span>
+			{/if}
+		</div>
 		<div class="flex items-center gap-1">
 			<input
 				type="text"
@@ -170,12 +180,12 @@
 				!availableClasses.length
 					? 'border-red-400'
 					: ''}"
-				disabled={loading}
+				disabled={loading || data.isImplicit}
 			/>
 			<button
 				class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50"
 				onclick={fetchTaskClasses}
-				disabled={!internalModulePath || loading}
+				disabled={!internalModulePath || loading || data.isImplicit}
 				title="Load classes from module"
 			>
 				{#if loading && !localSelectedClassName}
@@ -198,8 +208,12 @@
 						);
 					}}
 					class="text-2xs w-full rounded border border-gray-200 px-1.5 py-1"
-					disabled={loading || !selectedInterpreterPath.value}
-					title={!selectedInterpreterPath.value ? 'Select a Python interpreter first' : ''}
+					disabled={loading || !selectedInterpreterPath.value || data.isImplicit}
+					title={data.isImplicit
+						? 'Cannot change implicitly imported task'
+						: !selectedInterpreterPath.value
+							? 'Select a Python interpreter first'
+							: ''}
 				>
 					<option value={null} disabled selected={!localSelectedClassName}
 						>Select a Task Class...</option
