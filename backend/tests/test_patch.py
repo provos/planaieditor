@@ -1019,3 +1019,113 @@ def build_graph():
         llm_config5["model_name"]["value"] == "gpt-4"
         and llm_config5["model_name"]["is_literal"]
     )
+
+
+def test_extract_chat_task_worker_implicit_imports(temp_python_file):
+    """Test ChatTaskWorker parsing and implicit imports."""
+    code = """
+from planai import Graph, ChatTaskWorker # No ChatTask/ChatMessage import
+
+class MyChatWorker(ChatTaskWorker):
+    # No need to override anything for basic parsing
+    pass
+
+def build_chat_graph():
+    graph = Graph()
+    chat_worker = MyChatWorker()
+    graph.add_workers(chat_worker)
+    # No edges or entry needed for this test
+    return graph
+"""
+    file_path = temp_python_file(code)
+    definitions = get_definitions_from_file(str(file_path))
+
+    assert "workers" in definitions
+    assert len(definitions["workers"]) == 1
+    worker = definitions["workers"][0]
+
+    # Check worker details
+    assert worker["className"] == "MyChatWorker"
+    assert worker["workerType"] == "chattaskworker"
+    assert "inputTypes" in worker and worker["inputTypes"] == ["ChatTask"]
+    assert "classVars" in worker
+    assert "output_types" in worker["classVars"]
+    assert worker["classVars"]["output_types"] == ["ChatMessage"]
+
+    # Check implicit imports
+    assert "imported_tasks" in definitions
+    imported_tasks = definitions["imported_tasks"]
+    print(f"Imported Tasks (Implicit Test): {imported_tasks}")
+
+    expected_imports = [
+        {"modulePath": "planai", "className": "ChatTask", "isImplicit": True},
+        {"modulePath": "planai", "className": "ChatMessage", "isImplicit": True},
+    ]
+
+    # Convert to sets of tuples for comparison
+    expected_set = {tuple(sorted(d.items())) for d in expected_imports}
+    actual_set = {tuple(sorted(d.items())) for d in imported_tasks}
+
+    assert (
+        actual_set == expected_set
+    ), f"Implicit imports mismatch.\nExpected: {expected_set}\nGot: {actual_set}"
+
+
+def test_extract_chat_task_worker_explicit_imports(temp_python_file):
+    """Test ChatTaskWorker parsing with explicit imports."""
+    code = """
+from planai import Graph, ChatTaskWorker, ChatTask, ChatMessage # Explicit imports
+
+class MyChatWorker(ChatTaskWorker):
+    # Input/output types are implicitly set by ChatTaskWorker
+    pass
+
+def build_chat_graph():
+    graph = Graph()
+    chat_worker = MyChatWorker()
+    graph.add_workers(chat_worker)
+    return graph
+"""
+    file_path = temp_python_file(code)
+    definitions = get_definitions_from_file(str(file_path))
+
+    assert "workers" in definitions
+    assert len(definitions["workers"]) == 1
+    worker = definitions["workers"][0]
+
+    # Check worker details (should be the same as implicit case)
+    assert worker["className"] == "MyChatWorker"
+    assert worker["workerType"] == "chattaskworker"
+    assert "inputTypes" in worker and worker["inputTypes"] == ["ChatTask"]
+    assert "classVars" in worker
+    assert "output_types" in worker["classVars"]
+    assert worker["classVars"]["output_types"] == ["ChatMessage"]
+
+    # Check explicit imports
+    assert "imported_tasks" in definitions
+    imported_tasks = definitions["imported_tasks"]
+    print(f"Imported Tasks (Explicit Test): {imported_tasks}")
+
+    # Expected imports WITHOUT the isImplicit flag
+    expected_imports = [
+        {"modulePath": "planai", "className": "ChatTask"},
+        {"modulePath": "planai", "className": "ChatMessage"},
+    ]
+
+    # Convert to sets of tuples for comparison
+    expected_set = {tuple(sorted(d.items())) for d in expected_imports}
+    # Filter out any potential implicit flags from actual imports before comparison
+    actual_set = {
+        tuple(sorted(item for item in d.items() if item[0] != "isImplicit"))
+        for d in imported_tasks
+    }
+
+    # Check that the expected imports are present
+    assert expected_set.issubset(
+        actual_set
+    ), f"Explicit imports missing or incorrect.\nExpected subset: {expected_set}\nGot: {actual_set}"
+
+    # Check that NO imports in the list have isImplicit=True
+    assert not any(
+        imp.get("isImplicit") for imp in imported_tasks
+    ), f"Found unexpected isImplicit=True flag in imports: {imported_tasks}"

@@ -1464,13 +1464,13 @@ def add_implicit_imports(
     Add implicit imports based on worker types
     """
 
-    implicit_imports = {
-        "chattaskworker": {"modulePath": "planai", "className": "ChatTask"},
-        "chattask": {"modulePath": "planai", "className": "ChatMessage"},
-    }
+    implicit_imports = [
+        ("chattaskworker", {"modulePath": "planai", "className": "ChatTask"}),
+        ("chattaskworker", {"modulePath": "planai", "className": "ChatMessage"}),
+    ]
 
     imports = imported_tasks.copy()
-    for worker_type, import_info in implicit_imports.items():
+    for worker_type, import_info in implicit_imports:
         if worker_type in worker_types:
             if import_info not in imports:
                 # we don't want to re-create the import if it never existed in the original source code
