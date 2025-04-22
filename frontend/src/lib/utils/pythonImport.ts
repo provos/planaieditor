@@ -480,7 +480,7 @@ export async function importPythonCode(
 
         return {
             success: true,
-            message: `Imported ${importedTasks.length} Task(s) and ${importedWorkers.length} Worker(s).`,
+            message: `Imported ${importedTasks.length} Task(s), ${importedTaskReferences.length} TaskImport(s), and ${importedWorkers.length} Worker(s).`,
             nodes: newNodes,      // Return original nodes (without layout positions yet)
             edges: styledEdges       // Return styled edges
         };
