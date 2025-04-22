@@ -14,6 +14,7 @@
 	import JoinedTaskWorkerNode from '$lib/components/nodes/JoinedTaskWorkerNode.svelte';
 	import TaskImportNode from '$lib/components/nodes/TaskImportNode.svelte';
 	import SubGraphWorkerNode from '$lib/components/nodes/SubGraphWorkerNode.svelte';
+	import ChatTaskWorkerNode from '$lib/components/nodes/ChatTaskWorkerNode.svelte';
 	import type { BaseWorkerData } from '$lib/components/nodes/BaseWorkerNode.svelte';
 	import type { NodeData } from '$lib/components/nodes/TaskNode.svelte';
 	import { get } from 'svelte/store';
@@ -62,7 +63,8 @@
 		llmtaskworker: LLMTaskWorkerNode,
 		cachedllmtaskworker: LLMTaskWorkerNode,
 		joinedtaskworker: JoinedTaskWorkerNode,
-		subgraphworker: SubGraphWorkerNode
+		subgraphworker: SubGraphWorkerNode,
+		chattaskworker: ChatTaskWorkerNode
 	};
 
 	// Use SvelteFlow hook
@@ -107,6 +109,9 @@
 		socket.on('connect', async () => {
 			console.log('Connected to backend:', socket?.id);
 			isConnected = true;
+
+			importStatus = { type: 'idle', message: '' };
+			exportStatus = { type: 'idle', message: '' };
 
 			// Re-set interpreter on reconnect if one was selected
 			const currentPath = selectedInterpreterPath.value;
@@ -215,7 +220,7 @@
 					nameMap.set(node.id, name);
 				}
 				// Specifically add Task node class names to the task set
-				if (node.type === 'task' && node.data?.className) {
+				if ((node.type === 'task' || node.type === 'taskimport') && node.data?.className) {
 					// Cast to any first to avoid TypeScript error
 					const nodeData = node.data as any as NodeData;
 					taskNameSet.add(nodeData.className);
@@ -342,10 +347,23 @@ Analyze the following information and provide a response.`,
 				break;
 			}
 			case 'subgraphworker': {
+				const baseName = 'SubGraphWorker';
+				const uniqueName = generateUniqueName(baseName, existingNames);
 				nodeData = {
-					workerName: '',
+					workerName: uniqueName, // Assign the unique name
 					inputTypes: [],
 					output_types: [],
+					nodeId: id
+				};
+				break;
+			}
+			case 'chattaskworker': {
+				const baseName = 'ChatTaskWorker';
+				const uniqueName = generateUniqueName(baseName, existingNames);
+				nodeData = {
+					workerName: uniqueName, // Assign the unique name
+					inputTypes: ['ChatTask'],
+					output_types: ['ChatMessage'],
 					nodeId: id
 				};
 				break;

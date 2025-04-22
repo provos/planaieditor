@@ -286,11 +286,6 @@
 		return baseLabel;
 	}
 
-	// Update local fields when data.fields changes
-	$effect(() => {
-		currentFields = [...data.fields];
-	});
-
 	// Add a new literal value to the current field being edited
 	function addLiteralValue() {
 		if (!literalValueInput.trim()) return;

@@ -14,6 +14,7 @@ WORKER_BASE_CLASSES = [
     "JoinedTaskWorker",  # Keep for potential future use
     "SubGraphWorker",  # Add SubGraphWorker itself if it can be directly subclassed
     "TaskWorker",
+    "ChatTaskWorker",
 ]
 # Map to frontend types
 WORKER_TYPE_MAP = {
@@ -23,6 +24,7 @@ WORKER_TYPE_MAP = {
     "JoinedTaskWorker": "joinedtaskworker",
     "SubGraphWorker": "subgraphworker",  # Map SubGraphWorker
     "TaskWorker": "taskworker",
+    "ChatTaskWorker": "chattaskworker",
 }
 
 # Keep the list of all known PlanAI classes for potential future use
@@ -52,6 +54,10 @@ ALLOWED_TASK_IMPORTS: Dict[str, List[str]] = {
     "planai.patterns.search_fetcher": [
         "SearchQuery",
         "SearchResult",
+    ],
+    "planai": [
+        "ChatMessage",
+        "ChatTask",
     ],
     # Add modules that might contain Tasks used by subgraphs if needed
 }
@@ -584,6 +590,11 @@ def extract_worker_details(
     # Clean up trailing newlines from the consolidated source
     details["otherMembersSource"] = details["otherMembersSource"].strip()
 
+    # Special case for ChatTaskWorker
+    if worker_type == "chattaskworker":
+        details["inputTypes"] = ["ChatTask"]
+        details["classVars"]["output_types"] = ["ChatMessage"]
+
     # --- Determine Input Type based on Worker Type and available info ---
     input_type = extract_input_type(class_def, worker_type, details)
     if input_type:
@@ -644,6 +655,8 @@ def extract_input_type(
         final_input_type = input_type_from_joined
     elif worker_type in ("llmtaskworker", "cachedllmtaskworker") and llm_input_type_val:
         final_input_type = llm_input_type_val
+    elif worker_type == "chattaskworker":
+        final_input_type = "ChatTask"
     elif input_type_from_consume:  # Fallback for all types
         final_input_type = input_type_from_consume
 
@@ -1428,12 +1441,12 @@ def get_definitions_from_file(
                         imported_task_names.add(imported_as)
         # TODO: Add support for 'import module' and then using 'module.TaskName' if needed
 
-    print(f"Extracted imported tasks: {imported_tasks}")
+    # Add implicit imports based on worker types
+    imported_tasks = add_implicit_imports(
+        imported_tasks, {w["workerType"] for w in all_worker_defs}
+    )
 
-    # Update known_task_names with imported ones for cross-referencing if necessary
-    # This might be useful if a locally defined Task references an imported Task in a field
-    known_task_names.update(imported_task_names)
-    # Re-run field extraction if necessary? For now, assume frontend handles fetching details for imported tasks.
+    print(f"Extracted imported tasks: {imported_tasks}")
 
     return {
         "tasks": task_results,
@@ -1442,6 +1455,30 @@ def get_definitions_from_file(
         "entryEdges": entry_edges,
         "imported_tasks": imported_tasks,
     }
+
+
+def add_implicit_imports(
+    imported_tasks: List[Dict[str, Any]], worker_types: Set[str]
+) -> List[Dict[str, Any]]:
+    """
+    Add implicit imports based on worker types
+    """
+
+    implicit_imports = {
+        "chattaskworker": {"modulePath": "planai", "className": "ChatTask"},
+        "chattask": {"modulePath": "planai", "className": "ChatMessage"},
+    }
+
+    imports = imported_tasks.copy()
+    for worker_type, import_info in implicit_imports.items():
+        if worker_type in worker_types:
+            if import_info not in imports:
+                # we don't want to re-create the import if it never existed in the original source code
+                copied_import = import_info.copy()
+                copied_import["isImplicit"] = True
+                imports.append(copied_import)
+
+    return imports
 
 
 # Example usage (optional, can be removed or kept for testing)

@@ -3,7 +3,6 @@ import type { Socket } from 'socket.io-client';
 import type { BackendError } from './pythonImport';
 import { get } from 'svelte/store';
 import { llmConfigs } from '$lib/stores/llmConfigsStore';
-// import type { TaskImportNodeData } from '../components/nodes/TaskImportNode.svelte'; // Removed import
 
 // Type for export status updates
 export interface ExportStatus {

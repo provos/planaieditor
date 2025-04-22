@@ -84,6 +84,7 @@ export interface ImportedEdge {
 export interface ImportedTaskReference {
     modulePath: string;
     className: string;
+    isImplicit?: boolean;
 }
 
 // --- Type for Edges from Backend --- //
@@ -261,7 +262,7 @@ export async function importPythonCode(
                     description: f.description,
                     literalValues: f.literalValues
                 })),
-                nodeId: id // Crucial: Pass the generated node ID
+                nodeId: id, // Crucial: Pass the generated node ID
             };
 
             const newNode: Node = {
@@ -289,6 +290,7 @@ export async function importPythonCode(
             const nodeData = {
                 modulePath: importedTaskRef.modulePath,
                 className: importedTaskRef.className, // Store class name
+                isImplicit: importedTaskRef.isImplicit,
                 fields: [], // Fields will be fetched by the node itself
                 nodeId: id // Crucial: Pass the generated node ID
             };

@@ -34,7 +34,7 @@
 		minHeight = 200,
 		defaultName = 'BaseWorker',
 		isCached,
-		outputTypesEditable = true
+		isEditable = true
 	} = $props<{
 		id: string;
 		data: BaseWorkerData;
@@ -44,7 +44,7 @@
 		minHeight?: number;
 		defaultName?: string;
 		isCached?: boolean;
-		outputTypesEditable?: boolean;
+		isEditable?: boolean;
 	}>();
 
 	// Access the SvelteFlow store and internals update hook
@@ -77,6 +77,10 @@
 
 	// --- Effects for Reactivity ---
 	$effect(() => {
+		if (!isEditable) {
+			return;
+		}
+
 		let currentNodes: Node[] = [];
 		let currentEdges: Edge[] = [];
 
@@ -115,7 +119,7 @@
 	});
 
 	$effect(() => {
-		if (manuallySelectedInputType && inferredInputTypes.length === 0) {
+		if (manuallySelectedInputType && inferredInputTypes.length === 0 && !isEditable) {
 			inferredInputTypes = [manuallySelectedInputType];
 			data.inputTypes = [manuallySelectedInputType];
 		}
@@ -391,7 +395,7 @@
 						style={`background-color: ${color}20; border-left: 3px solid ${color};`}
 					>
 						<span class="font-mono">{type}</span>
-						{#if manuallySelectedInputType === type}
+						{#if manuallySelectedInputType === type && isEditable}
 							<!-- Delete button for manually selected input type -->
 							<button
 								class="ml-auto flex h-3 w-3 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity duration-150 ease-in-out group-hover:opacity-100"
@@ -411,7 +415,7 @@
 			<h3 class="text-2xs mb-1 font-semibold text-gray-600">Output Types</h3>
 			{#if availableTaskClasses.length > 0}
 				<div class="mb-1">
-					{#if outputTypesEditable}
+					{#if isEditable}
 						<select
 							class="text-2xs w-full rounded border border-gray-200 px-1 py-0.5"
 							onchange={addOutputTypeFromSelect}
@@ -463,7 +467,7 @@
 							style={`background-color: ${color}20; border-left: 3px solid ${color};`}
 						>
 							<span class="font-mono">{type}</span>
-							{#if outputTypesEditable}
+							{#if isEditable}
 								<div class="flex">
 									<button
 										class="ml-1 flex h-3 w-3 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-gray-200 hover:text-blue-500 group-hover:opacity-100"

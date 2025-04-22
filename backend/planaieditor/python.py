@@ -376,6 +376,11 @@ def generate_python_module(
     for node in task_import_nodes:
         node_id = node["id"]
         data = node.get("data", {})
+
+        # Skip implicit imports
+        if data.get("isImplicit"):
+            continue
+
         # Read modulePath and className directly from data for taskimport nodes
         module_path = data.get("modulePath")
         class_name = data.get("className")

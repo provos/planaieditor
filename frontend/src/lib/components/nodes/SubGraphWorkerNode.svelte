@@ -33,8 +33,8 @@
 		data: SubGraphWorkerData;
 	}>();
 
+	let dataCopy = $state(data);
 	const updateNodeInternals = useUpdateNodeInternals();
-
 	// Use a temporary variable to store the currently selected factory function
 	let selectedFactoryName = $state(data.factoryFunction || '');
 
@@ -58,7 +58,7 @@
 				// Also update our local tracking variable
 				selectedFactoryName = selectedFactory.name;
 			}
-			data = { ...data };
+			dataCopy = { ...data };
 			tick().then(() => updateNodeInternals(id));
 		} else {
 			// Handle empty selection (reset)
@@ -68,7 +68,7 @@
 			data.output_types = [];
 			data.workerName = undefined;
 			selectedFactoryName = '';
-			data = { ...data };
+			dataCopy = { ...data };
 			tick().then(() => updateNodeInternals(id));
 		}
 	}
@@ -85,14 +85,14 @@
 
 <BaseWorkerNode
 	{id}
-	{data}
+	data={dataCopy}
 	defaultName={data.workerName || 'SubGraphWorker'}
 	isCached={data.isCached}
 	minWidth={200}
 	minHeight={150}
-	outputTypesEditable={false}
+	isEditable={false}
 >
-	<div class="mt-1 flex flex-col rounded bg-blue-50 p-1 text-blue-700 h-auto">
+	<div class="mt-1 flex h-auto flex-col rounded bg-blue-50 p-1 text-blue-700">
 		<div class="text-2xs mb-1 flex flex-none items-center">
 			<CodeSimple size={10} weight="bold" class="mr-1 flex-none" />
 			<span class="mr-1 font-mono font-semibold">Factory:</span>
@@ -118,13 +118,9 @@
 			/>
 		</div>
 	</div>
-	<!-- Any additional content specific to SubGraphWorker can go here -->
-	<!-- BaseWorkerNode already displays input/output types -->
-	<!-- BaseWorkerNode will now hide editing controls because outputTypesEditable is false -->
 </BaseWorkerNode>
 
 <style>
-	/* Styles specific to SubGraphWorkerNode if needed */
 	:global(.text-2xs) {
 		font-size: 0.65rem;
 		line-height: 1rem;

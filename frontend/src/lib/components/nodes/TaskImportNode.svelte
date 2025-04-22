@@ -10,6 +10,7 @@
 	// Interface for this node's specific data
 	export interface TaskImportNodeData extends TaskNodeData {
 		modulePath?: string;
+		isImplicit?: boolean;
 	}
 
 	let { id, data } = $props<{
