@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { dev } from '$app/environment';
 	import { persisted } from 'svelte-persisted-store';
 	import { backendUrl } from '$lib/utils/backendUrl';
 
@@ -45,7 +46,8 @@
 	import {
 		exportPythonCode,
 		processExportResult,
-		type ExportStatus
+		type ExportStatus,
+		convertGraphtoJSON
 	} from '$lib/utils/pythonExport';
 
 	// Import the ELKjs layout function
@@ -91,6 +93,11 @@
 	let fileInputRef: HTMLInputElement;
 
 	onMount(() => {
+		if (dev) {
+			// Define the convertGraphToJSON function so it can be used in the backend tests
+			(window as any).convertGraphToJSON = convertGraphtoJSON;
+		}
+
 		// Connect to the Socket.IO server using the determined URL
 		socket = io(backendUrl);
 

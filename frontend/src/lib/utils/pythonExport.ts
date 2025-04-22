@@ -2,7 +2,7 @@ import type { Node, Edge } from '@xyflow/svelte';
 import type { Socket } from 'socket.io-client';
 import type { BackendError } from './pythonImport';
 import { get } from 'svelte/store';
-import { llmConfigs, type LLMConfig } from '$lib/stores/llmConfigsStore';
+import { llmConfigs } from '$lib/stores/llmConfigsStore';
 // import type { TaskImportNodeData } from '../components/nodes/TaskImportNode.svelte'; // Removed import
 
 // Type for export status updates
@@ -42,7 +42,7 @@ interface GraphData {
     edges: { source: string; target: string }[];
 }
 
-function convertGraphtoJSON(nodes: Node[], edges: Edge[]): GraphData {
+export function convertGraphtoJSON(nodes: Node[], edges: Edge[]): GraphData {
     const nodeIdToNameMap = new Map<string, string>();
     nodes.forEach(node => {
         const data = node.data as any; // Use any for broader compatibility during processing

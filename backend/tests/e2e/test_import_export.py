@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -141,6 +142,57 @@ def compare_definitions(defs1: dict, defs2: dict) -> bool:
                         f"Worker '{name}' factoryInvocation mismatch:\nDefs1: {worker1.get('factoryInvocation')}\nDefs2: {worker2.get('factoryInvocation')}"
                     )
                     all_match = False
+
+            # Compare LLM configuration
+            # Note: This compares the config *parsed* from code, not the potentially
+            # different config injected during export from the UI state.
+            # We rely on the final python code generation to handle the llmConfig correctly.
+            llm_config_var1 = worker1.get("llmConfigVar")
+            llm_config_var2 = worker2.get("llmConfigVar")
+            if llm_config_var1 != llm_config_var2:
+                # Allow mismatch if one is None (e.g., inline vs variable)
+                if not (llm_config_var1 is None or llm_config_var2 is None):
+                    print(
+                        f"Worker '{name}' llmConfigVar mismatch: {llm_config_var1} vs {llm_config_var2}"
+                    )
+                    all_match = False
+
+            llm_config1 = worker1.get("llmConfigFromCode")
+            llm_config2 = worker2.get("llmConfigFromCode")
+
+            if isinstance(llm_config1, dict) and isinstance(llm_config2, dict):
+                if set(llm_config1.keys()) != set(llm_config2.keys()):
+                    print(
+                        f"Worker '{name}' llmConfigFromCode keys mismatch:\n"  # type: ignore
+                        f"  Defs1: {set(llm_config1.keys())}\n"
+                        f"  Defs2: {set(llm_config2.keys())}"
+                    )
+                    all_match = False
+                else:
+                    for key in llm_config1:
+                        val_info1 = llm_config1[key]
+                        val_info2 = llm_config2[key]
+                        if not isinstance(val_info1, dict) or not isinstance(
+                            val_info2, dict
+                        ):
+                            print(
+                                f"Worker '{name}' llmConfigFromCode item '{key}' has unexpected format: {val_info1} vs {val_info2}"
+                            )
+                            all_match = False
+                            continue
+                        if val_info1.get("value") != val_info2.get(
+                            "value"
+                        ) or val_info1.get("is_literal") != val_info2.get("is_literal"):
+                            print(
+                                f"Worker '{name}' llmConfigFromCode item '{key}' mismatch: {val_info1} vs {val_info2}"
+                            )
+                            all_match = False
+            elif llm_config1 is not None or llm_config2 is not None:
+                # Mismatch if one has config and the other doesn't (and they aren't both None)
+                print(
+                    f"Worker '{name}' llmConfigFromCode presence mismatch: {llm_config1 is not None} vs {llm_config2 is not None}"
+                )
+                all_match = False
 
     # Compare Edges (source, target)
     edges1 = {(e["source"], e["target"]) for e in defs1.get("edges", [])}
@@ -376,104 +428,54 @@ def test_releasenotes_roundtrip(page: Page, backend_server):
     # Give a brief moment for any potential state updates triggered by the click
     page.wait_for_timeout(500)
 
-    # 6. Extract transformed data using page.evaluate
-    # Define the JS transformation logic again (reading from localStorage inside)
-    js_transform_function = """
-    () => { // No arguments needed, reads directly from localStorage
-        const nodes_raw = JSON.parse(localStorage.getItem('nodes'));
-        const edges_raw = JSON.parse(localStorage.getItem('edges'));
-        const llm_configs_raw = JSON.parse(localStorage.getItem('llmConfigs')); // Get LLM configs if needed by logic below
-
-        if (!nodes_raw || !Array.isArray(nodes_raw)) {
-             console.error('[evaluate] Invalid or missing nodes data in localStorage');
-             return null;
-        }
-        const safe_edges_raw = edges_raw && Array.isArray(edges_raw) ? edges_raw : [];
-        const safe_llm_configs = llm_configs_raw && Array.isArray(llm_configs_raw) ? llm_configs_raw : [];
-
-        console.log(`[evaluate] Read ${nodes_raw.length} nodes, ${safe_edges_raw.length} edges, ${safe_llm_configs.length} LLM configs from localStorage.`);
-
-        // --- Replicate core logic from convertGraphtoJSON ---
-        const nodeIdToNameMap = new Map();
-        nodes_raw.forEach(node => {
-            const data = node.data;
-            const name = data?.className || data?.workerName;
-            if (name) {
-                nodeIdToNameMap.set(node.id, name);
-            }
-        });
-
-        const exportedNodes = nodes_raw.map(node => {
-            const data = node.data;
-            let processedData = { ...data };
-
-            if (data?.workerName) {
-                processedData.className = data.workerName;
-                delete processedData.workerName;
-            }
-
-            // --- Include LLM config injection logic again, using safe_llm_configs ---
-            if ((node.type === 'llmtaskworker' || node.type === 'cachedllmtaskworker') && data?.llmConfigName) {
-                const configName = data.llmConfigName;
-                const foundConfig = safe_llm_configs.find(c => c.name === configName);
-                if (foundConfig) {
-                    processedData.llmConfig = foundConfig;
-                    delete processedData.llmConfigName;
-                } else {
-                    console.warn(`[evaluate] LLM Config '${configName}' not found during transformation.`);
-                    delete processedData.llmConfig;
-                    delete processedData.llmConfigName;
-                }
-            }
-            // --- End LLM config logic ---
-
-            const knownClassVars = [
-                'prompt', 'system_prompt', 'use_xml', 'debug_mode',
-                'llm_input_type', 'llm_output_type', 'join_type', 'output_types'
-            ];
-            if (node.type?.endsWith('worker')) {
-                if (!processedData.classVars) processedData.classVars = {};
-                for (const key of knownClassVars) {
-                    if (processedData[key] !== undefined) {
-                        processedData.classVars[key] = processedData[key];
-                        delete processedData[key];
-                    }
-                }
-            }
-
-            if (node.type === 'subgraphworker' && data?.isFactoryCreated) {
-                delete processedData.isFactoryCreated;
-            }
-
-            return { ...node, data: processedData };
-        });
-
-        const exportedEdges = safe_edges_raw
-            .map(edge => {
-                const sourceName = nodeIdToNameMap.get(edge.source);
-                const targetName = nodeIdToNameMap.get(edge.target);
-                if (!sourceName || !targetName) return null;
-                return { source: sourceName, target: targetName };
-            })
-            .filter(edge => edge !== null);
-        // --- End Replicated Logic ---
-
-        const result = { nodes: exportedNodes, edges: exportedEdges };
-        console.log('[evaluate] Returning transformed data:', result);
-        return result;
-    }
-    """
+    # 6. Extract transformed data using page.evaluate and calling the frontend function via window
 
     # Execute the transformation in the browser
     try:
-        print("Executing frontend transformation logic via page.evaluate...")
-        graph_data_transformed = page.evaluate(js_transform_function)
+        print(
+            "Retrieving data from localStorage and calling window.convertGraphToJSON..."
+        )
+        # Get data from localStorage and execute the window function
+        graph_data_transformed = page.evaluate(
+            """
+            async () => {
+                const nodes_raw = JSON.parse(localStorage.getItem('nodes'));
+                const edges_raw = JSON.parse(localStorage.getItem('edges'));
+
+                if (!nodes_raw || !edges_raw) {
+                    console.error('Missing nodes or edges in localStorage');
+                    return null;
+                }
+
+                // Check if the function exists on window
+                if (typeof window.convertGraphToJSON !== 'function') {
+                    console.error('window.convertGraphToJSON is not defined or not a function');
+                    return null; // Indicate failure
+                }
+
+                console.log('Executing window.convertGraphToJSON...');
+                return window.convertGraphToJSON(nodes_raw, edges_raw);
+            }
+            """
+        )
+
         assert (
             graph_data_transformed is not None
-        ), "Frontend transformation returned null or had errors (check browser console)"
-        assert (
-            "nodes" in graph_data_transformed and "edges" in graph_data_transformed
-        ), "Transformed data missing nodes/edges"
+        ), "window.convertGraphToJSON returned null or had errors (check browser console)"
+
+        # Further check if the returned object looks like graph data
+        if (
+            not isinstance(graph_data_transformed, dict)
+            or "nodes" not in graph_data_transformed
+            or "edges" not in graph_data_transformed
+        ):
+            pytest.fail(
+                f"window.convertGraphToJSON did not return expected structure. Got: {graph_data_transformed}"
+            )
+
+        assert isinstance(graph_data_transformed["nodes"], list) and isinstance(
+            graph_data_transformed["edges"], list
+        ), "Transformed data structure is invalid"
         print(
             f"Received transformed data: {len(graph_data_transformed['nodes'])} nodes, {len(graph_data_transformed['edges'])} edges."
         )
