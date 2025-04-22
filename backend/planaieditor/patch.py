@@ -485,7 +485,7 @@ def extract_worker_details(
             and isinstance(value_node.func.value.args[0], ast.Constant)
         ):
             # Extract the raw string from inside dedent()
-            return dedent(value_node.func.value.args[0].value)
+            return dedent(value_node.func.value.args[0].value).strip()
 
         # Standard Constant (str, int, bool, etc.)
         if isinstance(value_node, ast.Constant):

@@ -153,8 +153,10 @@ def create_worker_class(node: Dict[str, Any]) -> Optional[str]:
                     llm_output_type_name = class_vars.get("llm_output_type")
                     if llm_output_type_name and isinstance(llm_output_type_name, str):
                         output_type_hint = get_task_class_name(llm_output_type_name)
+                    else:
+                        output_type_hint = output_types[0]
 
-                signature = f"def post_process(self, task: {output_type_hint}):"
+                signature = f"def post_process(self, response: {output_type_hint}, input_task: {input_type_hint}):"
             elif method_name == "extra_cache_key":
                 signature = (
                     f"def extra_cache_key(self, task: {input_type_hint}) -> str:"

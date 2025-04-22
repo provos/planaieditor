@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 from playwright.sync_api import APIResponse, Page, Route, expect
+import pprint
 
 # Ensure planaieditor can be imported (adjust if your structure differs)
 # This might be handled by running pytest from the 'backend' dir
@@ -26,6 +27,134 @@ TIMEOUT = 15000  # Increased timeout slightly
 
 # --- Helper Functions / Verification Logic --- #
 
+# Helper function for recursive comparison
+def _recursive_compare(obj1, obj2, path=""):
+    """Recursively compares two objects (dicts, lists, primitives) and returns a list of differences."""
+    diffs = []
+
+    # --- Type Mismatch ---
+    if type(obj1) != type(obj2):
+        diffs.append({
+            "path": path, "type": "type_mismatch",
+            "old_type": type(obj1).__name__, "new_type": type(obj2).__name__
+        })
+        # Cannot compare further if types are different
+        return diffs
+
+    # --- Dictionary Comparison ---
+    if isinstance(obj1, dict):
+        keys1 = set(obj1.keys())
+        keys2 = set(obj2.keys())
+        added = keys2 - keys1
+        removed = keys1 - keys2
+        common = keys1 & keys2
+
+        for k in added:
+            full_path = f"{path}.{k}" if path else k
+            diffs.append({"path": full_path, "type": "added", "value": obj2[k]})
+        for k in removed:
+            full_path = f"{path}.{k}" if path else k
+            diffs.append({"path": full_path, "type": "removed", "value": obj1[k]})
+        # Recursively compare common keys
+        for k in common:
+            full_path = f"{path}.{k}" if path else k
+            diffs.extend(_recursive_compare(obj1[k], obj2[k], full_path))
+
+    # --- List Comparison ---
+    elif isinstance(obj1, list):
+        len1, len2 = len(obj1), len(obj2)
+        # Compare common elements recursively
+        for i in range(min(len1, len2)):
+             item_path = f"{path}[{i}]"
+             diffs.extend(_recursive_compare(obj1[i], obj2[i], item_path))
+        # Report elements only in the longer list
+        if len1 > len2:
+             for i in range(len2, len1):
+                 item_path = f"{path}[{i}]"
+                 diffs.append({"path": item_path, "type": "removed", "value": obj1[i]})
+        elif len2 > len1:
+             for i in range(len1, len2):
+                 item_path = f"{path}[{i}]"
+                 diffs.append({"path": item_path, "type": "added", "value": obj2[i]})
+        # Optional: Add a specific diff entry for length mismatch itself if desired
+        # if len1 != len2:
+        #      diffs.append({"path": path, "type": "list_length_mismatch", "old_len": len1, "new_len": len2})
+
+
+    # --- Primitive/Other Comparison ---
+    elif obj1 != obj2:
+        # Use repr for potentially more informative diffs, especially with strings containing whitespace
+        diffs.append({"path": path, "type": "changed", "old": repr(obj1), "new": repr(obj2)})
+
+    return diffs
+
+def format_diff(diff):
+    """Formats a single difference dictionary into a readable string."""
+    path = diff['path'] if diff['path'] else "<root>" # Handle empty path for top level
+    dtype = diff['type']
+    if dtype == "type_mismatch":
+        return f"{path}: Type mismatch - {diff['old_type']} vs {diff['new_type']}"
+    elif dtype == "added":
+        # Indent multi-line values for clarity
+        value_str = pprint.pformat(diff['value'], indent=2, width=60)
+        if '\n' in value_str:
+            lines = value_str.split('\n')
+            # Indent all lines after the first one
+            indented_lines = [lines[0]] + ['    ' + line for line in lines[1:]]
+            value_str = '\n    ' + '\n'.join(indented_lines) # Start on newline, indented
+        return f"{path}: Added = {value_str}"
+    elif dtype == "removed":
+        value_str = pprint.pformat(diff['value'], indent=2, width=60)
+        if '\n' in value_str:
+            lines = value_str.split('\n')
+            indented_lines = [lines[0]] + ['    ' + line for line in lines[1:]]
+            value_str = '\n    ' + '\n'.join(indented_lines) # Start on newline, indented
+        return f"{path}: Removed = {value_str}"
+    elif dtype == "list_length_mismatch": # If you add this type back in _recursive_compare
+        return f"{path}: List length mismatch - {diff['old_len']} vs {diff['new_len']}"
+    elif dtype == "changed":
+        old_repr = diff['old']
+        new_repr = diff['new']
+        # max_len = 100
+        # if len(old_repr) > max_len: old_repr = old_repr[:max_len] + '...'
+        # if len(new_repr) > max_len: new_repr = new_repr[:max_len] + '...'
+        # Build string line by line to avoid f-string complexity with repr()
+        lines = [
+            f"{path}: Changed",
+            f"    Old: {old_repr}",
+            f"    New: {new_repr}"
+        ]
+        return "\n".join(lines)
+    else:
+        # Fallback for unknown diff types
+        return f"Unknown diff @ {path}: {pprint.pformat(diff)}"
+
+
+def compare_dicts(dict1: dict, dict2: dict) -> bool:
+    """
+    Recursively compares two dictionaries and pretty-prints the differences.
+    Returns True if they are equal, False otherwise.
+    """
+    if not isinstance(dict1, dict) or not isinstance(dict2, dict):
+         print("Error: Both inputs must be dictionaries for compare_dicts.")
+         # Return False as they are not 'equal' in the context of comparing dicts
+         return False
+
+    # Start recursion with an empty path
+    differences = _recursive_compare(dict1, dict2, path="")
+
+    if not differences:
+        # Keep tests quieter by default, uncomment if needed for debugging passing cases
+        # print("Dictionaries are identical.")
+        return True
+    else:
+        print("--- Dictionary Comparison Differences ---")
+        for diff in differences:
+            # Indent each difference report for readability
+            print(f"  {format_diff(diff)}")
+        print("--- End Dictionary Comparison ---")
+        return False
+
 
 def compare_definitions(defs1: dict, defs2: dict) -> bool:
     """
@@ -35,7 +164,14 @@ def compare_definitions(defs1: dict, defs2: dict) -> bool:
     Handles expected differences (e.g., llmConfig presence).
     """
     print("Comparing parsed definitions...")
-    all_match = True
+
+    # Call the new compare_dicts for detailed initial output if different
+    # We still need the specific logic below to handle acceptable differences.
+    dicts_are_identical = compare_dicts(defs1, defs2)
+    # Optionally use dicts_are_identical for early exit if desired,
+    # but the detailed comparison below is more robust for this specific use case.
+
+    all_match = True # Assume match initially
 
     # Compare Tasks (name, fields - name, type, isList, required)
     tasks1 = {t["className"]: t for t in defs1.get("tasks", [])}

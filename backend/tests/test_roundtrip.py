@@ -216,7 +216,7 @@ class AdvancedLLMWorker(CachedLLMTaskWorker):
     def extra_cache_key(self, task: InputTask) -> str:
         return task.data[:10] # Cache based on first 10 chars
 
-    def post_process(self, task: AnalysisTask):
+    def post_process(self, respponse: AnalysisTask, input_task: InputTask):
         # Modify the analysis after LLM
         task.analysis['timestamp'] = "now"
         return task
