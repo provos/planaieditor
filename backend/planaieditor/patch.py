@@ -655,6 +655,24 @@ def _safe_eval_constant(node: Optional[ast.expr]) -> Any:
     return None  # Cannot safely evaluate
 
 
+# Helper to evaluate constant AST nodes and determine if literal
+def _evaluate_ast_node(node: Optional[ast.expr]) -> Tuple[Any, bool]:
+    """
+    Evaluates an AST node if it's a simple literal constant.
+
+    Returns:
+        Tuple[Any, bool]: (evaluated_value, is_literal)
+        is_literal is True if the node is a Constant, False otherwise.
+        evaluated_value is the constant value if is_literal is True, else None.
+    """
+    if isinstance(node, ast.Constant):
+        return node.value, True
+    # Handle NameConstant for True, False, None in older Python versions if necessary
+    # elif isinstance(node, ast.NameConstant):
+    #    return node.value, True
+    return None, False
+
+
 def find_assignment_in_scope(
     var_name: str, start_node: ast.AST, scope_node: ast.FunctionDef
 ) -> Optional[ast.expr]:
@@ -746,19 +764,28 @@ def get_llm_assignments(
             func_name = "llm_from_config"
 
         if func_name == "llm_from_config":
-            # Parse keyword arguments
+            # Parse keyword arguments into the new structure
             llm_args = {}
             for kw in call_node.keywords:
                 if kw.arg:
-                    # Try to evaluate simple constants, otherwise store as string repr
-                    value = _safe_eval_constant(kw.value)
-                    if value is None:
+                    value, is_literal = _evaluate_ast_node(kw.value)
+                    if is_literal:
+                        llm_args[kw.arg] = {"value": value, "is_literal": True}
+                    else:
+                        # If not a literal, unparse the node to get the variable/expression string
                         try:
-                            # Fallback to unparsing complex values or variables
-                            value = ast.unparse(kw.value)
+                            unparsed_value = ast.unparse(kw.value)
+                            llm_args[kw.arg] = {
+                                "value": unparsed_value,
+                                "is_literal": False,
+                            }
                         except Exception:
-                            value = "<Unparse Error>"
-                    llm_args[kw.arg] = value
+                            # Store error information if unparsing fails
+                            llm_args[kw.arg] = {
+                                "value": "<Unparse Error>",
+                                "is_literal": False,
+                                "error": True,
+                            }
             return llm_args
         return None
 

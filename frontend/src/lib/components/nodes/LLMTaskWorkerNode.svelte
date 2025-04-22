@@ -252,10 +252,10 @@
 		const config = data.llmConfigFromCode;
 		const parts = [];
 
-		if (config.provider) parts.push(`Provider: ${config.provider}`);
-		if (config.model_name) parts.push(`Model: ${config.model_name}`);
-		if (config.max_tokens) parts.push(`Max Tokens: ${config.max_tokens}`);
-		if (config.host) parts.push(`Host: ${config.host}`);
+		if (config.provider) parts.push(`Provider: ${config.provider.value}`);
+		if (config.model_name) parts.push(`Model: ${config.model_name.value}`);
+		if (config.max_tokens) parts.push(`Max Tokens: ${config.max_tokens.value}`);
+		if (config.host) parts.push(`Host: ${config.host.value}`);
 
 		return parts.join(', ');
 	}

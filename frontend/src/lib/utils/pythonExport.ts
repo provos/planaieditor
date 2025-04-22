@@ -93,16 +93,12 @@ function convertGraphtoJSON(nodes: Node[], edges: Edge[]): GraphData {
             // Priority 2: If no user-selected config but we have an imported config, use that
             else if (data?.llmConfigFromCode) {
                 // The backend expects 'llmConfig' for code generation, so we convert the imported format
-                processedData.llmConfig = {
-                    provider: data.llmConfigFromCode.provider,
-                    modelId: data.llmConfigFromCode.model_name, // Backend uses 'modelId' key
-                    max_tokens: data.llmConfigFromCode.max_tokens,
-                    fromCode: true
-                };
+                processedData.llmConfig = { ...data.llmConfigFromCode };
 
                 // If host is present, map it to baseUrl
                 if (data.llmConfigFromCode.host) {
                     processedData.llmConfig.baseUrl = data.llmConfigFromCode.host;
+                    delete processedData.llmConfig.host;
                 }
                 delete processedData.llmConfigFromCode;
                 console.log(`Using imported LLM config for node ${node.id}`);

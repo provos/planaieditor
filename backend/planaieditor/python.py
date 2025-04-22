@@ -3,6 +3,7 @@ import json
 import os
 import re
 from pathlib import Path
+from reprlib import repr as smart_repr
 from textwrap import dedent, indent
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -283,40 +284,51 @@ def create_worker_instance(node: Dict[str, Any], llm_name: Optional[str] = None)
 
 
 def create_llm_args(llm_config: Dict[str, Any]) -> List[str]:
-    provider = llm_config.get("provider")
-    model_name = llm_config.get(
-        "modelId"
-    )  # Map frontend 'modelId' to backend 'model_name'
-    max_tokens = llm_config.get("max_tokens")  # Optional from frontend
-    base_url = llm_config.get("baseUrl")  # Optional baseUrl (used as 'host' for ollama)
-    remote_hostname = llm_config.get("remoteHostname")  # For remote_ollama
-    remote_username = llm_config.get("remoteUsername")  # For remote_ollama
-
-    if not llm_config.get("fromCode"):
-        # If the LLM config was not created from code, we need to quote the values
-        provider = f'"{provider}"'
-        model_name = f'"{model_name}"'
-        base_url = f'"{base_url}"'
-        remote_hostname = f'"{remote_hostname}"'
-        remote_username = f'"{remote_username}"'
-
+    """
+    Generates a list of string arguments (e.g., 'provider="openai"', 'model_name=args.model')
+    for an llm_from_config call, based on the structured llmConfig data.
+    Handles both literal values and variable/expression references.
+    """
     llm_args_list = []
-    if provider:
-        llm_args_list.append(f"provider={provider}")
-    if model_name:
-        llm_args_list.append(f"model_name={model_name}")
-    if max_tokens is not None:
-        llm_args_list.append(f"max_tokens={int(max_tokens)}")  # Ensure it's an int
+    # Define which arguments are expected (adjust as needed)
+    expected_args = [
+        "provider",
+        "model_name",
+        "max_tokens",
+        "host",
+        "hostname",
+        "username",
+    ]
+    # Map frontend/config keys to backend llm_from_config keys if different
+    key_map = {
+        "modelId": "model_name",
+        "baseUrl": "host",
+        "remoteHostname": "hostname",
+        "remoteUsername": "username",
+    }
 
-    # Add provider-specific args
-    if provider == "ollama":
-        if base_url:  # Map frontend 'baseUrl' to backend 'host' for ollama
-            llm_args_list.append(f"host={base_url}")
-    elif provider == "remote_ollama":
-        if remote_hostname:
-            llm_args_list.append(f"hostname={remote_hostname}")
-        if remote_username:
-            llm_args_list.append(f"username={remote_username}")
+    for frontend_key, backend_key in key_map.items():
+        if frontend_key in llm_config:
+            llm_config[backend_key] = llm_config.pop(frontend_key)
+
+    for arg_name in expected_args:
+        if arg_name in llm_config:
+            arg_info = llm_config[arg_name]
+
+            value = arg_info["value"]
+            is_literal = arg_info.get(
+                "is_literal", True
+            )  # Default to literal if flag missing?
+
+            if is_literal:
+                # Format literals correctly (strings quoted, others not)
+                # Use smart_repr for potentially long strings
+                formatted_value = smart_repr(value)
+                llm_args_list.append(f"{arg_name}={formatted_value}")
+            else:
+                # Use the value directly as it's a variable/expression
+                llm_args_list.append(f"{arg_name}={value}")
+
     return llm_args_list
 
 

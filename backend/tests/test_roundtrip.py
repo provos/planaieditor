@@ -998,15 +998,26 @@ def build_graph():
     ), "LLM config missing from AnthropicProcessor"
 
     # Check config values
-    assert openai_worker["llmConfigFromCode"]["provider"] == "openai"
-    assert openai_worker["llmConfigFromCode"]["model_name"] == "gpt-4"
-    assert openai_worker["llmConfigFromCode"]["max_tokens"] == 1024
-
-    assert anthropic_worker["llmConfigFromCode"]["provider"] == "anthropic"
     assert (
-        anthropic_worker["llmConfigFromCode"]["model_name"] == "claude-3-opus-20240229"
+        openai_worker["llmConfigFromCode"]["provider"]["value"] == "openai"
+    ), "Provider value mismatch for OpenAI"
+    assert (
+        openai_worker["llmConfigFromCode"]["provider"]["is_literal"] is True
+    ), "Provider should be literal for OpenAI"
+    assert openai_worker["llmConfigFromCode"]["model_name"]["value"] == "gpt-4"
+    assert openai_worker["llmConfigFromCode"]["model_name"]["is_literal"] is True
+    assert openai_worker["llmConfigFromCode"]["max_tokens"]["value"] == 1024
+    assert openai_worker["llmConfigFromCode"]["max_tokens"]["is_literal"] is True
+
+    assert anthropic_worker["llmConfigFromCode"]["provider"]["value"] == "anthropic"
+    assert anthropic_worker["llmConfigFromCode"]["provider"]["is_literal"] is True
+    assert (
+        anthropic_worker["llmConfigFromCode"]["model_name"]["value"]
+        == "claude-3-opus-20240229"
     )
-    assert anthropic_worker["llmConfigFromCode"]["max_tokens"] == 2048
+    assert anthropic_worker["llmConfigFromCode"]["model_name"]["is_literal"] is True
+    assert anthropic_worker["llmConfigFromCode"]["max_tokens"]["value"] == 2048
+    assert anthropic_worker["llmConfigFromCode"]["max_tokens"]["is_literal"] is True
 
     # Step 2: Create graph data for regeneration
     task_nodes = []
@@ -1015,27 +1026,26 @@ def build_graph():
 
     worker_nodes = []
     for i, worker_def in enumerate(worker_defs):
-        # For LLM worker nodes, convert llmConfigFromCode to llmConfig
-        # to simulate frontend behavior (pythonExport.ts)
+        # Simulate the frontend creating the llmConfig based on llmConfigFromCode
         if "llmConfigFromCode" in worker_def:
-            # Create a synthetic llmConfig similar to what the frontend would produce
-            if "llmConfig" not in worker_def:
-                worker_def["llmConfig"] = {
-                    "provider": worker_def["llmConfigFromCode"]["provider"],
-                    "modelId": worker_def["llmConfigFromCode"]["model_name"],
-                    "max_tokens": worker_def["llmConfigFromCode"]["max_tokens"],
-                }
-                # Add any other params if they exist
-                if "host" in worker_def["llmConfigFromCode"]:
-                    worker_def["llmConfig"]["baseUrl"] = worker_def[
-                        "llmConfigFromCode"
-                    ]["host"]
+            original_llm_config = worker_def["llmConfigFromCode"]
+            # Create the new llmConfig structure for the regeneration step
+            new_llm_config = {}
+            for key, config_item in original_llm_config.items():
+                # Ensure config_item is the dictionary { "value": ..., "is_literal": ... }
+                new_llm_config[key] = (
+                    config_item  # Already in correct format (shouldn't happen yet)
+                )
+
+            # Replace llmConfigFromCode with the new llmConfig for regeneration
+            worker_def["llmConfig"] = new_llm_config
+            del worker_def["llmConfigFromCode"]
 
         worker_nodes.append(
             {
                 "id": f"worker_{i}",
                 "type": worker_def["workerType"],
-                "data": worker_def,
+                "data": worker_def,  # Pass the potentially modified worker_def
             }
         )
 

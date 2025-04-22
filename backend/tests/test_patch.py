@@ -929,26 +929,59 @@ def build_graph():
 
     # Check parsed LLM configs for worker1 (string literals)
     llm_config1 = worker1["llmConfigFromCode"]
-    assert llm_config1["provider"] == "openai"
-    assert llm_config1["model_name"] == "gpt-4"
-    assert llm_config1["max_tokens"] == 1024
-    assert llm_config1["host"] == "https://api.openai.com"
+    assert (
+        llm_config1["provider"]["value"] == "openai"
+        and llm_config1["provider"]["is_literal"]
+    )
+    assert (
+        llm_config1["model_name"]["value"] == "gpt-4"
+        and llm_config1["model_name"]["is_literal"]
+    )
+    assert (
+        llm_config1["max_tokens"]["value"] == 1024
+        and llm_config1["max_tokens"]["is_literal"]
+    )
+    assert (
+        llm_config1["host"]["value"] == "https://api.openai.com"
+        and llm_config1["host"]["is_literal"]
+    )
     assert worker1["llmConfigVar"] == "llm1"
 
     # Check parsed LLM configs for worker2 (variables)
     llm_config2 = worker2["llmConfigFromCode"]
-    assert llm_config2["provider"] == "provider_var"
-    assert llm_config2["model_name"] == "model_var"
-    assert llm_config2["max_tokens"] == 2048
+    assert (
+        llm_config2["provider"]["value"] == "provider_var"
+        and not llm_config2["provider"]["is_literal"]
+    )
+    assert (
+        llm_config2["model_name"]["value"] == "model_var"
+        and not llm_config2["model_name"]["is_literal"]
+    )
+    assert (
+        llm_config2["max_tokens"]["value"] == 2048
+        and llm_config2["max_tokens"]["is_literal"]
+    )
     assert worker2["llmConfigVar"] == "llm2"
 
     # Check parsed LLM configs for worker3 (inside try block)
     llm_config3 = worker3["llmConfigFromCode"]
-    assert llm_config3["provider"] == "ollama"
-    assert llm_config3["model_name"] == "llama3"
+    assert (
+        llm_config3["provider"]["value"] == "ollama"
+        and llm_config3["provider"]["is_literal"]
+    )
+    assert (
+        llm_config3["model_name"]["value"] == "llama3"
+        and llm_config3["model_name"]["is_literal"]
+    )
     assert worker3["llmConfigVar"] == "llm3"
 
     # Check parsed LLM configs for worker5 (inline instantiation)
     llm_config5 = worker5["llmConfigFromCode"]
-    assert llm_config5["provider"] == "openai"
-    assert llm_config5["model_name"] == "gpt-4"
+    assert (
+        llm_config5["provider"]["value"] == "openai"
+        and llm_config5["provider"]["is_literal"]
+    )
+    assert (
+        llm_config5["model_name"]["value"] == "gpt-4"
+        and llm_config5["model_name"]["is_literal"]
+    )
