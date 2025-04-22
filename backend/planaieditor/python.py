@@ -76,6 +76,8 @@ def create_worker_class(node: Dict[str, Any]) -> Optional[str]:
         base_class = "CachedTaskWorker"
     elif node_type == "cachedllmtaskworker":
         base_class = "CachedLLMTaskWorker"
+    elif node_type == "chattaskworker":
+        base_class = "ChatTaskWorker"
 
     code.append(f"\nclass {worker_name}({base_class}):")
     class_body = []  # Store lines for the current class body

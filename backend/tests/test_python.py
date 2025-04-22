@@ -448,3 +448,113 @@ def test_fixture_edge_generation_full():
     if not user_chat_to_chat_adapter or not chat_task_to_user_chat:
         print("\nTest failed: Missing expected edges in generated code")
         assert False, "Missing expected edges"
+
+
+def test_roundtrip_fixture_conversion():
+    """Test that we can convert JSON fixture -> Python -> JSON and get the same workers and edges."""
+    import json
+    import tempfile
+    from pathlib import Path
+
+    from planaieditor.patch import get_definitions_from_file
+
+    # Load the fixture data
+    fixture_path = os.path.join(
+        os.path.dirname(__file__), "data", "transformed_data_deepsearch_fixture.json"
+    )
+    with open(fixture_path, "r") as f:
+        fixture_data = json.load(f)
+
+    # Step 1: Convert JSON to Python code
+    python_code, module_name, error = generate_python_module(fixture_data)
+
+    # Verify code generation succeeded
+    assert error is None, f"Error generating Python code: {error}"
+    assert python_code is not None, "No Python code was generated"
+
+    # Step 2: Write Python code to a temporary file
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as temp_file:
+        temp_file.write(python_code)
+        temp_file_path = temp_file.name
+
+    try:
+        # Step 3: Parse Python code back to JSON
+        parsed_data = get_definitions_from_file(temp_file_path)
+
+        # Step 4: Compare the original and parsed data
+
+        # Create maps of workers by className for easier comparison
+        original_workers = {}
+        # Map to store node type by class name
+        node_type_by_class = {}
+
+        for node in fixture_data["nodes"]:
+            if node["type"] not in ["task", "taskimport"]:
+                class_name = node["data"]["className"]
+                original_workers[class_name] = node["data"]
+                node_type_by_class[class_name] = node["type"]
+
+        parsed_workers = {
+            worker["className"]: worker for worker in parsed_data["workers"]
+        }
+
+        # Check that all original workers are in the parsed data
+        for class_name, original_worker in original_workers.items():
+            assert (
+                class_name in parsed_workers
+            ), f"Worker {class_name} missing from parsed data"
+
+            # Get the expected worker type from the node type
+            original_type = node_type_by_class.get(class_name, "").lower()
+            expected_worker_type = original_type
+
+            parsed_type = parsed_workers[class_name]["workerType"].lower()
+            assert (
+                parsed_type == expected_worker_type
+            ), f"Worker {class_name} type mismatch: {parsed_type} != {expected_worker_type}"
+
+        # Normalize edges for comparison
+        original_edges_worker = set()
+        original_edges_entry = set()
+        task_nodes = {
+            n["data"]["className"]
+            for n in fixture_data["nodes"]
+            if n["type"] in ["task", "taskimport"]
+        }
+
+        for edge in fixture_data["edges"]:
+            if edge["source"] in task_nodes:
+                original_edges_entry.add((edge["source"], edge["target"]))
+            else:
+                original_edges_worker.add((edge["source"], edge["target"]))
+
+        parsed_edges_worker = set()
+        for edge in parsed_data["edges"]:
+            parsed_edges_worker.add((edge["source"], edge["target"]))
+
+        parsed_edges_entry = set()
+        for edge in parsed_data["entryEdges"]:
+            parsed_edges_entry.add((edge["sourceTask"], edge["targetWorker"]))
+
+        # Check worker-to-worker edges
+        assert (
+            parsed_edges_worker == original_edges_worker
+        ), f"Worker-to-worker edge mismatch.\nExpected: {original_edges_worker}\nGot: {parsed_edges_worker}"
+
+        # Check entry (task-to-worker) edges
+        assert (
+            parsed_edges_entry == original_edges_entry
+        ), f"Entry edge mismatch.\nExpected: {original_edges_entry}\nGot: {parsed_edges_entry}"
+
+        # Print a summary
+        print(f"\nRound-trip conversion report:")
+        print(f"Original workers: {len(original_workers)}")
+        print(f"Parsed workers: {len(parsed_workers)}")
+        print(f"Original worker edges: {len(original_edges_worker)}")
+        print(f"Parsed worker edges: {len(parsed_edges_worker)}")
+        print(f"Original entry edges: {len(original_edges_entry)}")
+        print(f"Parsed entry edges: {len(parsed_edges_entry)}")
+
+    finally:
+        # Clean up the temporary file
+        Path(temp_file_path).unlink()
