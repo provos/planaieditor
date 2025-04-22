@@ -415,7 +415,7 @@ def verify_functional_equivalence(original_code: str, exported_code: str) -> boo
     TEST_FIXTURE_PATHS,
     ids=[p.stem for p in TEST_FIXTURE_PATHS],  # Use filename stems for clearer test IDs
 )
-def test_import_export_roundtrip(page: Page, test_fixture_path: Path):
+def test_import_export_roundtrip(page: Page, test_fixture_path: Path, request):
     """
     Tests the import-export roundtrip for various fixture files.
     """
@@ -575,6 +575,11 @@ def test_import_export_roundtrip(page: Page, test_fixture_path: Path):
         )
     except Exception as e:
         pytest.fail(f"page.evaluate for transformation failed: {e}")
+
+    # Write transformed data to file for debugging
+    if request.config.getoption("--write-transformed-data"):
+        with open(f"transformed_data_{test_fixture_path.stem}.json", "w") as f:
+            json.dump(graph_data_transformed, f, indent=2)
 
     # 7. Trigger Export API Call with TRANSFORMED data
     export_api_url = f"{BACKEND_TEST_URL}/api/export-transformed"

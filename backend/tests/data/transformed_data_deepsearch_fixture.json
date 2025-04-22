@@ -1,0 +1,1108 @@
+{
+  "nodes": [
+    {
+      "id": "imported-task-Request-1745361767761",
+      "type": "task",
+      "position": {
+        "x": 12,
+        "y": 1281.25
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": false,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "className": "Request",
+        "fields": [
+          {
+            "name": "user_input",
+            "type": "string",
+            "isList": false,
+            "required": true,
+            "description": "User input for the LLM"
+          }
+        ],
+        "nodeId": "imported-task-Request-1745361767761"
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 270,
+        "height": 91
+      }
+    },
+    {
+      "id": "imported-task-Plan-1745361767761",
+      "type": "task",
+      "position": {
+        "x": 618,
+        "y": 12
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": false,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "className": "Plan",
+        "fields": [
+          {
+            "name": "response",
+            "type": "string",
+            "isList": false,
+            "required": true,
+            "description": "A detailed plan for the task"
+          }
+        ],
+        "nodeId": "imported-task-Plan-1745361767761"
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 288,
+        "height": 91
+      }
+    },
+    {
+      "id": "imported-task-SearchQueryWithPhase-1745361767761",
+      "type": "task",
+      "position": {
+        "x": 3124,
+        "y": 12
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": false,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "className": "SearchQueryWithPhase",
+        "fields": [
+          {
+            "name": "query",
+            "type": "string",
+            "isList": false,
+            "required": true,
+            "description": "A search query"
+          },
+          {
+            "name": "phase",
+            "type": "string",
+            "isList": false,
+            "required": true,
+            "description": "The phase of the plan including a description about the purpose of the query"
+          }
+        ],
+        "nodeId": "imported-task-SearchQueryWithPhase-1745361767761"
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 532,
+        "height": 115
+      }
+    },
+    {
+      "id": "imported-task-SearchQueries-1745361767761",
+      "type": "task",
+      "position": {
+        "x": 1282,
+        "y": 12
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": false,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "className": "SearchQueries",
+        "fields": [
+          {
+            "name": "queries",
+            "type": "SearchQueryWithPhase",
+            "isList": true,
+            "required": true,
+            "description": "A list of search queries"
+          }
+        ],
+        "nodeId": "imported-task-SearchQueries-1745361767761"
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 391,
+        "height": 91
+      }
+    },
+    {
+      "id": "imported-task-Response-1745361767761",
+      "type": "task",
+      "position": {
+        "x": 3676,
+        "y": 12
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": false,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "className": "Response",
+        "fields": [
+          {
+            "name": "response_type",
+            "type": "literal",
+            "isList": false,
+            "required": true,
+            "description": "The type of response",
+            "literalValues": [
+              "final",
+              "thinking",
+              "error"
+            ]
+          },
+          {
+            "name": "message",
+            "type": "string",
+            "isList": false,
+            "required": true,
+            "description": "The response to the user"
+          },
+          {
+            "name": "phase",
+            "type": "string",
+            "isList": false,
+            "required": false,
+            "description": "The phase of the plan"
+          }
+        ],
+        "nodeId": "imported-task-Response-1745361767761"
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 444,
+        "height": 139
+      }
+    },
+    {
+      "id": "imported-task-PhaseAnalysisInterim-1745361767761",
+      "type": "task",
+      "position": {
+        "x": 1693,
+        "y": 12
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": false,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "className": "PhaseAnalysisInterim",
+        "fields": [
+          {
+            "name": "extraction",
+            "type": "string",
+            "isList": false,
+            "required": true,
+            "description": "The extracted information for this phase of the plan"
+          }
+        ],
+        "nodeId": "imported-task-PhaseAnalysisInterim-1745361767761"
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 422,
+        "height": 91
+      }
+    },
+    {
+      "id": "imported-task-PhaseAnalysis-1745361767761",
+      "type": "task",
+      "position": {
+        "x": 2682,
+        "y": 12
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": false,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "className": "PhaseAnalysis",
+        "fields": [
+          {
+            "name": "phase",
+            "type": "string",
+            "isList": false,
+            "required": true,
+            "description": "The phase of the plan"
+          },
+          {
+            "name": "extraction",
+            "type": "string",
+            "isList": false,
+            "required": true,
+            "description": "The extracted information for this phase of the plan"
+          }
+        ],
+        "nodeId": "imported-task-PhaseAnalysis-1745361767761"
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 422,
+        "height": 115
+      }
+    },
+    {
+      "id": "imported-task-PhaseAnalyses-1745361767761",
+      "type": "task",
+      "position": {
+        "x": 2135,
+        "y": 12
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": false,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "className": "PhaseAnalyses",
+        "fields": [
+          {
+            "name": "analyses",
+            "type": "PhaseAnalysis",
+            "isList": true,
+            "required": true,
+            "description": "A list of extracted information for each phase of the plan"
+          }
+        ],
+        "nodeId": "imported-task-PhaseAnalyses-1745361767761"
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 527,
+        "height": 91
+      }
+    },
+    {
+      "id": "imported-task-FinalWriteup-1745361767761",
+      "type": "task",
+      "position": {
+        "x": 926,
+        "y": 12
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": false,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "className": "FinalWriteup",
+        "fields": [
+          {
+            "name": "writeup",
+            "type": "string",
+            "isList": false,
+            "required": true,
+            "description": "The final writeup in markdown format"
+          }
+        ],
+        "nodeId": "imported-task-FinalWriteup-1745361767761"
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 336,
+        "height": 91
+      }
+    },
+    {
+      "id": "imported-taskref-ChatMessage-1745361767761",
+      "type": "taskimport",
+      "position": {
+        "x": 12,
+        "y": 12
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": false,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "modulePath": "planai",
+        "className": "ChatMessage",
+        "fields": [],
+        "nodeId": "imported-taskref-ChatMessage-1745361767761"
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 182,
+        "height": 120
+      }
+    },
+    {
+      "id": "imported-taskref-ConsolidatedPages-1745361767761",
+      "type": "taskimport",
+      "position": {
+        "x": 214,
+        "y": 12
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": false,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "modulePath": "planai.patterns",
+        "className": "ConsolidatedPages",
+        "fields": [],
+        "nodeId": "imported-taskref-ConsolidatedPages-1745361767761"
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 182,
+        "height": 120
+      }
+    },
+    {
+      "id": "imported-taskref-SearchQuery-1745361767761",
+      "type": "taskimport",
+      "position": {
+        "x": 416,
+        "y": 12
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": false,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "modulePath": "planai.patterns",
+        "className": "SearchQuery",
+        "fields": [],
+        "nodeId": "imported-taskref-SearchQuery-1745361767761"
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 182,
+        "height": 120
+      }
+    },
+    {
+      "id": "imported-taskref-ChatTask-1745361767761",
+      "type": "taskimport",
+      "position": {
+        "x": 4934,
+        "y": 232.5
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": false,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "modulePath": "planai",
+        "className": "ChatTask",
+        "isImplicit": true,
+        "fields": [],
+        "nodeId": "imported-taskref-ChatTask-1745361767761"
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 182,
+        "height": 120
+      }
+    },
+    {
+      "id": "imported-cachedllmtaskworker-PlanWorker-1745361767761",
+      "type": "cachedllmtaskworker",
+      "position": {
+        "x": 402,
+        "y": 927.25
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": false,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "isCached": true,
+        "variableName": "plan_worker",
+        "nodeId": "imported-cachedllmtaskworker-PlanWorker-1745361767761",
+        "inputTypes": [
+          "Request"
+        ],
+        "methods": {
+          "post_process": "    def post_process(self, response: Plan, input_task: Request):\n        self.publish_work(task=response, input_task=input_task)\n        self.publish_work(\n            Response(response_type=\"thinking\", phase=\"plan\", message=response.response),\n            input_task,\n        )",
+          "pre_consume_work": "    def pre_consume_work(self, task):\n        self.notify_status(task, \"Creating a research plan\")"
+        },
+        "otherMembersSource": "",
+        "classVars": {
+          "llm_input_type": "Request",
+          "llm_output_type": "",
+          "output_types": [
+            "Plan",
+            "Response"
+          ],
+          "prompt": "Please provide a detailed step-by-step plan for researching this query. The plan should involve multiple phases of research,\nwhere each phase utilizes web searches to gather different types of information.\n\nEach phase should have a clear objective and contribute to a comprehensive understanding of the topic.\n\nStructure your plan in the following format:\n\nPhase 1: [Objective of the phase]\nPhase 2: [Objective of the phase]\n...\n\nProvide a concise description for each phase, outlining what information you aim to gather and how it fits into the overall research strategy.\n\nYour plan should be presented as markdown in the response field.",
+          "system_prompt": "You are an expert research agent and will create detailed multi-step plans to answer user's queries.\n        You have access to a web search tool to gather information.\n        You should think of different ways to gather information from the web to answer the user query.\n        Your plan should be ambitious and utilize the web search tool as much as possible to create a comprehensive\n        and well-informed response to the user's query.",
+          "use_xml": true,
+          "debug_mode": false
+        },
+        "llmConfigVar": "llm",
+        "requiredMembers": [
+          "prompt",
+          "system_prompt"
+        ],
+        "extraValidation": "return None",
+        "formatPrompt": "return self.prompt",
+        "preProcess": "return task",
+        "postProcess": "return super().post_process(response, input_task)",
+        "enabledFunctions": {
+          "extraValidation": false,
+          "formatPrompt": false,
+          "preProcess": false,
+          "postProcess": false
+        },
+        "className": "PlanWorker",
+        "llmConfig": {
+          "model_name": {
+            "is_literal": false,
+            "value": "model"
+          },
+          "provider": {
+            "is_literal": false,
+            "value": "provider"
+          },
+          "use_cache": {
+            "is_literal": true,
+            "value": false
+          },
+          "baseUrl": {
+            "is_literal": false,
+            "value": "host"
+          }
+        }
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 1020,
+        "height": 799
+      }
+    },
+    {
+      "id": "imported-cachedllmtaskworker-SearchCreator-1745361767761",
+      "type": "cachedllmtaskworker",
+      "position": {
+        "x": 1542,
+        "y": 641.5
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": false,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "isCached": true,
+        "variableName": "search_worker",
+        "nodeId": "imported-cachedllmtaskworker-SearchCreator-1745361767761",
+        "inputTypes": [
+          "Plan"
+        ],
+        "methods": {
+          "format_prompt": "    def format_prompt(self, input_task: Plan) -> str:\n        request: Request = input_task.find_input_task(Request)\n        if request is None:\n            raise ValueError(\"The input task is missing a Request task\")\n        return self.prompt.format(request=request.user_input)",
+          "pre_consume_work": "    def pre_consume_work(self, task: Plan):\n        self.notify_status(task, \"Creating search queries for each phase\")"
+        },
+        "otherMembersSource": "",
+        "classVars": {
+          "llm_input_type": "Plan",
+          "output_types": [
+            "SearchQueries"
+          ],
+          "prompt": "Given the provided research plan and the original user request:\n\n<user request>\n{request}\n</user request>\n\nPlease generate a specific search query for each phase of the plan. Each query should be designed to\ngather information relevant to the objective of that phase.\n\nFor each phase, provide:\n1. The phase description, including the specific question or objective that the search query aims to address.\n2. The search query itself, formulated to retrieve the most relevant and useful information for that phase.\n\nStructure your response as follows:\n\nPhase: [Phase description]\nQuery: [Generated search query]\n\nRepeat this structure for each phase of the plan.",
+          "system_prompt": "You are an expert search query generator. Given a research plan, you will generate targeted search queries\n        for each phase of the plan. Your goal is to create queries that will retrieve the most relevant information\n        from the web to fulfill the objectives of each research phase.",
+          "use_xml": true,
+          "debug_mode": false,
+          "llm_output_type": ""
+        },
+        "llmConfigVar": "llm",
+        "requiredMembers": [
+          "prompt",
+          "system_prompt"
+        ],
+        "extraValidation": "return None",
+        "formatPrompt": "return self.prompt",
+        "preProcess": "return task",
+        "postProcess": "return super().post_process(response, input_task)",
+        "enabledFunctions": {
+          "extraValidation": false,
+          "formatPrompt": false,
+          "preProcess": false,
+          "postProcess": false
+        },
+        "className": "SearchCreator",
+        "llmConfig": {
+          "model_name": {
+            "is_literal": false,
+            "value": "model"
+          },
+          "provider": {
+            "is_literal": false,
+            "value": "provider"
+          },
+          "use_cache": {
+            "is_literal": true,
+            "value": false
+          },
+          "baseUrl": {
+            "is_literal": false,
+            "value": "host"
+          }
+        }
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 836,
+        "height": 822
+      }
+    },
+    {
+      "id": "imported-taskworker-SearchSplitter-1745361767761",
+      "type": "taskworker",
+      "position": {
+        "x": 2498,
+        "y": 903
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": false,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "isCached": false,
+        "variableName": "split_worker",
+        "nodeId": "imported-taskworker-SearchSplitter-1745361767761",
+        "inputTypes": [
+          "SearchQueries"
+        ],
+        "methods": {
+          "consume_work": "    def consume_work(self, task: SearchQueries):\n        # we need to adopt the queries to the search-fetch pattern\n        for query in task.queries:\n            self.publish_work(\n                SearchQuery(query=query.query, metadata=query.phase), input_task=task\n            )"
+        },
+        "otherMembersSource": "",
+        "classVars": {
+          "output_types": [
+            "SearchQuery"
+          ]
+        },
+        "requiredMembers": [
+          "consume_work"
+        ],
+        "className": "SearchSplitter"
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 634,
+        "height": 299
+      }
+    },
+    {
+      "id": "imported-cachedllmtaskworker-SearchSummarizer-1745361767761",
+      "type": "cachedllmtaskworker",
+      "position": {
+        "x": 3653,
+        "y": 571
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": false,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "isCached": true,
+        "variableName": "analysis_worker",
+        "nodeId": "imported-cachedllmtaskworker-SearchSummarizer-1745361767761",
+        "inputTypes": [
+          "ConsolidatedPages"
+        ],
+        "methods": {
+          "format_prompt": "    def format_prompt(self, input_task: ConsolidatedPages) -> str:\n        plan: Plan = input_task.find_input_task(Plan)\n        if plan is None:\n            raise ValueError(\"The input task is missing a Plan task\")\n        query: SearchQuery = input_task.find_input_task(SearchQuery)\n        if query is None:\n            raise ValueError(\"The input task is missing a SearchQuery task\")\n        return self.prompt.format(plan=plan.response, phase=query.metadata)",
+          "post_process": "    def post_process(\n        self, response: PhaseAnalysisInterim, input_task: ConsolidatedPages\n    ):\n        query: SearchQuery = input_task.find_input_task(SearchQuery)\n        if query is None:\n            raise ValueError(\"The input task is missing a SearchQuery task\")\n        return self.publish_work(\n            PhaseAnalysis(phase=query.metadata, extraction=response.extraction),\n            input_task,\n        )"
+        },
+        "otherMembersSource": "",
+        "classVars": {
+          "llm_input_type": "ConsolidatedPages",
+          "llm_output_type": "",
+          "output_types": [
+            "PhaseAnalysis"
+          ],
+          "prompt": "These documents were retrieved based on the following phase of a research plan:\n\n<current phase>\n{phase}\n</current phase>\n\nAnd within the context of the overall research plan:\n\n<overall plan>\n{plan}\n</overall plan>\n\nYour task is to synthesize the information from the provided research results (web pages) into a comprehensive extraction that directly addresses the objective of this research phase.\n\nFocus on distilling the key findings, insights, and concepts from the research.\n\n**Do not refer to the documents themselves in your extraction (e.g., avoid phrases like \"This document discusses...\" or \"The provided sources indicate...\").**\n\nInstead, integrate the information into a cohesive narrative that stands on its own, as if you are explaining the findings to a colleague.\n\nExplain the findings in a way that is both accurate and accessible to someone who may not be deeply familiar with the topic.\n\nYour extraction should be a well-structured, informative, and engaging piece of text that contributes directly to a broader understanding of the overall research topic as outlined in the plan.\n\nProvide your extraction in markdown format.",
+          "system_prompt": "You are a master research scientist, adept at synthesizing complex information from multiple sources into clear, concise, and engaging extractions.\n        You will be provided with research results related to a specific phase of a larger research plan.\n        Your task is to distill the core findings and insights from these materials, focusing on answering the research question posed in that phase.\n        Craft a narrative that seamlessly integrates the information, prioritizing a natural flow of knowledge over explicitly referencing individual sources.\n        Assume the reader is intelligent but may not be familiar with the specific details of the research. Explain complex concepts clearly and avoid jargon where possible.\n        The goal is to produce a comprehensive and insightful extraction that stands alone as a valuable piece of knowledge, directly contributing to a broader understanding of the overarching research topic.",
+          "use_xml": true,
+          "debug_mode": false
+        },
+        "llmConfigVar": "llm",
+        "requiredMembers": [
+          "prompt",
+          "system_prompt"
+        ],
+        "extraValidation": "return None",
+        "formatPrompt": "return self.prompt",
+        "preProcess": "return task",
+        "postProcess": "return super().post_process(response, input_task)",
+        "enabledFunctions": {
+          "extraValidation": false,
+          "formatPrompt": false,
+          "preProcess": false,
+          "postProcess": false
+        },
+        "className": "SearchSummarizer",
+        "llmConfig": {
+          "model_name": {
+            "is_literal": false,
+            "value": "model"
+          },
+          "provider": {
+            "is_literal": false,
+            "value": "provider"
+          },
+          "use_cache": {
+            "is_literal": true,
+            "value": false
+          },
+          "baseUrl": {
+            "is_literal": false,
+            "value": "host"
+          }
+        }
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 1463,
+        "height": 963
+      }
+    },
+    {
+      "id": "imported-joinedtaskworker-AnalysisJoiner-1745361767761",
+      "type": "joinedtaskworker",
+      "position": {
+        "x": 5236,
+        "y": 906.5
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": false,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "isCached": false,
+        "variableName": "analysis_joiner",
+        "nodeId": "imported-joinedtaskworker-AnalysisJoiner-1745361767761",
+        "inputTypes": [
+          "PhaseAnalysis"
+        ],
+        "methods": {
+          "consume_work_joined": "    def consume_work_joined(self, tasks: List[PhaseAnalysis]):\n        self.publish_work(PhaseAnalyses(analyses=tasks), tasks[0])"
+        },
+        "otherMembersSource": "",
+        "classVars": {
+          "join_type": "InitialTaskWorker",
+          "output_types": [
+            "PhaseAnalyses"
+          ]
+        },
+        "requiredMembers": [
+          "consume_work_joined"
+        ],
+        "className": "AnalysisJoiner"
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 506,
+        "height": 292
+      }
+    },
+    {
+      "id": "imported-cachedllmtaskworker-FinalNarrativeWorker-1745361767761",
+      "type": "cachedllmtaskworker",
+      "position": {
+        "x": 5862,
+        "y": 514
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": false,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "isCached": true,
+        "variableName": "final_narrative_worker",
+        "nodeId": "imported-cachedllmtaskworker-FinalNarrativeWorker-1745361767761",
+        "inputTypes": [
+          "PhaseAnalyses"
+        ],
+        "methods": {
+          "format_prompt": "    def format_prompt(self, input_task: ConsolidatedPages) -> str:\n        plan: Plan = input_task.find_input_task(Plan)\n        if plan is None:\n            raise ValueError(\"The input task is missing a Plan task\")\n        request: Request = input_task.find_input_task(Request)\n        if request is None:\n            raise ValueError(\"The input task is missing a Request task\")\n        return self.prompt.format(plan=plan.response, user_query=request.user_input)",
+          "post_process": "    def post_process(self, response: FinalWriteup, input_task: Response):\n        return self.publish_work(\n            Response(response_type=\"final\", message=response.writeup), input_task\n        )",
+          "pre_consume_work": "    def pre_consume_work(self, task):\n        self.notify_status(task, \"Creating the final writeup\")"
+        },
+        "otherMembersSource": "",
+        "classVars": {
+          "llm_input_type": "PhaseAnalyses",
+          "llm_output_type": "",
+          "output_types": [
+            "Response"
+          ],
+          "prompt": "Original User Query:\n<user_query>\n{user_query}\n</user_query>\n\nResearch Plan:\n<plan>\n{plan}\n</plan>\n\nYour task is to synthesize the provided research extractions into a single, cohesive, and detailed narrative that directly addresses the user's original query.\n\n**Depth and Detail:** Go beyond a basic overview. Provide a more in-depth explanation of the core concepts, findings, and their implications. Incorporate relevant scientific terminology and concepts where appropriate, defining them clearly for a non-expert audience. Use specific examples where appropriate.\n\n**Narrative Structure:** Structure your response as a continuous narrative, not as a collection of separate summaries. Build upon each extraction to create a comprehensive and engaging story of discovery and understanding. Connect the concepts in a logical flow, building upon previous ideas to create a cohesive understanding.\n\n**Markdown for Clarity:** Use Markdown formatting to enhance clarity and presentation:\n\n*   Use **bold** and *italics* to emphasize key terms and concepts.\n*   Employ bullet points or numbered lists to break down complex information into digestible parts.\n*   If relevant, use `code blocks` to present equations or formulas in a clear format, but keep it simple and explain them thoroughly.\n*   You can use links, but only if you think they will greatly enhance the answer. Keep it minimal.\n\n**Integrate, Don't Repeat:** Do not simply restate the extractions. Instead, distill their essence and weave them into a unified narrative that provides a deeper understanding of the topic.\n\n**Audience Awareness:** Assume your audience is intelligent and eager to learn but may not have a strong background in the specific scientific field. Explain complex ideas clearly and accessibly, defining jargon and providing context where needed.\n\n**Address the Query Completely:** Ensure that your narrative directly and completely answers the user's original query, leaving no major aspects unaddressed.\n\n**Maintain Accuracy:** While maintaining a narrative style, prioritize scientific accuracy. Ensure your explanations are consistent with the provided research.\n\nThe final narrative should be a well-written, informative, accurate, and engaging piece of scientific writing that stands alone as a satisfying answer to the user's original question.",
+          "system_prompt": "You are a master science communicator, adept at explaining complex scientific concepts to a curious and intelligent audience.\n        You will be provided with a user's original query and a series of detailed research extractions related to that query.\n        Your task is to synthesize these extractions into a single, comprehensive, and engaging narrative that directly and thoroughly answers the user's query.\n        Maintain scientific accuracy while presenting the information in a narrative style, as if guiding the reader through a fascinating scientific journey.\n        Use Markdown formatting to enhance the readability and presentation of your narrative.",
+          "use_xml": true,
+          "debug_mode": false
+        },
+        "llmConfigVar": "llm",
+        "requiredMembers": [
+          "prompt",
+          "system_prompt"
+        ],
+        "extraValidation": "return None",
+        "formatPrompt": "return self.prompt",
+        "preProcess": "return task",
+        "postProcess": "return super().post_process(response, input_task)",
+        "enabledFunctions": {
+          "extraValidation": false,
+          "formatPrompt": false,
+          "preProcess": false,
+          "postProcess": false
+        },
+        "className": "FinalNarrativeWorker",
+        "llmConfig": {
+          "model_name": {
+            "is_literal": false,
+            "value": "model"
+          },
+          "provider": {
+            "is_literal": false,
+            "value": "provider"
+          },
+          "use_cache": {
+            "is_literal": true,
+            "value": false
+          },
+          "baseUrl": {
+            "is_literal": false,
+            "value": "host"
+          }
+        }
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 2266,
+        "height": 1077
+      }
+    },
+    {
+      "id": "imported-chattaskworker-UserChat-1745361767762",
+      "type": "chattaskworker",
+      "position": {
+        "x": 5427.5,
+        "y": 223
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": false,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "isCached": false,
+        "variableName": "chat_worker",
+        "nodeId": "imported-chattaskworker-UserChat-1745361767762",
+        "inputTypes": [
+          "ChatTask"
+        ],
+        "methods": {},
+        "otherMembersSource": "",
+        "classVars": {
+          "output_types": [
+            "ChatMessage"
+          ]
+        },
+        "llmConfigFromCode": {
+          "host": {
+            "is_literal": false,
+            "value": "host"
+          },
+          "model_name": {
+            "is_literal": false,
+            "value": "model"
+          },
+          "provider": {
+            "is_literal": false,
+            "value": "provider"
+          },
+          "use_cache": {
+            "is_literal": true,
+            "value": false
+          }
+        },
+        "llmConfigVar": "llm_chat",
+        "llmConfigDescription": "Imported: [object Object] / [object Object]",
+        "className": "UserChat"
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 123,
+        "height": 139
+      }
+    },
+    {
+      "id": "imported-taskworker-ChatAdapter-1745361767762",
+      "type": "taskworker",
+      "position": {
+        "x": 6674.5,
+        "y": 171
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": false,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "isCached": false,
+        "variableName": "chat_adapter",
+        "nodeId": "imported-taskworker-ChatAdapter-1745361767762",
+        "inputTypes": [
+          "ChatMessage"
+        ],
+        "methods": {
+          "consume_work": "    def consume_work(self, task: ChatMessage):\n        self.publish_work(Response(response_type=\"final\", message=task.content), task)"
+        },
+        "otherMembersSource": "",
+        "classVars": {
+          "output_types": [
+            "Response"
+          ]
+        },
+        "requiredMembers": [
+          "consume_work"
+        ],
+        "className": "ChatAdapter"
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 641,
+        "height": 243
+      }
+    },
+    {
+      "id": "imported-taskworker-ResponsePublisher-1745361767762",
+      "type": "taskworker",
+      "position": {
+        "x": 8248,
+        "y": 931
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": false,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "isCached": false,
+        "variableName": "response_publisher",
+        "nodeId": "imported-taskworker-ResponsePublisher-1745361767762",
+        "inputTypes": [
+          "Response"
+        ],
+        "methods": {
+          "consume_work": "    def consume_work(self, task: Response):\n        self.publish_work(task, input_task=task)"
+        },
+        "otherMembersSource": "",
+        "classVars": {
+          "output_types": [
+            "Response"
+          ]
+        },
+        "requiredMembers": [
+          "consume_work"
+        ],
+        "className": "ResponsePublisher"
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 385,
+        "height": 243
+      }
+    },
+    {
+      "id": "imported-subgraphworker-SearchFetchWorker-1745361767762",
+      "type": "subgraphworker",
+      "position": {
+        "x": 3252,
+        "y": 954
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": false,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "isCached": false,
+        "variableName": "search_fetch_worker",
+        "nodeId": "imported-subgraphworker-SearchFetchWorker-1745361767762",
+        "inputTypes": [
+          "SearchQuery"
+        ],
+        "methods": {},
+        "otherMembersSource": "",
+        "classVars": {
+          "output_types": [
+            "ConsolidatedPages"
+          ]
+        },
+        "factoryFunction": "create_search_fetch_worker",
+        "factoryInvocation": "",
+        "className": "SearchFetchWorker"
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 281,
+        "height": 197
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "PlanWorker",
+      "target": "ResponsePublisher"
+    },
+    {
+      "source": "PlanWorker",
+      "target": "SearchCreator"
+    },
+    {
+      "source": "SearchCreator",
+      "target": "SearchSplitter"
+    },
+    {
+      "source": "SearchSplitter",
+      "target": "SearchFetchWorker"
+    },
+    {
+      "source": "SearchFetchWorker",
+      "target": "SearchSummarizer"
+    },
+    {
+      "source": "SearchSummarizer",
+      "target": "AnalysisJoiner"
+    },
+    {
+      "source": "AnalysisJoiner",
+      "target": "FinalNarrativeWorker"
+    },
+    {
+      "source": "FinalNarrativeWorker",
+      "target": "ResponsePublisher"
+    },
+    {
+      "source": "UserChat",
+      "target": "ChatAdapter"
+    },
+    {
+      "source": "ChatAdapter",
+      "target": "ResponsePublisher"
+    },
+    {
+      "source": "Request",
+      "target": "PlanWorker"
+    },
+    {
+      "source": "ChatTask",
+      "target": "UserChat"
+    }
+  ]
+}

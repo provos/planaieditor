@@ -359,9 +359,6 @@ def generate_python_module(
     # 1. Imports
     code_to_format = return_code_snippet("imports")
 
-    # 2. Task Definitions (from 'task' nodes)
-    tasks_code = []
-    task_nodes = [n for n in nodes if n.get("type") == "task"]
     imported_tasks = {}  # Store details of imported tasks: {className: modulePath}
     task_import_nodes = [n for n in nodes if n.get("type") == "taskimport"]
 
@@ -401,7 +398,9 @@ def generate_python_module(
             import_statements.append(
                 f"from {module_path} import {', '.join(sorted_class_names)}"
             )
-
+    # 2. Task Definitions (from 'task' nodes)
+    tasks_code = []
+    task_nodes = [n for n in nodes if n.get("type") == "task"]
     # Add locally defined Task nodes
     if not task_nodes:
         tasks_code.append("# No Task nodes defined in the graph.")
@@ -512,6 +511,7 @@ def generate_python_module(
             "cachedtaskworker",
             "cachedllmtaskworker",
             "subgraphworker",
+            "chattaskworker",
         )
     ]
 
@@ -576,6 +576,13 @@ def generate_python_module(
         # Map all the task names
         task_names = set()
         for node in task_nodes:
+            data = node.get("data", {})
+            class_name = data.get("className")
+            if class_name:
+                task_names.add(class_name)
+
+        # Also add task names from taskimport nodes
+        for node in task_import_nodes:
             data = node.get("data", {})
             class_name = data.get("className")
             if class_name:
