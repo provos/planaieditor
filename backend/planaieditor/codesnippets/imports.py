@@ -44,7 +44,7 @@ from pydantic import ConfigDict, Field, PrivateAttr  # noqa: F401
 # --- Graph Setup ---
 
 
-def create_graph() -> Graph:
+def execute_graph():
     graph = Graph(name="GeneratedPlan")
 
     # --- LLM Configs ---
@@ -57,24 +57,36 @@ def create_graph() -> Graph:
 
     # {dependency_setup}
 
-    return graph
+    # Optional: Add code here to run the graph if needed for testing
+    # print("Graph setup complete. Running graph...")
+
+    initial_tasks = []
+
+    # {initial_tasks}
+
+    # Run the graph
+    if initial_tasks:
+        graph.run(initial_tasks=initial_tasks, display_terminal=False)
+
+        # Get the output from the graph
+        output = graph.get_output_tasks()
+
+        # Print the output
+        print(output)
+    else:
+        print("No initial tasks provided.")
 
 
 if __name__ == "__main__":
     print("Setting up and running the generated PlanAI graph...")
-    graph = None
     try:
         # Pass notify=None for now, can be configured later
-        workers = create_graph()
+        execute_graph()
         # If setup completes without error (no sys.exit), print success JSON
         success_info = {"success": True, "message": "Graph setup successful."}
         print("##SUCCESS_JSON_START##", flush=True)
         print(json.dumps(success_info), flush=True)
         print("##SUCCESS_JSON_END##", flush=True)
-
-        # Optional: Add code here to run the graph if needed for testing
-        # print("Graph setup complete. Running graph...")
-        # graph.run() # Example run call
 
     except SystemExit:  # Don't catch sys.exit(1) from inner blocks
         # Errors should have already been printed with JSON markers

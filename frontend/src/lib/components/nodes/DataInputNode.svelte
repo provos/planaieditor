@@ -60,6 +60,9 @@
 	// Update data when selectedClassName changes
 	$effect(() => {
 		data.className = selectedClassName;
+		tick().then(() => {
+			updateNodeInternals(id);
+		});
 	});
 
 	// Keep track of the json validity

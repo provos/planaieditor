@@ -52,6 +52,115 @@ def return_code_snippet(name):
         return f.read() + "\n\n"
 
 
+def create_worker_to_instance_mapping(
+    worker_nodes: List[Dict[str, Any]],
+) -> Dict[str, str]:
+    """
+    Creates a mapping of worker class names to instance names.
+    """
+    # Create a lookup for worker instance names by className
+    worker_instance_by_class_name = {}
+    # Populate lookup using all worker nodes (including factory)
+    for node in worker_nodes:
+        data = node.get("data", {})
+        class_name = data.get("className")
+
+        if class_name:
+            instance_name = worker_to_instance_name(node)
+            worker_instance_by_class_name[class_name] = instance_name
+
+    return worker_instance_by_class_name
+
+
+def create_initial_tasks(
+    node: Dict[str, Any],
+    worker_nodes: List[Dict[str, Any]],
+    edges: List[Dict[str, Any]],
+) -> Optional[str]:
+    """
+    Creates a datainput task from a node.
+    """
+    assert node.get("type") == "datainput"
+    data = node.get("data", {})
+    class_name = data.get("className")
+    json_data = data.get("jsonData")
+
+    edge = next(
+        (e for e in edges if e.get("source") == "datainput-" + class_name),
+        None,
+    )
+    if not edge:
+        print(
+            f"Warning: Could not find edge for datainput {class_name}. Skipping initial task creation."
+        )
+        return None
+
+    worker_instance_by_class_name = create_worker_to_instance_mapping(worker_nodes)
+    target_class_name = edge.get("target")
+    target_instance_name = worker_instance_by_class_name.get(target_class_name)
+    if not target_instance_name:
+        print(
+            f"Warning: Could not find worker instance for {target_class_name}. Skipping initial task creation."
+        )
+        return None
+
+    return f"initial_tasks.append(({target_instance_name}, {class_name}.model_validate({json_data})))"
+
+
+def create_all_graph_dependencies(
+    task_nodes: List[Dict[str, Any]],
+    task_import_nodes: List[Dict[str, Any]],
+    worker_nodes: List[Dict[str, Any]],
+    edges: List[Dict[str, Any]],
+) -> Optional[str]:
+    """
+    Creates the dependency setting code for the graph.
+    """
+    # Map all the task names
+    task_names = set()
+    for node in task_nodes:
+        data = node.get("data", {})
+        class_name = data.get("className")
+        if class_name:
+            task_names.add(class_name)
+
+    # Also add task names from taskimport nodes
+    for node in task_import_nodes:
+        data = node.get("data", {})
+        class_name = data.get("className")
+        if class_name:
+            task_names.add(class_name)
+
+    # Create a lookup for worker instance names by className
+    worker_instance_by_class_name = create_worker_to_instance_mapping(worker_nodes)
+
+    code = []
+    # Create the dependency setting code strings
+    for edge in edges:
+        source_class_name: str = edge.get("source")
+        target_class_name: str = edge.get("target")
+
+        if source_class_name.startswith("datainput-"):
+            continue
+
+        # Use the lookup to find the instance names
+        source_inst_name = worker_instance_by_class_name.get(source_class_name)
+        target_inst_name = worker_instance_by_class_name.get(target_class_name)
+
+        if source_inst_name and target_inst_name:
+            code.append(
+                f"    graph.set_dependency({source_inst_name}, {target_inst_name})"
+            )
+        elif source_class_name in task_names and target_inst_name:
+            code.append(f"    graph.set_entry({target_inst_name})")
+        else:
+            print(
+                f"Warning: Could not find worker instances for edge {source_class_name} -> {target_class_name}"
+            )
+
+    return "\n".join(code)
+
+
 def create_task_import_state(node: Dict[str, Any], imported_tasks: Dict[str, Set[str]]):
     """
     Creates a task import state from a node.
@@ -570,6 +679,14 @@ def generate_python_module(
                 llm_names_used.add(llm_name)
             worker_setup.append(create_worker_instance(node, llm_name))
 
+    # Assuming factory functions come from planai.patterns for now
+    factory_import_line = ""
+    if factories_used:
+        sorted_factories = sorted(list(factories_used))
+        factory_import_line = (
+            f"from planai.patterns import {', '.join(sorted_factories)}"
+        )
+
     # Make sure all worker names are included in add_workers
     if worker_nodes:  # Only add if there are workers
         worker_setup.append(f"graph.add_workers({', '.join(worker_names)})")
@@ -578,63 +695,22 @@ def generate_python_module(
         worker_setup.append("# No workers instantiated.")
 
     # --- Generate Code for Dependencies and Entry Point *inside* create_graph ---
-    dep_code_lines = []  # Renamed from dep_code_lines
-    if not edges:
-        dep_code_lines.append("# No edges defined in the graph data.")
-    else:
-        # Map all the task names
-        task_names = set()
-        for node in task_nodes:
-            data = node.get("data", {})
-            class_name = data.get("className")
-            if class_name:
-                task_names.add(class_name)
-
-        # Also add task names from taskimport nodes
-        for node in task_import_nodes:
-            data = node.get("data", {})
-            class_name = data.get("className")
-            if class_name:
-                task_names.add(class_name)
-
-        # Create a lookup for worker instance names by className
-        worker_instance_by_class_name = {}
-        # Populate lookup using all worker nodes (including factory)
-        for node in worker_nodes:
-            data = node.get("data", {})
-            class_name = data.get("className")
-
-            if class_name:
-                instance_name = worker_to_instance_name(node)
-                worker_instance_by_class_name[class_name] = instance_name
-
-        # Create the dependency setting code strings
-        for edge in edges:
-            source_class_name = edge.get("source")
-            target_class_name = edge.get("target")
-
-            # Use the lookup to find the instance names
-            source_inst_name = worker_instance_by_class_name.get(source_class_name)
-            target_inst_name = worker_instance_by_class_name.get(target_class_name)
-
-            if source_inst_name and target_inst_name:
-                dep_code_lines.append(
-                    f"    graph.set_dependency({source_inst_name}, {target_inst_name})"
-                )
-            elif source_class_name in task_names and target_inst_name:
-                dep_code_lines.append(f"    graph.set_entry({target_inst_name})")
-            else:
-                print(
-                    f"Warning: Could not find worker instances for edge {source_class_name} -> {target_class_name}"
-                )
-
-    # Assuming factory functions come from planai.patterns for now
-    factory_import_line = ""
-    if factories_used:
-        sorted_factories = sorted(list(factories_used))
-        factory_import_line = (
-            f"from planai.patterns import {', '.join(sorted_factories)}"
+    dep_code_lines = []
+    dep_code_lines.append(
+        create_all_graph_dependencies(
+            task_nodes, task_import_nodes, worker_nodes, edges
         )
+    )
+    if not dep_code_lines:
+        dep_code_lines.append("# No dependencies defined in the graph data.")
+
+    # 5. Initial Tasks
+    datainput_nodes = [n for n in nodes if n.get("type") == "datainput"]
+    initial_tasks = []
+    for node in datainput_nodes:
+        inital_task = create_initial_tasks(node, worker_nodes, edges)
+        if inital_task:
+            initial_tasks.append(inital_task)
 
     final_code = custom_format(
         code_to_format,
@@ -652,6 +728,7 @@ def generate_python_module(
         llm_configs="\n".join(llm_configs)[4:],
         worker_instantiation=indent(dedent("\n".join(worker_setup)), "    ")[4:],
         dependency_setup=indent(dedent("\n".join(dep_code_lines)), "    ")[4:],
+        initial_tasks=indent(dedent("\n".join(initial_tasks)), "    ")[4:],
     )
 
     # Format the generated code using black

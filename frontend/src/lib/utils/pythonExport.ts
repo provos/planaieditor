@@ -147,6 +147,7 @@ export function convertGraphtoJSON(nodes: Node[], edges: Edge[]): GraphData {
         .map(edge => {
             const sourceName = nodeIdToNameMap.get(edge.source);
             const targetName = nodeIdToNameMap.get(edge.target);
+            const sourceNode = nodes.find(n => n.id === edge.source);
 
             if (!sourceName || !targetName) {
                 console.warn(`Skipping edge ${edge.id}: Could not find names for source/target IDs.`);
@@ -156,7 +157,7 @@ export function convertGraphtoJSON(nodes: Node[], edges: Edge[]): GraphData {
             // Return new edge structure with names
             // TODO: Potentially include targetInputType if needed by generator?
             return {
-                source: sourceName,
+                source: sourceNode?.type === 'datainput' ? 'datainput-' + sourceName : sourceName,
                 target: targetName
                 // targetInputType: ... // If needed
             };
