@@ -2,6 +2,7 @@
 	import CodeMirror from 'svelte-codemirror-editor';
 	import { python } from '@codemirror/lang-python';
 	import { markdown } from '@codemirror/lang-markdown';
+	import { json } from '@codemirror/lang-json';
 	import ChevronDown from 'phosphor-svelte/lib/ArrowDown';
 	import ChevronRight from 'phosphor-svelte/lib/ArrowRight';
 	import Trash from 'phosphor-svelte/lib/Trash';
@@ -19,7 +20,7 @@
 	} = $props<{
 		title?: string;
 		code: string;
-		language?: 'python' | 'markdown';
+		language?: 'python' | 'markdown' | 'json';
 		initialCollapsed?: boolean;
 		onUpdate: (newCode: string) => void;
 		onReset?: () => void;
@@ -29,7 +30,18 @@
 
 	let collapsed = $state(initialCollapsed);
 
-	const langExtension: LanguageSupport = language === 'python' ? python() : markdown();
+	let langExtension: LanguageSupport | undefined = $derived.by(() => {
+		switch (language) {
+			case 'python':
+				return python();
+			case 'markdown':
+				return markdown();
+			case 'json':
+				return json();
+			default:
+				return undefined;
+		}
+	});
 
 	function toggleCollapse() {
 		collapsed = !collapsed;

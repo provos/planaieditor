@@ -15,6 +15,7 @@
 	import TaskImportNode from '$lib/components/nodes/TaskImportNode.svelte';
 	import SubGraphWorkerNode from '$lib/components/nodes/SubGraphWorkerNode.svelte';
 	import ChatTaskWorkerNode from '$lib/components/nodes/ChatTaskWorkerNode.svelte';
+	import DataInputNode from '$lib/components/nodes/DataInputNode.svelte';
 	import type { BaseWorkerData } from '$lib/components/nodes/BaseWorkerNode.svelte';
 	import type { NodeData } from '$lib/components/nodes/TaskNode.svelte';
 	import { get } from 'svelte/store';
@@ -64,7 +65,8 @@
 		cachedllmtaskworker: LLMTaskWorkerNode,
 		joinedtaskworker: JoinedTaskWorkerNode,
 		subgraphworker: SubGraphWorkerNode,
-		chattaskworker: ChatTaskWorkerNode
+		chattaskworker: ChatTaskWorkerNode,
+		datainput: DataInputNode
 	};
 
 	// Use SvelteFlow hook
@@ -364,6 +366,15 @@ Analyze the following information and provide a response.`,
 					workerName: uniqueName, // Assign the unique name
 					inputTypes: ['ChatTask'],
 					output_types: ['ChatMessage'],
+					nodeId: id
+				};
+				break;
+			}
+			case 'datainput': {
+				// No name generation needed for data input
+				nodeData = {
+					className: null, // Start with no Task type selected
+					jsonData: '{}', // Default to empty JSON
 					nodeId: id
 				};
 				break;

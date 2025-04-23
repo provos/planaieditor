@@ -11,6 +11,7 @@
 	import PythonInterpreterSelector from '$lib/components/PythonInterpreterSelector.svelte';
 	import Export from 'phosphor-svelte/lib/Export';
 	import Gear from 'phosphor-svelte/lib/Gear';
+	import Keyboard from 'phosphor-svelte/lib/Keyboard';
 
 	let {
 		onExport,
@@ -69,6 +70,20 @@
 				<div class="text-sm font-semibold">TaskImport</div>
 			</div>
 		</div>
+		<!-- DataInput Node -->
+		<div
+			class="cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
+			role="button"
+			tabindex="0"
+			draggable="true"
+			ondragstart={(e) => onDragStart(e, 'datainput')}
+		>
+			<div class="flex items-center gap-1.5">
+				<Keyboard size={16} weight="fill" class="text-gray-500" />
+				<div class="text-sm font-semibold">DataInput</div>
+			</div>
+		</div>
+
 		<!-- TaskWorker Node -->
 		<div
 			class="cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
