@@ -1,18 +1,20 @@
 ---
-description: 
+description:
 globs: *.py
 alwaysApply: false
 ---
-# Python Backend Best Practices: Flask & Flask-SocketIO
+# Python Backend Best Practices
 
 ## Project Structure
-1. Organize code using a layered architecture (controllers → services → data layer)
-2. Separate your app into Blueprints for logical groupings of endpoints
-3. Implement the application factory pattern to create the Flask app with different configurations
+1. The main entry point for the backend app is in [app.py](mdc:backend/app.py)
+2. The remaining python code is in backend/planaieditor/
+3. Tests are in the tests/ directory
 
 ## Python Practices
 1. Use type hints for everything
 2. Use pytest for writing tests
+3. All dependencies are managed by Poetry which is setup in the backend/ directory
+4. Create flake8 and black compliant code - can we run with ```poetry run flake8``` or ```poetry run black .``` in the backend/ directory
 
 ## Flask Configuration
 1. Store configurations in separate files for different environments (dev, test, prod)
@@ -45,23 +47,10 @@ alwaysApply: false
 2. Log errors with sufficient context for debugging
 3. Return user-friendly error messages without exposing internal details
 
-## Database Practices
-1. Use SQLAlchemy for database interactions
-2. Implement database migrations with Alembic
-3. Create database connection pools for better performance
-
-## Security
-1. Use Flask-Bcrypt for password hashing
-2. Implement JWT-based authentication
-3. Add rate limiting to prevent abuse
-4. Sanitize all user inputs
-5. Set secure cookie options with HTTPOnly, Secure, and SameSite attributes
-
 ## Testing
 1. Write unit tests for individual functions and classes
-2. Create integration tests for API endpoints
-3. Use pytest and its fixtures for test organization
-4. Mock external services during testing
+2. Use pytest and its fixtures for test organization
+3. Mock external services during testing
 
 ## Performance
 1. Implement caching strategies using Flask-Caching
@@ -69,13 +58,4 @@ alwaysApply: false
 3. Consider asynchronous processing for CPU-intensive tasks
 
 ## Documentation
-1. Document API endpoints using OpenAPI/Swagger
-2. Include docstrings for all functions, classes, and methods
-3. Create a README with setup and running instructions
-
-## Logging
-1. Configure structured logging with timestamps and log levels
-2. Include request IDs in logs for traceability
-3. Set up appropriate log rotation
-
-Follow these guidelines to create a maintainable, secure, and efficient Flask application with WebSocket support.
+1. Include docstrings for all functions, classes, and methods
