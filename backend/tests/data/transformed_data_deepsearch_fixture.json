@@ -897,8 +897,8 @@
             "ChatMessage"
           ]
         },
-        "llmConfigFromCode": {
-          "host": {
+        "llmConfig": {
+          "baseUrl": {
             "is_literal": false,
             "value": "host"
           },

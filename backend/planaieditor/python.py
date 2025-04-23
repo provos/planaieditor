@@ -257,7 +257,7 @@ def create_worker_instance(node: Dict[str, Any], llm_name: Optional[str] = None)
     code.append(f"# Instantiate: {worker_class_name}")
 
     # Basic LLM assignment - needs refinement based on node config/needs
-    if worker_type in ["llmtaskworker", "cachedllmtaskworker"]:
+    if worker_type in ["llmtaskworker", "cachedllmtaskworker", "chattaskworker"]:
         if llm_name:
             llm_arg = f"llm={llm_name}"
         else:
@@ -288,7 +288,7 @@ def create_llm_args(llm_config: Dict[str, Any]) -> List[str]:
     Handles both literal values and variable/expression references.
     """
     llm_args_list = []
-    
+
     # Map frontend/config keys to backend llm_from_config keys if different
     key_map = {
         "modelId": "model_name",

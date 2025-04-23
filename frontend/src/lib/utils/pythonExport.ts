@@ -63,7 +63,7 @@ export function convertGraphtoJSON(nodes: Node[], edges: Edge[]): GraphData {
         }
 
         // If it's an LLM worker node, handle LLM configuration
-        if ((node.type === 'llmtaskworker' || node.type === 'cachedllmtaskworker')) {
+        if ((node.type === 'llmtaskworker' || node.type === 'cachedllmtaskworker' || node.type === 'chattaskworker')) {
             // Priority 1: If user selected an LLM config in the UI, use that
             if (data?.llmConfigName) {
                 const configName = data.llmConfigName;
