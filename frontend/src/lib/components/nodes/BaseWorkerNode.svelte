@@ -9,7 +9,7 @@
 	import type { Node, Edge } from '@xyflow/svelte';
 	import type { Snippet } from 'svelte';
 	import { tick } from 'svelte';
-
+	import { formatErrorMessage } from '$lib/utils/utils';
 	// Base interface for worker node data
 	export interface BaseWorkerData {
 		workerName: string;
@@ -531,7 +531,7 @@
 		{#if data.error}
 			<div class="mt-auto flex-none border-t border-red-200 bg-red-50 p-1.5">
 				<p class="text-2xs font-semibold text-red-700">Error:</p>
-				<p class="text-2xs text-red-600">{data.error}</p>
+				<p class="text-2xs text-red-600">{@html formatErrorMessage(data.error)}</p>
 			</div>
 		{/if}
 	</div>
