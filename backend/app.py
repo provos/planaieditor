@@ -643,45 +643,45 @@ def get_task_fields():
     status_code = 200 if result.get("success") else 400  # Or 500?
     return jsonify(result), status_code
 
+if is_development:
+    @app.route("/api/export-transformed", methods=["POST"])
+    def export_transformed_graph():
+        """
+        Accepts pre-transformed graph data (nodes with className, edges with names)
+        and generates/validates the Python code. Intended for E2E testing.
+        """
+        if not request.is_json:
+            return jsonify({"success": False, "error": "Request must be JSON"}), 400
 
-@app.route("/api/export-transformed", methods=["POST"])
-def export_transformed_graph():
-    """
-    Accepts pre-transformed graph data (nodes with className, edges with names)
-    and generates/validates the Python code. Intended for E2E testing.
-    """
-    if not request.is_json:
-        return jsonify({"success": False, "error": "Request must be JSON"}), 400
+        graph_data = request.get_json()
+        if not graph_data or "nodes" not in graph_data or "edges" not in graph_data:
+            return jsonify({"success": False, "error": "Invalid graph data format"}), 400
 
-    graph_data = request.get_json()
-    if not graph_data or "nodes" not in graph_data or "edges" not in graph_data:
-        return jsonify({"success": False, "error": "Invalid graph data format"}), 400
+        # Directly generate code from the pre-transformed data
+        python_code, module_name, error_json = generate_python_module(graph_data)
 
-    # Directly generate code from the pre-transformed data
-    python_code, module_name, error_json = generate_python_module(graph_data)
+        if error_json:
+            # Generation itself failed, return the error JSON from generate_python_module
+            return jsonify(error_json), 400  # Or 500?
 
-    if error_json:
-        # Generation itself failed, return the error JSON from generate_python_module
-        return jsonify(error_json), 400  # Or 500?
+        if python_code is None or module_name is None:
+            # Should ideally be caught by error_json, but as a fallback
+            return (
+                jsonify({"success": False, "error": "Code generation failed silently."}),
+                500,
+            )
 
-    if python_code is None or module_name is None:
-        # Should ideally be caught by error_json, but as a fallback
-        return (
-            jsonify({"success": False, "error": "Code generation failed silently."}),
-            500,
-        )
+        # --- Validation is NOT needed for this E2E test endpoint ---
+        # validation_result = validate_code_in_venv(module_name, python_code)
 
-    # --- Validation is NOT needed for this E2E test endpoint ---
-    # validation_result = validate_code_in_venv(module_name, python_code)
+        # Construct the final response - just return the code
+        response_data = {
+            "success": True,
+            "python_code": python_code,
+            # "validation_result": validation_result # Removed
+        }
 
-    # Construct the final response - just return the code
-    response_data = {
-        "success": True,
-        "python_code": python_code,
-        # "validation_result": validation_result # Removed
-    }
-
-    return jsonify(response_data), 200  # Always 200 if generation succeeds
+        return jsonify(response_data), 200  # Always 200 if generation succeeds
 
 
 # Serve Svelte static files - ONLY add this route if NOT in development
