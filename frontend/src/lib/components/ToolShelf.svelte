@@ -3,7 +3,7 @@
 	import Cube from 'phosphor-svelte/lib/Cube';
 	import Brain from 'phosphor-svelte/lib/Brain';
 	import ArrowsIn from 'phosphor-svelte/lib/ArrowsIn';
-	import FileCode from 'phosphor-svelte/lib/FileCode';
+	import Chat from 'phosphor-svelte/lib/Chat';
 	import FileMagnifyingGlass from 'phosphor-svelte/lib/FileMagnifyingGlass';
 	import Eraser from 'phosphor-svelte/lib/Eraser';
 	import UploadSimple from 'phosphor-svelte/lib/UploadSimple';
@@ -119,6 +119,19 @@
 			<div class="flex items-center gap-1.5">
 				<Network size={16} weight="fill" class="text-teal-500" />
 				<div class="text-sm font-semibold">SubGraphWorker</div>
+			</div>
+		</div>
+		<!-- ChatWorker Node -->
+		<div
+			class="cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
+			role="button"
+			tabindex="0"
+			draggable="true"
+			ondragstart={(e) => onDragStart(e, 'chattaskworker')}
+		>
+			<div class="flex items-center gap-1.5">
+				<Chat size={16} weight="fill" class="text-red-500" />
+				<div class="text-sm font-semibold">ChatTaskWorker</div>
 			</div>
 		</div>
 	</div>

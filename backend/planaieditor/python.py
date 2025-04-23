@@ -93,7 +93,7 @@ def create_worker_class(node: Dict[str, Any]) -> Optional[str]:
     system_prompt = class_vars.get("system_prompt")
 
     # Handle Output Types
-    if output_types:
+    if output_types and node_type != "chattaskworker":
         types_str = ", ".join(get_task_class_name(t) for t in output_types)
         class_body.append(f"    output_types: List[Type[Task]] = [{types_str}]")
 
