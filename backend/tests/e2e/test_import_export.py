@@ -34,7 +34,7 @@ def _recursive_compare(obj1, obj2, path=""):
     diffs = []
 
     # --- Type Mismatch ---
-    if type(obj1) != type(obj2):
+    if type(obj1) is not type(obj2):
         diffs.append(
             {
                 "path": path,
@@ -176,9 +176,7 @@ def compare_definitions(defs1: dict, defs2: dict) -> bool:
 
     # Call the new compare_dicts for detailed initial output if different
     # We still need the specific logic below to handle acceptable differences.
-    dicts_are_identical = compare_dicts(defs1, defs2)
-    # Optionally use dicts_are_identical for early exit if desired,
-    # but the detailed comparison below is more robust for this specific use case.
+    compare_dicts(defs1, defs2)
 
     all_match = True  # Assume match initially
 

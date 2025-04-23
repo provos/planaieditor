@@ -1,15 +1,9 @@
-import json
 import os
-import sys
 import tempfile
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Tuple
 
 import pytest
-
-# Add the parent directory to sys.path to import our modules
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from planaieditor.patch import get_definitions_from_file  # noqa: E402
 from planaieditor.python import generate_python_module  # noqa: E402
 

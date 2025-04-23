@@ -643,7 +643,9 @@ def get_task_fields():
     status_code = 200 if result.get("success") else 400  # Or 500?
     return jsonify(result), status_code
 
+
 if is_development:
+
     @app.route("/api/export-transformed", methods=["POST"])
     def export_transformed_graph():
         """
@@ -655,7 +657,10 @@ if is_development:
 
         graph_data = request.get_json()
         if not graph_data or "nodes" not in graph_data or "edges" not in graph_data:
-            return jsonify({"success": False, "error": "Invalid graph data format"}), 400
+            return (
+                jsonify({"success": False, "error": "Invalid graph data format"}),
+                400,
+            )
 
         # Directly generate code from the pre-transformed data
         python_code, module_name, error_json = generate_python_module(graph_data)
@@ -667,7 +672,9 @@ if is_development:
         if python_code is None or module_name is None:
             # Should ideally be caught by error_json, but as a fallback
             return (
-                jsonify({"success": False, "error": "Code generation failed silently."}),
+                jsonify(
+                    {"success": False, "error": "Code generation failed silently."}
+                ),
                 500,
             )
 

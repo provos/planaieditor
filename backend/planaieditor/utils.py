@@ -1,4 +1,6 @@
 import re
+from textwrap import dedent
+from typing import List, Optional, Tuple
 
 
 def is_valid_python_class_name(name: str) -> bool:
@@ -6,3 +8,73 @@ def is_valid_python_class_name(name: str) -> bool:
     if not name:
         return False
     return bool(re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", name))
+
+
+def split_method_signature_body(method_source: str) -> Tuple[Optional[str], List[str]]:
+    """
+    Splits Python method source code into its signature and body lines using ast.
+
+    Args:
+        method_source: The source code of the method.
+
+    Returns:
+        A tuple containing:
+        - The signature string or None if parsing failed.
+        - A list of strings representing the body lines (dedented).
+          If parsing failed, returns original lines.
+    """
+    try:
+        # Dedent source before parsing to handle indentation correctly
+        dedented_source = dedent(method_source).strip()
+
+        # Using a simpler but reliable approach for splitting signature and body
+        # Look for the first occurrence of "):", ")->" or ") ->" which typically marks the end of a signature
+        lines = dedented_source.splitlines()
+        signature_lines = []
+        body_lines = []
+
+        # Track if we're in the signature part
+        in_signature = True
+        paren_level = 0
+
+        for i, line in enumerate(lines):
+            if in_signature:
+                # Count opening and closing parentheses
+                paren_level += line.count("(") - line.count(")")
+
+                # Add to signature if we're still in the signature part
+                signature_lines.append(line)
+
+                # Check if this line contains the end of the signature
+                if paren_level <= 0 and ":" in line:
+                    # This line contains the end of the signature
+                    in_signature = False
+
+                    # The rest of the lines are body
+                    body_lines = lines[i + 1 :] if i + 1 < len(lines) else []
+                    break
+            else:
+                # Already in body, just append
+                body_lines.append(line)
+
+        # If we never found the end of the signature, parsing failed
+        if in_signature:
+            raise ValueError(
+                "Could not find end of signature (closing parenthesis and colon)"
+            )
+
+        # Join the signature lines
+        signature = "\n".join(signature_lines)
+
+        # Handle empty body
+        if not body_lines:
+            body_lines = ["pass"]
+        else:
+            body_lines = dedent("\n".join(body_lines)).strip().splitlines()
+
+        return signature, body_lines
+
+    except (SyntaxError, ValueError, IndexError) as e:
+        print(f"Info: Splitting failed: {e}")
+        # Parsing failed, return None for signature, and original lines as body
+        return None, method_source.splitlines()
