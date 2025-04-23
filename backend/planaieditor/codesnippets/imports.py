@@ -57,8 +57,7 @@ def execute_graph():
 
     # {dependency_setup}
 
-    # Optional: Add code here to run the graph if needed for testing
-    # print("Graph setup complete. Running graph...")
+    print("Graph setup complete.")
 
     initial_tasks = []
 
@@ -66,6 +65,7 @@ def execute_graph():
 
     # Run the graph
     if initial_tasks:
+        print("Running graph with initial tasks...")
         graph.run(initial_tasks=initial_tasks, display_terminal=False)
 
         # Get the output from the graph
