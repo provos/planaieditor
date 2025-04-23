@@ -96,7 +96,7 @@
 	</div>
 
 	{#if !collapsed}
-		<div class="min-h-0 flex-grow overflow-hidden">
+		<div class="min-h-0 min-w-[60ch] flex-grow overflow-hidden">
 			<CodeMirror
 				value={code}
 				lang={langExtension}
