@@ -25,8 +25,8 @@ from flask_socketio import SocketIO, emit
 from planaieditor.llm_interface_utils import list_models_for_provider
 from planaieditor.patch import get_definitions_from_file
 from planaieditor.python import (
+    add_to_task_import_state,
     create_task_class,
-    create_task_import_state,
     generate_python_module,
 )
 
@@ -666,9 +666,7 @@ def validate_pydantic_data():
     className = node.get("data", {}).get("className")
     if not className:
         return (
-            jsonify(
-                {"success": False, "error": "Missing 'className' in request"}
-            ),
+            jsonify({"success": False, "error": "Missing 'className' in request"}),
             400,
         )
 
@@ -689,14 +687,12 @@ def validate_pydantic_data():
         case "task":
             task_class = create_task_class(node)
         case "taskimport":
-            task_import_state = create_task_import_state(node, task_import_state)
+            add_to_task_import_state(node, task_import_state)
             import_code = ""
             for module_path, classes in task_import_state.items():
                 import_code += f"from {module_path} import {', '.join(classes)}\n"
         case _:
             return (jsonify({"success": False, "error": "Invalid node type"}), 400)
-
-    print(node)
 
     # Create a validation script with proper JSON output markers
     validation_script = f"""

@@ -161,7 +161,7 @@ def create_all_graph_dependencies(
     return "\n".join(code)
 
 
-def create_task_import_state(node: Dict[str, Any], imported_tasks: Dict[str, Set[str]]):
+def add_to_task_import_state(node: Dict[str, Any], imported_tasks: Dict[str, Set[str]]):
     """
     Creates a task import state from a node.
 
@@ -598,7 +598,7 @@ def generate_python_module(
     # Add imports for TaskImportNodes first
     import_statements = []
     for node in task_import_nodes:
-        create_task_import_state(node, imported_tasks)
+        add_to_task_import_state(node, imported_tasks)
 
     # Generate the import statements from the grouped dictionary
     for module_path, class_names in imported_tasks.items():

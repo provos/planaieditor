@@ -715,7 +715,7 @@ Analyze the following information and provide a response.`,
 		const targetNodeData = targetNode.data as BaseWorkerData;
 		// Get source className based on node type
 		let sourceClassName = null;
-		if (sourceNode.type === 'task') {
+		if (sourceNode.type === 'task' || sourceNode.type === 'datainput' || sourceNode.type === 'taskimport') {
 			sourceClassName = (sourceNode.data as unknown as NodeData).className;
 		} else if (connection.sourceHandle) {
 			sourceClassName = connection.sourceHandle.split('-')[1];

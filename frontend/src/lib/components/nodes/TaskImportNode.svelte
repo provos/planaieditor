@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { tick } from 'svelte';
+	import { useUpdateNodeInternals } from '@xyflow/svelte';
 	import { backendUrl } from '$lib/utils/backendUrl';
 	import TaskNode from './TaskNode.svelte';
 	import type { NodeData as TaskNodeData } from './TaskNode.svelte';
@@ -22,6 +24,8 @@
 	// Initialize data if needed
 	if (!data.modulePath) data.modulePath = '';
 	if (!data.className) data.className = null;
+
+	const updateNodeInternals = useUpdateNodeInternals();
 
 	// Internal state
 	let internalModulePath = $state(data.modulePath);
@@ -136,6 +140,9 @@
 		if (data.className !== localSelectedClassName) {
 			data.className = localSelectedClassName;
 			hasFetchedFields = false; // Reset fetch status when class changes
+			tick().then(() => {
+				updateNodeInternals(id);
+			});
 
 			// Fetch fields based on the current local state IF interpreter is selected
 			if (localSelectedClassName && selectedInterpreterPath.value && !hasFetchedFields) {
