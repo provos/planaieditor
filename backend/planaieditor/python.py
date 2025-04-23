@@ -288,16 +288,7 @@ def create_llm_args(llm_config: Dict[str, Any]) -> List[str]:
     Handles both literal values and variable/expression references.
     """
     llm_args_list = []
-    # Define which arguments are expected (adjust as needed)
-    expected_args = [
-        "provider",
-        "model_name",
-        "max_tokens",
-        "host",
-        "hostname",
-        "username",
-        "use_cache",
-    ]
+    
     # Map frontend/config keys to backend llm_from_config keys if different
     key_map = {
         "modelId": "model_name",
@@ -310,23 +301,22 @@ def create_llm_args(llm_config: Dict[str, Any]) -> List[str]:
         if frontend_key in llm_config:
             llm_config[backend_key] = llm_config.pop(frontend_key)
 
-    for arg_name in expected_args:
-        if arg_name in llm_config:
-            arg_info = llm_config[arg_name]
+    for arg_name in llm_config:
+        arg_info = llm_config[arg_name]
 
-            value = arg_info["value"]
-            is_literal = arg_info.get(
-                "is_literal", True
-            )  # Default to literal if flag missing?
+        value = arg_info["value"]
+        is_literal = arg_info.get(
+            "is_literal", True
+        )  # Default to literal if flag missing?
 
-            if is_literal:
-                # Format literals correctly (strings quoted, others not)
-                # Use smart_repr for potentially long strings
-                formatted_value = smart_repr(value)
-                llm_args_list.append(f"{arg_name}={formatted_value}")
-            else:
-                # Use the value directly as it's a variable/expression
-                llm_args_list.append(f"{arg_name}={value}")
+        if is_literal:
+            # Format literals correctly (strings quoted, others not)
+            # Use smart_repr for potentially long strings
+            formatted_value = smart_repr(value)
+            llm_args_list.append(f"{arg_name}={formatted_value}")
+        else:
+            # Use the value directly as it's a variable/expression
+            llm_args_list.append(f"{arg_name}={value}")
 
     return llm_args_list
 
