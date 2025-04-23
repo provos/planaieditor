@@ -3,6 +3,7 @@ description:
 globs: *.py
 alwaysApply: false
 ---
+
 # Python Backend Best Practices
 
 ## Project Structure
