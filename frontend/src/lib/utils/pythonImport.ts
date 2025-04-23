@@ -349,8 +349,8 @@ export async function importPythonCode(
                 nodeData.llmConfigVar = worker.llmConfigVar;
 
                 // Add a human-readable description of the imported LLM config
-                const provider = worker.llmConfigFromCode.provider || 'unknown';
-                const modelName = worker.llmConfigFromCode.model_name || 'unknown';
+                const provider = worker.llmConfigFromCode.provider.value || 'unknown';
+                const modelName = worker.llmConfigFromCode.model_name.value || 'unknown';
                 nodeData.llmConfigDescription = `Imported: ${provider} / ${modelName}`;
 
                 // Log the imported LLM config for debugging

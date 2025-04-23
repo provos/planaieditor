@@ -160,13 +160,13 @@
 	// Function to format the imported LLM config for display (similar to LLMTaskWorkerNode)
 	function formatImportedLLMConfigDetails(configData: Record<string, any>): string {
 		const parts = [];
-		if (configData.provider) parts.push(`Provider: ${configData.provider}`);
-		if (configData.model_name) parts.push(`Model: ${configData.model_name}`);
-		if (configData.max_tokens) parts.push(`Max Tokens: ${configData.max_tokens}`);
-		if (configData.host) parts.push(`Host: ${configData.host}`); // Used by Ollama
-		if (configData.base_url) parts.push(`Base URL: ${configData.base_url}`); // Used by OpenAI
-		if (configData.remote_hostname) parts.push(`Remote Host: ${configData.remote_hostname}`);
-		if (configData.remote_username) parts.push(`Remote User: ${configData.remote_username}`);
+		if (configData.provider) parts.push(`Provider: ${configData.provider.value}`);
+		if (configData.model_name) parts.push(`Model: ${configData.model_name.value}`);
+		if (configData.max_tokens) parts.push(`Max Tokens: ${configData.max_tokens.value}`);
+		if (configData.host) parts.push(`Host: ${configData.host.value}`); // Used by Ollama
+		if (configData.baseUrl) parts.push(`Base URL: ${configData.baseUrl.value}`); // Used by OpenAI
+		if (configData.remote_hostname) parts.push(`Remote Host: ${configData.remote_hostname.value}`);
+		if (configData.remote_username) parts.push(`Remote User: ${configData.remote_username.value}`);
 
 		return parts.join(', ');
 	}
