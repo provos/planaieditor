@@ -38,7 +38,7 @@
 	// Use a temporary variable to store the currently selected factory function
 	let selectedFactoryName = $state(data.factoryFunction || '');
 
-	if (!!data.factoryInvocation) {
+	if (data.factoryInvocation === undefined) {
 		data.factoryInvocation = '';
 	}
 
