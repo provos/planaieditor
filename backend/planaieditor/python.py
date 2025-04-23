@@ -52,6 +52,138 @@ def return_code_snippet(name):
         return f.read() + "\n\n"
 
 
+def create_task_import_state(node: Dict[str, Any], imported_tasks: Dict[str, Set[str]]):
+    """
+    Creates a task import state from a node.
+
+    Args:
+        node: The node to create the task import state from.
+        imported_tasks: A dictionary of unique imported tasks.
+    """
+    assert node.get("type") == "taskimport"
+    data = node.get("data", {})
+
+    # Skip implicit imports
+    if data.get("isImplicit"):
+        return None
+
+    # Read modulePath and className directly from data for taskimport nodes
+    module_path = data.get("modulePath")
+    class_name = data.get("className")
+
+    if module_path and class_name and is_valid_python_class_name(class_name):
+        # Group imports by module path
+        if module_path not in imported_tasks:
+            imported_tasks[module_path] = set()
+        if class_name not in imported_tasks[module_path]:
+            imported_tasks[module_path].add(class_name)
+        else:
+            print(
+                f"Warning: Task '{class_name}' from module '{module_path}' already imported or name collision."
+            )
+    else:
+        print(
+            f"Warning: Invalid or missing import details for node {node['id']}. Module: '{module_path}', Class: '{class_name}'"
+        )
+
+
+def create_task_class(node: Dict[str, Any]) -> Optional[str]:
+    """
+    Creates a Pydantic Task class from a node.
+    """
+    assert node.get("type") == "task"
+    data = node.get("data", {})
+    class_name = data.get("className")
+    if not is_valid_python_class_name(class_name):
+        raise ValueError(f"Invalid class name: {class_name}")
+
+    code = []
+    code.append(f"\nclass {class_name}(Task):")
+    fields = data.get("fields", [])
+    if not fields:
+        code.append("    pass # No fields defined")
+        return "\n".join(code)
+
+    # Add ConfigDict for arbitrary_types_allowed if needed later
+    # code.append("    model_config = ConfigDict(arbitrary_types_allowed=True)")
+    for field in fields:
+        field_name = field.get("name", "unnamed_field")
+        field_type_frontend = field.get("type", "Any")  # Type from frontend/import
+        description = field.get("description", "")
+        is_list = field.get("isList", False)
+        literal_values = field.get("literalValues", None)
+        is_required = field.get("required", True)
+
+        # Handle Literal types
+        if field_type_frontend == "literal" and literal_values:
+            # Join the literal values with commas, properly quoted for strings
+            # Format properly: Literal["value1", "value2"] or Literal[1, 2, 3]
+            literal_items = []
+            for val in literal_values:
+                # Check if it's numeric by attempting to convert
+                try:
+                    float(val)  # If this works, it's numeric
+                    # Add numeric value without quotes
+                    literal_items.append(val)
+                except ValueError:
+                    # Add string value with quotes
+                    literal_items.append(f'"{val}"')
+
+            # Create the Literal type expression
+            py_type = f"Literal[{', '.join(literal_items)}]"
+        else:
+            # Map frontend primitive types to Python types
+            primitive_type_mapping = {
+                "string": "str",
+                "integer": "int",
+                "float": "float",
+                "boolean": "bool",
+            }
+
+            # Check if it's a primitive type
+            if field_type_frontend.lower() in primitive_type_mapping:
+                py_type = primitive_type_mapping[field_type_frontend.lower()]
+            else:
+                # Assume it's a custom Task type (or Any/other complex type)
+                # Use the name directly, ensure it's a valid identifier if possible
+                # Basic validation: if it contains invalid chars, default to Any
+                if is_valid_python_class_name(field_type_frontend):
+                    py_type = field_type_frontend
+                else:
+                    print(
+                        f"Warning: Invalid field type '{field_type_frontend}' encountered, defaulting to Any."
+                    )
+                    py_type = "Any"
+
+        # Handle List type
+        if is_list:
+            py_type = f"List[{py_type}]"
+
+        # Handle Optional fields
+        if not is_required:
+            py_type = f"Optional[{py_type}]"
+            default_value = "None"
+        else:
+            default_value = "..."
+
+        # Build Field arguments
+        field_args = []
+        # Always add the default value as first argument
+        field_args.append(default_value)
+
+        # Add description if we have one
+        if description:
+            # Escape quotes within description if necessary
+            escaped_description = description.replace('"', '\\"')
+            field_args.append(f'description="{escaped_description}"')
+
+        # Format the complete field with appropriate spacing
+        field_args_str = ", ".join(field_args)
+        code.append(f"    {field_name}: {py_type} = Field({field_args_str})")
+
+    return "\n".join(code)
+
+
 def create_worker_class(node: Dict[str, Any]) -> Optional[str]:
     # Determine base class based on node type, including cached variants
     node_type = node.get("type")
@@ -357,31 +489,7 @@ def generate_python_module(
     # Add imports for TaskImportNodes first
     import_statements = []
     for node in task_import_nodes:
-        node_id = node["id"]
-        data = node.get("data", {})
-
-        # Skip implicit imports
-        if data.get("isImplicit"):
-            continue
-
-        # Read modulePath and className directly from data for taskimport nodes
-        module_path = data.get("modulePath")
-        class_name = data.get("className")
-
-        if module_path and class_name and is_valid_python_class_name(class_name):
-            # Group imports by module path
-            if module_path not in imported_tasks:
-                imported_tasks[module_path] = set()
-            if class_name not in imported_tasks[module_path]:
-                imported_tasks[module_path].add(class_name)
-            else:
-                print(
-                    f"Warning: Task '{class_name}' from module '{module_path}' already imported or name collision."
-                )
-        else:
-            print(
-                f"Warning: Invalid or missing import details for node {node['id']}. Module: '{module_path}', Class: '{class_name}'"
-            )
+        create_task_import_state(node, imported_tasks)
 
     # Generate the import statements from the grouped dictionary
     for module_path, class_names in imported_tasks.items():
@@ -393,103 +501,12 @@ def generate_python_module(
     # 2. Task Definitions (from 'task' nodes)
     tasks_code = []
     task_nodes = [n for n in nodes if n.get("type") == "task"]
+
     # Add locally defined Task nodes
+    for node in task_nodes:
+        tasks_code.append(create_task_class(node))
     if not task_nodes:
         tasks_code.append("# No Task nodes defined in the graph.")
-    else:
-        for node in task_nodes:
-            node_id = node["id"]
-            data = node.get("data", {})
-            class_name = data.get("className")
-            if not is_valid_python_class_name(class_name):
-                raise ValueError(f"Invalid class name: {class_name}")
-            tasks_code.append(f"\nclass {class_name}(Task):")
-            fields = data.get("fields", [])
-            if not fields:
-                tasks_code.append("    pass # No fields defined")
-            else:
-                # Add ConfigDict for arbitrary_types_allowed if needed later
-                # code.append("    model_config = ConfigDict(arbitrary_types_allowed=True)")
-                for field in fields:
-                    field_name = field.get("name", "unnamed_field")
-                    field_type_frontend = field.get(
-                        "type", "Any"
-                    )  # Type from frontend/import
-                    description = field.get("description", "")
-                    is_list = field.get("isList", False)
-                    literal_values = field.get("literalValues", None)
-                    is_required = field.get("required", True)
-
-                    # Handle Literal types
-                    if field_type_frontend == "literal" and literal_values:
-                        # Join the literal values with commas, properly quoted for strings
-                        # Format properly: Literal["value1", "value2"] or Literal[1, 2, 3]
-                        literal_items = []
-                        for val in literal_values:
-                            # Check if it's numeric by attempting to convert
-                            try:
-                                float(val)  # If this works, it's numeric
-                                # Add numeric value without quotes
-                                literal_items.append(val)
-                            except ValueError:
-                                # Add string value with quotes
-                                literal_items.append(f'"{val}"')
-
-                        # Create the Literal type expression
-                        py_type = f"Literal[{', '.join(literal_items)}]"
-                    else:
-                        # Map frontend primitive types to Python types
-                        primitive_type_mapping = {
-                            "string": "str",
-                            "integer": "int",
-                            "float": "float",
-                            "boolean": "bool",
-                        }
-
-                        # Check if it's a primitive type
-                        if field_type_frontend.lower() in primitive_type_mapping:
-                            py_type = primitive_type_mapping[
-                                field_type_frontend.lower()
-                            ]
-                        else:
-                            # Assume it's a custom Task type (or Any/other complex type)
-                            # Use the name directly, ensure it's a valid identifier if possible
-                            # Basic validation: if it contains invalid chars, default to Any
-                            if is_valid_python_class_name(field_type_frontend):
-                                py_type = field_type_frontend
-                            else:
-                                print(
-                                    f"Warning: Invalid field type '{field_type_frontend}' encountered, defaulting to Any."
-                                )
-                                py_type = "Any"
-
-                    # Handle List type
-                    if is_list:
-                        py_type = f"List[{py_type}]"
-
-                    # Handle Optional fields
-                    if not is_required:
-                        py_type = f"Optional[{py_type}]"
-                        default_value = "None"
-                    else:
-                        default_value = "..."
-
-                    # Build Field arguments
-                    field_args = []
-                    # Always add the default value as first argument
-                    field_args.append(default_value)
-
-                    # Add description if we have one
-                    if description:
-                        # Escape quotes within description if necessary
-                        escaped_description = description.replace('"', '\\"')
-                        field_args.append(f'description="{escaped_description}"')
-
-                    # Format the complete field with appropriate spacing
-                    field_args_str = ", ".join(field_args)
-                    tasks_code.append(
-                        f"    {field_name}: {py_type} = Field({field_args_str})"
-                    )
 
     # 3. Worker Definitions (from worker nodes)
     worker_nodes = [

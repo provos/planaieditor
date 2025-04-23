@@ -31,6 +31,7 @@
 		data,
 		children,
 		additionalOutputType,
+		additionalClassStyle,
 		minWidth = 250,
 		minHeight = 200,
 		defaultName = 'BaseWorker',
@@ -41,6 +42,7 @@
 		data: BaseWorkerData;
 		children?: Snippet;
 		additionalOutputType?: string;
+		additionalClassStyle?: string;
 		minWidth?: number;
 		minHeight?: number;
 		defaultName?: string;
@@ -296,7 +298,7 @@
 
 <div
 	bind:this={nodeRef}
-	class="base-worker-node relative flex h-full flex-col rounded-md border border-gray-300 bg-white shadow-md"
+	class="base-worker-node relative flex h-full flex-col rounded-md border border-gray-300 bg-white shadow-md {additionalClassStyle}"
 >
 	<NodeResizer
 		{minWidth}

@@ -24,7 +24,11 @@ from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 from planaieditor.llm_interface_utils import list_models_for_provider
 from planaieditor.patch import get_definitions_from_file
-from planaieditor.python import generate_python_module
+from planaieditor.python import (
+    create_task_class,
+    create_task_import_state,
+    generate_python_module,
+)
 
 # Determine mode and configure paths/CORS
 FLASK_ENV = os.environ.get("FLASK_ENV", "production")  # Default to production
@@ -641,6 +645,115 @@ def get_task_fields():
         module_path, action="get_fields", class_name=class_name
     )
     status_code = 200 if result.get("success") else 400  # Or 500?
+    return jsonify(result), status_code
+
+
+@app.route("/api/validate-pydantic-data", methods=["POST"])
+def validate_pydantic_data():
+    """Validates JSON data against a Pydantic model."""
+    data = request.get_json()
+    node = data.get("node")
+    json_data = data.get("jsonData")
+
+    if not node or not json_data:
+        return (
+            jsonify(
+                {"success": False, "error": "Missing 'node' or 'jsonData' in request"}
+            ),
+            400,
+        )
+
+    className = node.get("data", {}).get("className")
+    if not className:
+        return (
+            jsonify(
+                {"success": False, "error": "Missing 'className' in request"}
+            ),
+            400,
+        )
+
+    python_executable = app.config.get("SELECTED_VENV_PATH")
+    if not python_executable:
+        return {"success": False, "error": "No Python interpreter selected."}
+    if not os.path.exists(python_executable):
+        return {
+            "success": False,
+            "error": f"Selected Python interpreter not found: {python_executable}",
+        }
+
+    task_import_state = {}
+    node_type = node.get("type")
+    task_class = ""
+    import_code = ""
+    match node_type:
+        case "task":
+            task_class = create_task_class(node)
+        case "taskimport":
+            task_import_state = create_task_import_state(node, task_import_state)
+            import_code = ""
+            for module_path, classes in task_import_state.items():
+                import_code += f"from {module_path} import {', '.join(classes)}\n"
+        case _:
+            return (jsonify({"success": False, "error": "Invalid node type"}), 400)
+
+    print(node)
+
+    # Create a validation script with proper JSON output markers
+    validation_script = f"""
+import sys
+import json
+import traceback
+from planai import Task
+from pydantic import Field
+{import_code}
+{task_class}
+
+try:
+    # Parse and validate the JSON data against the model
+    validated_data = {className}.model_validate({json_data})
+
+    # Success case - output formatted JSON for the validation function to parse
+    success_output = {{
+        "success": True,
+        "message": "Data successfully validated against {className}"
+    }}
+    print("##SUCCESS_JSON_START##")
+    print(json.dumps(success_output))
+    print("##SUCCESS_JSON_END##")
+
+except Exception as e:
+    # Error case - format any validation errors as JSON
+    error_message = str(e)
+    error_traceback = traceback.format_exc()
+
+    # Create a structured error response
+    error_output = {{
+        "success": False,
+        "error": {{
+            "message": error_message,
+            "nodeName": "{className}",
+            "fullTraceback": error_traceback
+        }}
+    }}
+
+    print("##ERROR_JSON_START##")
+    print(json.dumps(error_output))
+    print("##ERROR_JSON_END##")
+    sys.exit(1)
+"""
+
+    print(validation_script)
+
+    # Execute the validation script in the selected Python environment
+    result = validate_code_in_venv("pydantic_validation", validation_script)
+
+    if not result.get("success"):
+        # convert the error output to a string
+        error_output = result.get("error")
+        result["error"] = error_output.get("message")
+
+    # Return the validation result directly to the frontend
+    status_code = 200 if result.get("success") else 400
     return jsonify(result), status_code
 
 

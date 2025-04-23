@@ -12,3 +12,16 @@ export function formatErrorMessage(errorText: string): string {
     // Then replace newlines with <br> tags
     return escaped.replace(/\\n/g, '<br>').replace(/\n/g, '<br>');
 }
+
+// Debounce function to prevent excessive calls to the server
+export function debounce(func: Function, wait: number) {
+    let timeout: number | undefined;
+    return function executedFunction(...args: any[]) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
