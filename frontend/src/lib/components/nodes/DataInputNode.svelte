@@ -9,6 +9,7 @@
 	import { formatErrorMessage, debounce } from '$lib/utils/utils';
 	import type { NodeData as TaskNodeData } from './TaskNode.svelte';
 	import { backendUrl } from '$lib/utils/backendUrl';
+	import Spinner from 'phosphor-svelte/lib/Spinner';
 
 	// Define the interface for the node's data
 	export interface DataInputNodeData {
@@ -35,6 +36,7 @@
 	let selectedClassName = $state<string | null>(data.className); // Use state for reactivity
 	let errorMessage = $state<string | null>(null);
 	let jsonIsValid = $state<boolean>(false);
+	let isLoading = $state<boolean>(false);
 
 	const updateNodeInternals = useUpdateNodeInternals();
 
@@ -58,39 +60,48 @@
 	function handleJsonUpdate(newCode: string) {
 		data.jsonData = newCode;
 		errorMessage = null;
+		jsonIsValid = false;
 		debounce(validateJsonData, 1000)();
 	}
 
 	async function validateJsonData() {
-		// find the Task Class Node
-		let taskClassNode: Node | undefined;
-		const unsubNodes = nodes.subscribe((nodes) => {
-			taskClassNode = nodes.find(
-				(node) =>
-					(node.type === 'task' || node.type === 'taskimport') &&
-					(node.data as unknown as TaskNodeData).className === selectedClassName
-			);
-		});
-		unsubNodes();
+		isLoading = true;
+		try {
+			// find the Task Class Node
+			let taskClassNode: Node | undefined;
+			const unsubNodes = nodes.subscribe((nodes) => {
+				taskClassNode = nodes.find(
+					(node) =>
+						(node.type === 'task' || node.type === 'taskimport') &&
+						(node.data as unknown as TaskNodeData).className === selectedClassName
+				);
+			});
+			unsubNodes();
 
-		if (!taskClassNode) {
-			errorMessage = 'No Task Class Node found';
-			return;
-		}
+			if (!taskClassNode) {
+				errorMessage = 'No Task Class Node found';
+				return;
+			}
 
-		const response = await fetch(`${backendUrl}/api/validate-pydantic-data`, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify({ node: taskClassNode, jsonData: data.jsonData })
-		});
-		const result = await response.json();
-		jsonIsValid = result.success;
-		if (result.success) {
-			errorMessage = null;
-		} else {
-			errorMessage = result.error;
+			const response = await fetch(`${backendUrl}/api/validate-pydantic-data`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ node: taskClassNode, jsonData: data.jsonData })
+			});
+			const result = await response.json();
+			jsonIsValid = result.success;
+			if (result.success) {
+				errorMessage = null;
+			} else {
+				errorMessage = result.error;
+			}
+		} catch (error) {
+			console.error('Error validating JSON data:', error);
+			errorMessage = 'Error validating JSON data';
+		} finally {
+			isLoading = false;
 		}
 	}
 
@@ -152,13 +163,19 @@
 			onCollapseToggle={handleCollapse}
 		/>
 		<div class="absolute bottom-1 right-3 z-10">
-			<p
-				class="text-2xs {jsonIsValid
-					? 'text-green-700'
-					: 'text-red-700'} rounded-sm bg-white/50 px-1.5 py-0.5"
-			>
-				{jsonIsValid ? 'validated' : 'not validated'}
-			</p>
+			{#if isLoading}
+				<div class="rounded-sm bg-white/50 px-1.5 py-1.5">
+					<Spinner size={12} class="animate-spin text-blue-500" />
+				</div>
+			{:else}
+				<p
+					class="text-2xs {jsonIsValid
+						? 'text-green-700'
+						: 'text-red-700'} rounded-sm bg-white/50 px-1.5 py-1.5"
+				>
+					{jsonIsValid ? 'validated' : 'not validated'}
+				</p>
+			{/if}
 		</div>
 	</div>
 
