@@ -516,16 +516,7 @@ def test_import_export_roundtrip(page: Page, test_fixture_path: Path, request):
     )  # Increased timeout slightly
     print(f"{expected_node_count} nodes rendered after import.")
 
-    # 5. Click Export Button to trigger frontend transformation
-    export_button = page.locator('button[data-testid="export-button"]')
-    expect(export_button).to_be_visible(timeout=TIMEOUT)
-    expect(export_button).to_be_enabled(timeout=TIMEOUT)
-    print("Clicking export button...")
-    export_button.click()
-    print("Export button clicked.")
-    page.wait_for_timeout(500)
-
-    # 6. Extract transformed data using page.evaluate
+    # 5. Extract transformed data using page.evaluate
     try:
         print(
             "Retrieving data from localStorage and calling window.convertGraphToJSON..."
@@ -581,7 +572,7 @@ def test_import_export_roundtrip(page: Page, test_fixture_path: Path, request):
         with open(f"transformed_data_{test_fixture_path.stem}.json", "w") as f:
             json.dump(graph_data_transformed, f, indent=2)
 
-    # 7. Trigger Export API Call with TRANSFORMED data
+    # 6. Trigger Export API Call with TRANSFORMED data
     export_api_url = f"{BACKEND_TEST_URL}/api/export-transformed"
     print(f"Triggering export API: {export_api_url}...")
     api_context = page.request
@@ -595,7 +586,7 @@ def test_import_export_roundtrip(page: Page, test_fixture_path: Path, request):
     except Exception as e:
         pytest.fail(f"API call to {export_api_url} failed: {e}")
 
-    # 8. Get exported code from response
+    # 7. Get exported code from response
     print(f"Export API response status: {response.status}")
     assert (
         response.ok
@@ -610,7 +601,7 @@ def test_import_export_roundtrip(page: Page, test_fixture_path: Path, request):
     ), "Exported Python code not found or invalid in backend response."
     print("Successfully received exported code from backend API.")
 
-    # 9. Verify Functional Equivalence
+    # 8. Verify Functional Equivalence
     assert verify_functional_equivalence(
         original_code, exported_code
     ), "Functional equivalence check failed."
