@@ -24,9 +24,10 @@ export function getEdgeStyleProps(
     }
 
     let taskType: string | undefined = undefined;
+    const isTaskSource = sourceNode.type === 'task' || sourceNode.type === 'taskimport' || sourceNode.type === 'datainput';
 
     // Determine the task type based on the source node and edge/connection handle
-    if (sourceNode.type === 'task' || sourceNode.type === 'taskimport') {
+    if (isTaskSource) {
         // For Task and TaskImport nodes, the class name defines the type
         taskType = (sourceNode.data as unknown as NodeData)?.className;
     } else if (edgeOrConnection.sourceHandle && edgeOrConnection.sourceHandle.startsWith('output-')) {
@@ -48,7 +49,7 @@ export function getEdgeStyleProps(
     }
 
     // Edges originating from Task or TaskImport nodes are animated
-    const animated = sourceNode.type === 'task' || sourceNode.type === 'taskimport';
+    const animated = isTaskSource;
 
     return {
         style: styleString,
