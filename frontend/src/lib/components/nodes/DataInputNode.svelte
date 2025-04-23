@@ -93,7 +93,7 @@
 			unsubNodes();
 
 			if (!taskClassNode) {
-				errorMessage = 'No Task Class Node found';
+				errorMessage = `No Task Class Node found for ${selectedClassName}`;
 				return;
 			}
 
