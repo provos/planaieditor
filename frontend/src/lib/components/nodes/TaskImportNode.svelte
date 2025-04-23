@@ -34,6 +34,7 @@
 	let localSelectedClassName = $state<string | null>(data.className); // Local reactive state
 	let availableClasses = $state<string[]>(data.className ? [data.className] : []); // Local state for classes
 	let hasFetchedFields = $state(false); // Track if fields have been fetched for the current class
+	let dataCopy = $state(data);
 
 	// Placeholder functions for backend interaction
 	async function fetchTaskClasses() {
@@ -55,6 +56,12 @@
 				// Check response.ok too
 				availableClasses = result.classes; // Update local state
 				data.modulePath = internalModulePath; // Update data prop
+				dataCopy = {
+					...dataCopy,
+					modulePath: internalModulePath,
+					className: null,
+					fields: []
+				};
 			} else {
 				error = result.error || `HTTP error ${response.status}`;
 				availableClasses = []; // Clear local state on error
@@ -87,8 +94,9 @@
 			console.log('[fetchTaskFields] API Result:', result);
 			if (response.ok && result.success) {
 				// Check response.ok too
-				data = {
-					...data,
+				data.fields = result.fields;
+				dataCopy = {
+					...dataCopy,
 					fields: result.fields
 				};
 				console.log('[fetchTaskFields] Success, updating fields.');
@@ -98,8 +106,9 @@
 					result.error || `HTTP ${response.status}`
 				);
 				error = result.error || `HTTP error ${response.status}`;
-				data = {
-					...data,
+				data.fields = [];
+				dataCopy = {
+					...dataCopy,
 					fields: []
 				};
 			}
@@ -251,7 +260,7 @@
 	</div>
 {/snippet}
 
-<TaskNode {id} {data}>
+<TaskNode {id} data={dataCopy}>
 	{@render ImportHeader()}
 </TaskNode>
 

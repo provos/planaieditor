@@ -55,7 +55,7 @@
 	let tempClassName = $state(data.className);
 
 	// Track current fields for rendering
-	let currentFields = $state<Field[]>([...data.fields]);
+	let currentFields = $derived<Field[]>([...data.fields]);
 
 	// Field type options
 	const BASE_TYPE_LABELS: Record<BaseFieldType, string> = {
