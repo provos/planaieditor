@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { tick } from 'svelte';
+	import { useStore } from '@xyflow/svelte';
 	import { useUpdateNodeInternals } from '@xyflow/svelte';
 	import { backendUrl } from '$lib/utils/backendUrl';
 	import TaskNode from './TaskNode.svelte';
@@ -14,6 +15,7 @@
 	export interface TaskImportNodeData extends TaskNodeData {
 		modulePath?: string;
 		isImplicit?: boolean;
+		availableClasses?: string[];
 	}
 
 	let { id, data } = $props<{
@@ -27,12 +29,15 @@
 
 	const updateNodeInternals = useUpdateNodeInternals();
 
+	const { edges } = useStore();
+
+
 	// Internal state
 	let internalModulePath = $state(data.modulePath);
 	let error = $state<string | null>(null);
 	let loading = $state(false);
 	let localSelectedClassName = $state<string | null>(data.className); // Local reactive state
-	let availableClasses = $state<string[]>(data.className ? [data.className] : []); // Local state for classes
+	let availableClasses = $state<string[]>(data.availableClasses || []); // Local state for classes
 	let hasFetchedFields = $state(false); // Track if fields have been fetched for the current class
 	let dataCopy = $state(data);
 
@@ -137,17 +142,35 @@
 		}
 	}
 
+	let isEdgeConnected = $state(false);
+
 	// Effect 1: Fetch fields when component mounts AND interpreter is selected AND class is selected
 	onMount(() => {
 		if (selectedInterpreterPath.value && data.className && !hasFetchedFields) {
 			fetchTaskFields(data.className);
 		}
+
+		const unsubEdges = edges.subscribe((edges) => {
+			isEdgeConnected = edges.some((edge) => edge.source === id);
+		});
+
+		return () => {
+			unsubEdges();
+		};
+	});
+
+	$effect(() => {
+		data.availableClasses = availableClasses;
 	});
 
 	// Effect 2: Sync local changes UP to prop & potentially trigger fetch
 	$effect(() => {
 		if (data.className !== localSelectedClassName) {
 			data.className = localSelectedClassName;
+			dataCopy = {
+				...dataCopy,
+				className: localSelectedClassName
+			};
 			hasFetchedFields = false; // Reset fetch status when class changes
 			tick().then(() => {
 				updateNodeInternals(id);
@@ -192,16 +215,16 @@
 				type="text"
 				bind:value={internalModulePath}
 				placeholder="e.g., my_tasks.core_types"
-				class="text-2xs w-full flex-grow rounded border border-gray-200 px-1.5 py-1 {error &&
+				class="text-2xs w-full flex-grow rounded border border-gray-200 px-1.5 py-1 disabled:cursor-not-allowed {error &&
 				!availableClasses.length
 					? 'border-red-400'
 					: ''}"
-				disabled={loading || data.isImplicit}
+				disabled={loading || data.isImplicit || isEdgeConnected }
 			/>
 			<button
-				class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50"
+				class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded bg-blue-500 text-white hover:bg-blue-600 disabled:hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
 				onclick={fetchTaskClasses}
-				disabled={!internalModulePath || loading || data.isImplicit}
+				disabled={!internalModulePath || loading || data.isImplicit || isEdgeConnected}
 				title="Load classes from module"
 			>
 				{#if loading && !localSelectedClassName}
@@ -224,7 +247,7 @@
 						);
 					}}
 					class="text-2xs w-full rounded border border-gray-200 px-1.5 py-1"
-					disabled={loading || !selectedInterpreterPath.value || data.isImplicit}
+					disabled={loading || !selectedInterpreterPath.value || data.isImplicit || isEdgeConnected}
 					title={data.isImplicit
 						? 'Cannot change implicitly imported task'
 						: !selectedInterpreterPath.value
