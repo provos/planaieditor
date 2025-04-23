@@ -881,23 +881,23 @@ Analyze the following information and provide a response.`,
 
 	/* Restore appropriate cursors for interactive elements */
 	:global(.svelte-flow .svelte-flow__node input) {
-		cursor: text !important;
+		cursor: text;
 	}
 
 	:global(.svelte-flow .svelte-flow__node button) {
-		cursor: pointer !important;
+		cursor: pointer;
 	}
 
 	:global(.svelte-flow .svelte-flow__node select) {
-		cursor: pointer !important;
+		cursor: pointer;
 	}
 
 	/* Ensure code editor sections have text cursor */
 	:global(.svelte-flow .svelte-flow__node .cm-editor) {
-		cursor: text !important;
+		cursor: text;
 	}
 
 	:global(.svelte-flow .svelte-flow__node .cm-content) {
-		cursor: text !important;
+		cursor: text;
 	}
 </style>
