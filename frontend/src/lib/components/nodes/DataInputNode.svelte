@@ -10,11 +10,13 @@
 	import type { NodeData as TaskNodeData } from './TaskNode.svelte';
 	import { backendUrl } from '$lib/utils/backendUrl';
 	import Spinner from 'phosphor-svelte/lib/Spinner';
+	import { onMount } from 'svelte';
 
 	// Define the interface for the node's data
 	export interface DataInputNodeData {
 		className: string | null; // Can be null initially
 		jsonData: string;
+		isJsonValid?: boolean;
 		nodeId: string;
 	}
 
@@ -40,7 +42,6 @@
 
 	const updateNodeInternals = useUpdateNodeInternals();
 
-	// --- Effects ---
 	// Subscribe to task class names
 	const unsubTaskTypes = taskClassNamesStore.subscribe((taskClasses) => {
 		availableTaskClasses = Array.from(taskClasses);
@@ -51,9 +52,19 @@
 		}
 	});
 
+	// --- Effects ---
+	onMount(() => {
+		validateJsonData();
+	});
+
 	// Update data when selectedClassName changes
 	$effect(() => {
 		data.className = selectedClassName;
+	});
+
+	// Keep track of the json validity
+	$effect(() => {
+		data.isJsonValid = jsonIsValid;
 	});
 
 	// Handler for code updates from EditableCodeSection
