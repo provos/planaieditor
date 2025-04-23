@@ -296,6 +296,7 @@ def create_llm_args(llm_config: Dict[str, Any]) -> List[str]:
         "host",
         "hostname",
         "username",
+        "use_cache",
     ]
     # Map frontend/config keys to backend llm_from_config keys if different
     key_map = {

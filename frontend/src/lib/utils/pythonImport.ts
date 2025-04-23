@@ -382,6 +382,7 @@ export async function importPythonCode(
                     nodeData.debug_mode = worker.classVars.debug_mode || false;
                     // Explicitly map llm_input_type from classVars
                     nodeData.llm_input_type = worker.classVars.llm_input_type || '';
+                    nodeData.llm_output_type = worker.classVars.llm_output_type || '';
                     break;
                 case 'joinedtaskworker':
                     // Map the join_type from class variables
