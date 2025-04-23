@@ -749,7 +749,7 @@ except Exception as e:
         result["error"] = error_output.get("message")
 
     # Return the validation result directly to the frontend
-    status_code = 200 if result.get("success") else 400
+    status_code = 200
     return jsonify(result), status_code
 
 
