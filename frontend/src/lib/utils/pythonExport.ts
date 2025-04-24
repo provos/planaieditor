@@ -218,11 +218,14 @@ export function processExportResult(
     const clearedNodes = clearNodeErrors([...nodes]);
 
     if (resultData.success) {
+        // check if any nodes have errors
+        const hasErrors = nodes.some(node => node.data?.error);
         return {
             status: {
                 type: 'success',
                 message: resultData.message || 'Export successful!'
-            }
+            },
+            updatedNodes: hasErrors ? clearedNodes : undefined
         };
     } else {
         const errorInfo = resultData.error;
