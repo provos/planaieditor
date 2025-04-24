@@ -2,7 +2,7 @@ import type { Node, Edge } from '@xyflow/svelte';
 import type { Socket } from 'socket.io-client';
 import type { BackendError } from './pythonImport';
 import { get } from 'svelte/store';
-import { llmConfigs } from '$lib/stores/llmConfigsStore';
+import { llmConfigs, type LLMConfig } from '$lib/stores/llmConfigsStore';
 
 // Type for export status updates
 export interface ExportStatus {
@@ -41,6 +41,20 @@ interface GraphData {
     edges: { source: string; target: string }[];
 }
 
+function convertLLMConfigToBackendFormat(config: LLMConfig): Record<string, any> {
+    let convertedConfig: Record<string, any> = {};
+
+    // Process each property in the config object
+    Object.entries(config).forEach(([key, value]) => {
+        // Skip name and source properties
+        if (key !== 'name' && key !== 'source' && key !== 'id') {
+            convertedConfig[key] = { value: value, is_literal: true };
+        }
+    });
+
+    return convertedConfig;
+}
+
 export function convertGraphtoJSON(nodes: Node[], edges: Edge[]): GraphData {
     const nodeIdToNameMap = new Map<string, string>();
     nodes.forEach(node => {
@@ -72,7 +86,9 @@ export function convertGraphtoJSON(nodes: Node[], edges: Edge[]): GraphData {
 
                 if (foundConfig) {
                     // Add the full config object to the data being exported
-                    processedData.llmConfig = foundConfig;
+                    const convertConfig = convertLLMConfigToBackendFormat(foundConfig);
+
+                    processedData.llmConfig = convertConfig;
                     // Remove the name now that we have the full object
                     delete processedData.llmConfigName;
 
