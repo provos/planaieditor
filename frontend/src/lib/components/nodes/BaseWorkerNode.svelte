@@ -4,12 +4,15 @@
 	import { getColorForType, calculateHandlePosition } from '$lib/utils/colorUtils';
 	import { taskClassNamesStore } from '$lib/stores/taskClassNamesStore';
 	import EditableCodeSection from '../EditableCodeSection.svelte';
+	import InputHandle from '../InputHandle.svelte';
 	import Trash from 'phosphor-svelte/lib/Trash';
 	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
-	import type { Node, Edge } from '@xyflow/svelte';
+	import type { Node } from '@xyflow/svelte';
 	import type { Snippet } from 'svelte';
 	import { tick } from 'svelte';
 	import { formatErrorMessage } from '$lib/utils/utils';
+	import { onMount } from 'svelte';
+
 	// Base interface for worker node data
 	export interface BaseWorkerData {
 		workerName: string;
@@ -67,7 +70,6 @@
 		data.inputTypes.length > 0 ? data.inputTypes[0] : ''
 	);
 	let currentOutputTypes = $derived<string[]>([...(data.output_types || [])]);
-	let nodeRef: HTMLElement | null = $state(null);
 	let currentHeight = $state(minHeight); // State for reactive height
 
 	let combinedOutputTypes = $derived(
@@ -79,29 +81,19 @@
 	);
 
 	// --- Effects for Reactivity ---
-	$effect(() => {
+	onMount(() => {
 		if (!isEditable) {
 			return;
 		}
 
-		let currentNodes: Node[] = [];
-		let currentEdges: Edge[] = [];
-
 		// Subscribe to nodes store changes
 		const unsubNodes = store.nodes.subscribe((nodesValue: Node[]) => {
-			currentNodes = nodesValue || [];
+			const currentNodes = nodesValue || [];
 			// Find this node and update height
 			const thisNode = currentNodes.find((n) => n.id === id);
 			if (thisNode) {
 				currentHeight = thisNode.measured?.height ?? thisNode.height ?? minHeight;
 			}
-			updateInferredTypes(currentNodes, currentEdges);
-		});
-
-		// Subscribe to edges store changes
-		const unsubEdges = store.edges.subscribe((edgesValue: Edge[]) => {
-			currentEdges = edgesValue || [];
-			updateInferredTypes(currentNodes, currentEdges);
 		});
 
 		// Subscribe to the taskClassNamesStore for output type selection
@@ -110,52 +102,12 @@
 			availableTaskClasses = Array.from(taskClasses);
 		});
 
-		// Initial update in case stores already have values
-		updateInferredTypes(currentNodes, currentEdges);
-
 		// Cleanup function
 		return () => {
 			unsubNodes();
-			unsubEdges();
 			unsubClassNames();
 		};
 	});
-
-	$effect(() => {
-		if (manuallySelectedInputType && inferredInputTypes.length === 0 && !isEditable) {
-			inferredInputTypes = [manuallySelectedInputType];
-			data.inputTypes = [manuallySelectedInputType];
-		}
-	});
-
-	// Function to calculate and update inferred input types
-	function updateInferredTypes(nodes: Node[], edges: Edge[]) {
-		if (!edges || !nodes) {
-			inferredInputTypes = manuallySelectedInputType ? [manuallySelectedInputType] : [];
-			return;
-		}
-
-		const incomingEdges = edges.filter((edge: Edge) => edge.target === id);
-		const sourceNodeIds = incomingEdges.map((edge: Edge) => edge.source);
-		const sourceClassNames: string[] = sourceNodeIds
-			.map((nodeId: string) => {
-				const sourceNode = nodes.find((node: Node) => node.id === nodeId);
-				const edge = incomingEdges.find((e) => e.source === nodeId);
-				const sourceHandleId = edge?.sourceHandle;
-				if (sourceHandleId && sourceHandleId.startsWith('output-')) {
-					return sourceHandleId.substring(7);
-				}
-				// Fallback if handle ID is missing/unexpected
-				return sourceNode?.data?.className;
-			})
-			.filter(Boolean) as string[];
-
-		// make sourceClassNames unique
-		const uniqueSourceClassNames = [...new Set(sourceClassNames)];
-
-		inferredInputTypes = uniqueSourceClassNames;
-		data.inputTypes = uniqueSourceClassNames;
-	}
 
 	// --- Worker Name Editing Logic ---
 	function startEditingName() {
@@ -294,10 +246,13 @@
 		await tick();
 		updateNodeInternals(id);
 	}
+
+	function updateInferredInputTypes(updatedInputTypes: string[]) {
+		inferredInputTypes = updatedInputTypes;
+	}
 </script>
 
 <div
-	bind:this={nodeRef}
 	class="base-worker-node relative flex h-full flex-col rounded-md border border-gray-300 bg-white shadow-md {additionalClassStyle}"
 >
 	<NodeResizer
@@ -308,11 +263,12 @@
 	/>
 
 	<!-- Input Handle (Single for now) -->
-	<Handle
-		type="target"
-		position={Position.Left}
-		id="input"
-		style={`background-color: ${getColorForType(inferredInputTypes[0])};`}
+	<InputHandle
+		{id}
+		{data}
+		{manuallySelectedInputType}
+		{isEditable}
+		onUpdate={updateInferredInputTypes}
 	/>
 
 	<!-- Output Handles (Dynamically created) -->
