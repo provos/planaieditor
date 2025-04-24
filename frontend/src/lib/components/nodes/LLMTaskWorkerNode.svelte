@@ -1,6 +1,7 @@
 <script lang="ts">
 	import BaseWorkerNode from '$lib/components/nodes/BaseWorkerNode.svelte';
 	import EditableCodeSection from '$lib/components/EditableCodeSection.svelte';
+	import LLMConfigSelector from '$lib/components/LLMConfigSelector.svelte';
 	import type { BaseWorkerData } from '$lib/components/nodes/BaseWorkerNode.svelte';
 	import { taskClassNamesStore } from '$lib/stores/taskClassNamesStore';
 	import { getColorForType } from '$lib/utils/colorUtils';
@@ -8,14 +9,6 @@
 	import { useUpdateNodeInternals } from '@xyflow/svelte';
 	import { tick } from 'svelte';
 	import type { Action } from 'svelte/action';
-	import {
-		llmConfigs,
-		llmConfigsFromCode,
-		getLLMConfigById,
-		getLLMConfigFromCodeById,
-		type LLMConfigBasic
-	} from '$lib/stores/llmConfigsStore';
-	import { getProviderVisuals, type ProviderVisuals } from '$lib/utils/providerVisuals';
 
 	// Extend the base data interface
 	export interface LLMWorkerData extends BaseWorkerData {
@@ -50,6 +43,7 @@
 	let availableTaskClasses = $state<string[]>([]);
 	let showLLMOutputTypeDropdown = $state(false);
 	let currentOutputType = $state(data.llm_output_type || '');
+
 	// Ensure all fields are initialized
 	if (!data.prompt) {
 		data.prompt = '';
@@ -103,56 +97,6 @@
 	let useXml = $state(data.use_xml);
 	let debugMode = $state(data.debug_mode);
 
-	// State for the combined selection identifier (e.g., "user:uuid" or "code:uuid")
-	let selectedConfigName = $state<string | undefined>(data.llmConfigName || data.llmConfigVar);
-
-	// Combine user and code configs for the dropdown
-	const combinedConfigs = $derived<LLMConfigBasic[]>([...$llmConfigs, ...$llmConfigsFromCode]);
-
-	// Helper to get visuals for a given identifier
-	function getVisualsForIdentifier(identifier: string | undefined): ProviderVisuals | null {
-		if (!identifier) return null;
-		const config = combinedConfigs.find((c) => c.name === identifier);
-		if (!config) return null;
-
-		let provider: string | undefined;
-		if (config.source === 'user') {
-			const visualConfig = getLLMConfigById(config.id);
-			provider = visualConfig?.provider;
-		}
-
-		return getProviderVisuals(provider as any);
-	}
-
-	// Reactive visuals based on the selected identifier
-	let selectedConfigVisuals = $derived(getVisualsForIdentifier(selectedConfigName));
-
-	// Effect to update data prop when selection changes
-	$effect(() => {
-		if (selectedConfigName) {
-			let sourceConfig = combinedConfigs.find((c) => c.name === selectedConfigName);
-			if (sourceConfig?.source === 'user') {
-				const config = getLLMConfigById(sourceConfig.id);
-				if (config) {
-					data.llmConfigName = config.name;
-					data.llmConfigFromCode = undefined; // Clear the other
-				}
-			} else if (sourceConfig?.source === 'code') {
-				const config = getLLMConfigFromCodeById(sourceConfig.id);
-				if (config) {
-					data.llmConfigName = undefined; // Clear the other
-					data.llmConfigFromCode = config.llmConfigFromCode;
-					data.llmConfigVar = config.name;
-				}
-			}
-		} else {
-			// No selection or invalid identifier
-			data.llmConfigName = undefined;
-			data.llmConfigFromCode = undefined;
-			data.llmConfigVar = undefined;
-		}
-	});
-
 	// Subscribe to the taskClassNamesStore for output type selection
 	$effect(() => {
 		const unsubClassNames = taskClassNamesStore.subscribe((taskClasses) => {
@@ -182,6 +126,18 @@
 	$effect(() => {
 		data.debug_mode = debugMode;
 	});
+
+	// Handle LLM config changes
+	function handleLLMConfigChange(changes: {
+		configName?: string;
+		configFromCode?: Record<string, any>;
+		configVar?: string;
+	}) {
+		console.log('changes', changes);
+		data.llmConfigName = changes.configName;
+		data.llmConfigFromCode = changes.configFromCode;
+		data.llmConfigVar = changes.configVar;
+	}
 
 	// Handle code updates
 	function handlePromptUpdate(newCode: string) {
@@ -244,21 +200,6 @@
 			event.stopPropagation();
 		}
 	}
-
-	// Add a function to format the imported LLM config for display
-	function formatImportedLLMConfig(): string {
-		if (!data.llmConfigFromCode) return '';
-
-		const config = data.llmConfigFromCode;
-		const parts = [];
-
-		if (config.provider) parts.push(`Provider: ${config.provider.value}`);
-		if (config.model_name) parts.push(`Model: ${config.model_name.value}`);
-		if (config.max_tokens) parts.push(`Max Tokens: ${config.max_tokens.value}`);
-		if (config.host) parts.push(`Host: ${config.host.value}`);
-
-		return parts.join(', ');
-	}
 </script>
 
 <BaseWorkerNode
@@ -270,36 +211,13 @@
 	isCached={data.isCached}
 >
 	<!-- LLM Configuration Selector -->
-	<div class="mb-2 flex-none">
-		<label for="llm-config-{id}" class="label flex-none">LLM Config</label>
-		<div
-			class="mt-1 flex items-center gap-2 {data.llmConfigFromCode ? 'bg-gray-100' : 'bg-green-100'}"
-		>
-			{#if selectedConfigVisuals}
-				<div class="flex-none" title={data.llmConfigName || data.llmConfigFromCode?.name}>
-					<selectedConfigVisuals.icon size={12} class={selectedConfigVisuals.colorClass} />
-				</div>
-			{/if}
-			<select
-				id="llm-config-{id}"
-				class="text-2xs nodrag select select-bordered select-sm w-full flex-grow"
-				bind:value={selectedConfigName}
-			>
-				<option value={undefined}>-- Select --</option>
-				{#if combinedConfigs.length === 0}
-					<option disabled>No configs defined or imported</option>
-				{:else}
-					{#each combinedConfigs as config (config.id)}
-						{#if config.source === 'user'}
-							<option value={config.name}>{config.name}</option>
-						{:else}
-							<option value={config.name}>{config.name} ({formatImportedLLMConfig()})</option>
-						{/if}
-					{/each}
-				{/if}
-			</select>
-		</div>
-	</div>
+	<LLMConfigSelector
+		{id}
+		initialConfigName={data.llmConfigName}
+		initialConfigFromCode={data.llmConfigFromCode}
+		initialConfigVar={data.llmConfigVar}
+		onChange={handleLLMConfigChange}
+	/>
 
 	<!-- LLM Output Type Section -->
 	<div class="mb-2 flex-none">
@@ -415,13 +333,5 @@
 	.text-2xs {
 		font-size: 0.65rem; /* 10.4px */
 		line-height: 1rem; /* 16px */
-	}
-
-	.label {
-		/* @apply text-2xs font-semibold text-gray-600; */
-		font-size: 0.65rem; /* Apply text-2xs size directly */
-		line-height: 1rem; /* Apply text-2xs line-height directly */
-		font-weight: 600; /* Corresponds to font-semibold */
-		color: rgb(75 85 99); /* Corresponds to text-gray-600 */
 	}
 </style>
