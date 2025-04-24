@@ -13,6 +13,8 @@
 	import Gear from 'phosphor-svelte/lib/Gear';
 	import Keyboard from 'phosphor-svelte/lib/Keyboard';
 	import Table from 'phosphor-svelte/lib/Table';
+	import { useStore } from '@xyflow/svelte';
+	import type { BaseWorkerData } from './nodes/BaseWorkerNode.svelte';
 
 	let {
 		onExport,
@@ -39,6 +41,69 @@
 			event.dataTransfer.effectAllowed = 'move';
 		}
 	}
+
+	let isExecutionReady = $state(false);
+	const { edges, nodes } = useStore();
+
+	let unconnectedWorkersTooltip = $state<string | null>(null);
+
+	// Define the types of nodes that are expected to have an output connection
+	const workerNodeTypes = new Set([
+		'datainput',
+		'taskworker',
+		'llmtaskworker',
+		'joinedtaskworker',
+		'subgraphworker',
+		'chattaskworker'
+	]);
+
+	$effect(() => {
+		const currentNodes = $nodes;
+		const currentEdges = $edges;
+
+		// Create a set of node IDs that are used as a source in any edge
+		const sourceNodeIds = new Set(currentEdges.map((edge) => edge.source));
+
+		let allRequiredOutputsConnected = true;
+		const unconnectedNodes: string[] = [];
+
+		// Filter nodes to find only those that are workers and have a defined type
+		const relevantWorkerNodes = currentNodes.filter(
+			(node) => node.type && workerNodeTypes.has(node.type)
+		);
+
+		// If there are worker nodes that require connections...
+		if (relevantWorkerNodes.length > 0) {
+			// ...check if each one is connected
+			for (const node of relevantWorkerNodes) {
+				// We know node.id is a string. Check if it's a source in any edge.
+				if (!sourceNodeIds.has(node.id)) {
+					allRequiredOutputsConnected = false;
+					// Use label if available, otherwise fallback to ID
+					unconnectedNodes.push((node.data as BaseWorkerData)?.workerName || node.id);
+					// Don't break here, collect all unconnected nodes
+				}
+			}
+		} else {
+			// If there are no worker nodes requiring output, then technically all required outputs *are* connected.
+			allRequiredOutputsConnected = true;
+		}
+
+		// Determine if there are any nodes that actually require an output connection
+		const workerNodesExist = relevantWorkerNodes.length > 0;
+
+		// The graph is ready for execution if either:
+		// 1. There are no worker nodes requiring an output connection.
+		// 2. All worker nodes that require an output connection have one.
+		isExecutionReady = !workerNodesExist || allRequiredOutputsConnected;
+
+		// Update the tooltip based on the connection status
+		if (!isExecutionReady && unconnectedNodes.length > 0) {
+			unconnectedWorkersTooltip = `Outputs missing for: ${unconnectedNodes.join(', ')}`;
+		} else {
+			unconnectedWorkersTooltip = null; // Clear tooltip if ready or no specific nodes are missing connections
+		}
+	});
 </script>
 
 <div class="flex items-center gap-4" data-testid="toolshelf-container">
@@ -55,7 +120,7 @@
 		>
 			<div class="flex items-center gap-1.5">
 				<Cube size={16} weight="fill" class="text-blue-500" />
-			<div class="text-sm font-semibold">Task</div>
+				<div class="text-sm font-semibold">Task</div>
 			</div>
 		</div>
 		<!-- Task Import Node -->
@@ -181,8 +246,10 @@
 		<!-- Export Button -->
 		<button
 			onclick={onExport}
-			class="flex items-center rounded bg-green-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-700"
+			class="flex items-center rounded bg-green-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-green-600"
 			data-testid="export-button"
+			disabled={!isExecutionReady}
+			title={unconnectedWorkersTooltip ? unconnectedWorkersTooltip : 'Export to Python'}
 		>
 			<Export size={18} class="mr-1.5" />
 			Export
