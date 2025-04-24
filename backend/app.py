@@ -321,6 +321,22 @@ os.environ['DEBUG_PORT'] = '{server.port}'
                         },
                     }
 
+            # Try to parse special errors in output
+            error_match = re.search(
+                r"ERROR:root:Worker (\w+) on Task (\w+) failed with exception: (.*)",
+                process.stderr,
+            )
+            if error_match:
+                error_data = {
+                    "success": False,
+                    "error": {
+                        "message": f"Worker {error_match.group(1)} on Task {error_match.group(2)} failed with exception: {error_match.group(3)}",
+                        "nodeName": error_match.group(1),
+                        "fullTraceback": process.stderr,
+                    },
+                }
+                return error_data
+
             # Try to parse structured JSON success output
             success_match = re.search(
                 r"##SUCCESS_JSON_START##\s*(.*?)\s*##SUCCESS_JSON_END##",
