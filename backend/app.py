@@ -225,133 +225,177 @@ def validate_code_in_venv(module_name, code_string):
     # delete=False is needed on Windows to allow the subprocess to open the file.
     # The file is explicitly closed and removed in the finally block.
     tmp_file = None  # Initialize outside try
+    process = None  # Initialize process reference
+
+    # Define the debug event handler
+    def handle_debug_event(event):
+        """Handle debug events received from the subprocess"""
+        event_type = event.get("type", "unknown")
+        event_data = event.get("data", {})
+
+        print(f"Received debug event: {event_type} - {event_data}")
+
+        # Emit the event to the frontend through SocketIO
+        # Include current socket ID to ensure it goes to the right client
+        socketio.emit(
+            "planai_debug_event",
+            {"type": event_type, "data": event_data},
+            room=request.sid,
+        )
+
     try:
-        # Create a named temporary file
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".py", delete=False, encoding="utf-8"
-        ) as tmp_file:
-            tmp_file.write(code_string)
-            module_path = tmp_file.name  # Get the path of the temporary file
+        from planaieditor.socket_server import SocketServer
 
-        # Execute the script using the venv's Python interpreter
-        result = subprocess.run(
-            [python_executable, module_path],
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=60,  # Increased timeout slightly
-        )
-
-        print(f"Execution in venv completed with exit code: {result.returncode}")
-        if result.stdout:
-            # Print label and output separately
-            print("stdout:")
-            print(result.stdout)
-        if result.stderr:
-            # Print label and output separately
-            print("stderr:")
-            print(result.stderr)
-
-        # Combine stdout and stderr for parsing
-        combined_output = result.stdout + "\n" + result.stderr
-
-        # Try to parse structured JSON error output first
-        error_match = re.search(
-            r"##ERROR_JSON_START##\s*(.*?)\s*##ERROR_JSON_END##",
-            combined_output,
-            re.DOTALL,
-        )
-        if error_match:
-            json_str = error_match.group(1)
-            try:
-                error_data = json.loads(json_str)
-                print(f"Parsed error JSON from script output: {error_data}")
-                return error_data  # Return the structured error from the script
-            except json.JSONDecodeError as e:
-                print(
-                    f"Error decoding JSON from script error output: {e}\nJSON string: {json_str}"
+        # Use the SocketServer as a context manager
+        with SocketServer(callback=handle_debug_event) as server:
+            # Create a named temporary file
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".py", delete=False, encoding="utf-8"
+            ) as tmp_file:
+                # Inject debug monitor import at the top of the code
+                debug_monitor_path = os.path.join(
+                    os.path.dirname(__file__),
+                    "planaieditor",
+                    "codesnippets",
+                    "debug_monitor.py",
                 )
-                # Fallback to generic error if JSON parsing fails
+                debug_import = f"""
+# Debug monitoring - injected by PlanAI Editor
+import os, sys
+os.environ['DEBUG_PORT'] = '{server.port}'
+
+{Path(debug_monitor_path).read_text()}
+
+# End of debug monitoring injection
+"""
+                tmp_file.write(debug_import + code_string)
+                module_path = tmp_file.name  # Get the path of the temporary file
+
+            print(f"Starting execution with debug server on port {server.port}")
+
+            # Execute the script using the venv's Python interpreter
+            process = subprocess.run(
+                [python_executable, module_path],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=60,
+            )
+
+            print(f"Execution in venv completed with exit code: {process.returncode}")
+            if process.stdout:
+                # Print label and output separately
+                print("stdout:")
+                print(process.stdout)
+            if process.stderr:
+                # Print label and output separately
+                print("stderr:")
+                print(process.stderr)
+
+            # Combine stdout and stderr for parsing
+            combined_output = process.stdout + "\n" + process.stderr
+
+            # Try to parse structured JSON error output first
+            error_match = re.search(
+                r"##ERROR_JSON_START##\s*(.*?)\s*##ERROR_JSON_END##",
+                combined_output,
+                re.DOTALL,
+            )
+            if error_match:
+                json_str = error_match.group(1)
+                try:
+                    error_data = json.loads(json_str)
+                    print(f"Parsed error JSON from script output: {error_data}")
+                    return error_data  # Return the structured error from the script
+                except json.JSONDecodeError as e:
+                    print(
+                        f"Error decoding JSON from script error output: {e}\nJSON string: {json_str}"
+                    )
+                    # Fallback to generic error if JSON parsing fails
+                    return {
+                        "success": False,
+                        "error": {
+                            "message": "Script failed with undecipherable JSON error output.",
+                            "nodeName": None,
+                            "fullTraceback": combined_output,
+                        },
+                    }
+
+            # Try to parse structured JSON success output
+            success_match = re.search(
+                r"##SUCCESS_JSON_START##\s*(.*?)\s*##SUCCESS_JSON_END##",
+                combined_output,
+                re.DOTALL,
+            )
+            if success_match:
+                json_str = success_match.group(1)
+                try:
+                    success_data = json.loads(json_str)
+                    print(f"Parsed success JSON from script output: {success_data}")
+                    return success_data  # Return the structured success info
+                except json.JSONDecodeError as e:
+                    print(
+                        f"Error decoding JSON from script success output: {e}\nJSON string: {json_str}"
+                    )
+                    # Fallback, but assume success if marker was present
+                    return {
+                        "success": True,
+                        "message": "Script indicated success, but JSON output was malformed.",
+                    }
+
+            # --- Fallback Logic (if no JSON markers found) ---
+            print(
+                "No structured JSON markers found in script output. Falling back to exit code check."
+            )
+
+            if process.returncode == 0:
+                # Script finished with exit code 0 but didn't print success JSON
+                print(
+                    f"Script '{module_name}' completed with exit code 0 but no success JSON marker."
+                )
+                return {
+                    "success": True,
+                    "message": "Script validation finished without explicit success confirmation.",
+                }  # Assume success?
+            else:
+                # Script failed before printing JSON markers (e.g., syntax error)
+                print(
+                    f"Script failed with exit code {process.returncode} before printing JSON markers."
+                )
+                error_output = (
+                    process.stderr or process.stdout or "Unknown execution error"
+                )
+                lines = error_output.strip().split("\n")
+                core_error_message = (
+                    lines[-1] if lines else "Unknown execution error line."
+                )
+
+                # Use the simpler regex fallback for node name from raw output
+                name_regex = (
+                    r"\b([A-Za-z_][A-Za-z0-9_]*?)(?:Task|Worker)\d+\b(?:\s*=|\s*\()"
+                )
+                found_node_name = None
+                matches = re.findall(name_regex, error_output)
+                if matches:
+                    found_node_name = matches[0]
+                    if (
+                        found_node_name.startswith("l")
+                        and len(found_node_name) > 1
+                        and found_node_name[1].isupper()
+                    ):
+                        found_node_name = found_node_name[1:]
+
+                print(
+                    f"Fallback Error: Node found: {found_node_name}, Error: {core_error_message}"
+                )
                 return {
                     "success": False,
                     "error": {
-                        "message": "Script failed with undecipherable JSON error output.",
-                        "nodeName": None,
-                        "fullTraceback": combined_output,
+                        "message": core_error_message,
+                        "nodeName": found_node_name,
+                        "fullTraceback": error_output,  # Provide the raw output as traceback
                     },
                 }
-
-        # Try to parse structured JSON success output
-        success_match = re.search(
-            r"##SUCCESS_JSON_START##\s*(.*?)\s*##SUCCESS_JSON_END##",
-            combined_output,
-            re.DOTALL,
-        )
-        if success_match:
-            json_str = success_match.group(1)
-            try:
-                success_data = json.loads(json_str)
-                print(f"Parsed success JSON from script output: {success_data}")
-                return success_data  # Return the structured success info
-            except json.JSONDecodeError as e:
-                print(
-                    f"Error decoding JSON from script success output: {e}\nJSON string: {json_str}"
-                )
-                # Fallback, but assume success if marker was present
-                return {
-                    "success": True,
-                    "message": "Script indicated success, but JSON output was malformed.",
-                }
-
-        # --- Fallback Logic (if no JSON markers found) ---
-        print(
-            "No structured JSON markers found in script output. Falling back to exit code check."
-        )
-
-        if result.returncode == 0:
-            # Script finished with exit code 0 but didn't print success JSON
-            print(
-                f"Script '{module_name}' completed with exit code 0 but no success JSON marker."
-            )
-            return {
-                "success": True,
-                "message": "Script validation finished without explicit success confirmation.",
-            }  # Assume success?
-        else:
-            # Script failed before printing JSON markers (e.g., syntax error)
-            print(
-                f"Script failed with exit code {result.returncode} before printing JSON markers."
-            )
-            error_output = result.stderr or result.stdout or "Unknown execution error"
-            lines = error_output.strip().split("\n")
-            core_error_message = lines[-1] if lines else "Unknown execution error line."
-
-            # Use the simpler regex fallback for node name from raw output
-            name_regex = (
-                r"\b([A-Za-z_][A-Za-z0-9_]*?)(?:Task|Worker)\d+\b(?:\s*=|\s*\()"
-            )
-            found_node_name = None
-            matches = re.findall(name_regex, error_output)
-            if matches:
-                found_node_name = matches[0]
-                if (
-                    found_node_name.startswith("l")
-                    and len(found_node_name) > 1
-                    and found_node_name[1].isupper()
-                ):
-                    found_node_name = found_node_name[1:]
-
-            print(
-                f"Fallback Error: Node found: {found_node_name}, Error: {core_error_message}"
-            )
-            return {
-                "success": False,
-                "error": {
-                    "message": core_error_message,
-                    "nodeName": found_node_name,
-                    "fullTraceback": error_output,  # Provide the raw output as traceback
-                },
-            }
 
     except subprocess.TimeoutExpired:
         error_message = f"Execution of '{module_name}' timed out after 60 seconds."
@@ -388,10 +432,41 @@ def validate_code_in_venv(module_name, code_string):
 def handle_connect():
     print("Client connected:", request.sid)
 
+    # Initialize debug sessions storage if not exists
+    if not hasattr(app, "debug_sessions"):
+        app.debug_sessions = {}
+
 
 @socketio.on("disconnect")
 def handle_disconnect():
     print("Client disconnected:", request.sid)
+
+    # Clean up any debug session data
+    if hasattr(app, "debug_sessions") and request.sid in app.debug_sessions:
+        del app.debug_sessions[request.sid]
+
+
+@socketio.on("register_for_debug_events")
+def handle_register_for_debug(data):
+    """Register client to receive PlanAI debug events."""
+    print(f"Client {request.sid} registered for debug events")
+
+    # Store debug session data
+    if not hasattr(app, "debug_sessions"):
+        app.debug_sessions = {}
+
+    # Store any client preferences
+    app.debug_sessions[request.sid] = {
+        "registered": True,
+        "preferences": data.get("preferences", {}),
+    }
+
+    # Acknowledge registration
+    emit(
+        "debug_registration_status",
+        {"success": True, "message": "Successfully registered for PlanAI debug events"},
+        room=request.sid,
+    )
 
 
 @socketio.on("export_graph")
