@@ -16,6 +16,7 @@
 	import SubGraphWorkerNode from '$lib/components/nodes/SubGraphWorkerNode.svelte';
 	import ChatTaskWorkerNode from '$lib/components/nodes/ChatTaskWorkerNode.svelte';
 	import DataInputNode from '$lib/components/nodes/DataInputNode.svelte';
+	import DataOutputNode from '$lib/components/nodes/DataOutputNode.svelte';
 	import type { BaseWorkerData } from '$lib/components/nodes/BaseWorkerNode.svelte';
 	import type { NodeData } from '$lib/components/nodes/TaskNode.svelte';
 	import { get } from 'svelte/store';
@@ -66,7 +67,8 @@
 		joinedtaskworker: JoinedTaskWorkerNode,
 		subgraphworker: SubGraphWorkerNode,
 		chattaskworker: ChatTaskWorkerNode,
-		datainput: DataInputNode
+		datainput: DataInputNode,
+		dataoutput: DataOutputNode
 	};
 
 	// Use SvelteFlow hook
@@ -376,6 +378,17 @@ Analyze the following information and provide a response.`,
 					className: null, // Start with no Task type selected
 					jsonData: '{}', // Default to empty JSON
 					nodeId: id
+				};
+				break;
+			}
+			case 'dataoutput': {
+				const baseName = 'DataOutput';
+				const uniqueName = generateUniqueName(baseName, existingNames);
+				nodeData = {
+					workerName: uniqueName,
+					nodeId: id,
+					receivedData: [],
+					inputTypes: []
 				};
 				break;
 			}
@@ -715,7 +728,11 @@ Analyze the following information and provide a response.`,
 		const targetNodeData = targetNode.data as BaseWorkerData;
 		// Get source className based on node type
 		let sourceClassName = null;
-		if (sourceNode.type === 'task' || sourceNode.type === 'datainput' || sourceNode.type === 'taskimport') {
+		if (
+			sourceNode.type === 'task' ||
+			sourceNode.type === 'datainput' ||
+			sourceNode.type === 'taskimport'
+		) {
 			sourceClassName = (sourceNode.data as unknown as NodeData).className;
 		} else if (connection.sourceHandle) {
 			sourceClassName = connection.sourceHandle.split('-')[1];

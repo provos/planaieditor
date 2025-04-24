@@ -1,0 +1,146 @@
+<script lang="ts">
+	import { NodeResizer, Position } from '@xyflow/svelte';
+	import InputHandle from '../InputHandle.svelte';
+	import { tick } from 'svelte';
+	import { useUpdateNodeInternals } from '@xyflow/svelte';
+	import { formatErrorMessage } from '$lib/utils/utils';
+	import { getColorForType } from '$lib/utils/colorUtils';
+
+	// Define the interface for the node's data
+	export interface DataOutputNodeData {
+		nodeId: string;
+		receivedData?: any[]; // Array to store received JSON objects
+		inputTypes: string[]; // Inferred input types
+		error?: string; // Optional error display
+	}
+
+	// Props passed by SvelteFlow
+	let { id, data } = $props<{
+		id: string;
+		data: DataOutputNodeData;
+	}>();
+
+	// Ensure data fields are initialized
+	if (!data.receivedData) {
+		data.receivedData = [];
+	}
+	if (!data.inputTypes) {
+		data.inputTypes = [];
+	}
+
+	const updateNodeInternals = useUpdateNodeInternals();
+
+	// --- State Variables ---
+	let inferredInputTypes = $state<string[]>(data.inputTypes || []);
+
+	// Callback for InputHandle to update inferred types
+	function updateInferredInputTypes(updatedTypes: string[]) {
+		inferredInputTypes = updatedTypes;
+	}
+
+	// Update node internals when content potentially changes height
+	async function handleContentUpdate() {
+		await tick();
+		updateNodeInternals(id);
+	}
+
+	// Reactive update when receivedData changes
+	$effect(() => {
+		if (data.receivedData) {
+			handleContentUpdate();
+		}
+	});
+</script>
+
+<div
+	class="dataoutput-node flex h-full min-h-[150px] flex-col rounded-md border border-gray-300 bg-white shadow-md"
+>
+	<NodeResizer
+		minWidth={200}
+		minHeight={150}
+		handleClass="resize-handle-output"
+		lineClass="resize-line-output"
+	/>
+
+	<!-- Input Handle (using the reusable component) -->
+	<InputHandle
+		{id}
+		{data}
+		manuallySelectedInputType={null}
+		isEditable={true}
+		onUpdate={updateInferredInputTypes}
+	/>
+
+	<!-- Header -->
+	<div class="flex-none border-b border-gray-200 bg-emerald-200 p-1 text-center text-xs font-medium">
+		{data.workerName}
+	</div>
+
+	<!-- Input Types Display Section -->
+	<div class="flex-none border-b border-gray-100 p-1.5">
+		<h3 class="text-2xs mb-1 font-semibold text-gray-600">Input Types</h3>
+		{#if inferredInputTypes.length === 0}
+			<div class="text-2xs italic text-gray-400">Connect a node...</div>
+		{:else}
+			<div class="space-y-1">
+				{#each inferredInputTypes as type (type)}
+					{@const color = getColorForType(type)}
+					<div
+						class="text-2xs rounded px-1 py-0.5 font-mono"
+						style={`background-color: ${color}20; border-left: 3px solid ${color};`}
+					>
+						{type}
+					</div>
+				{/each}
+			</div>
+		{/if}
+	</div>
+
+	<!-- Display Area for Received Data -->
+	<div class="min-h-0 flex-grow overflow-auto p-1.5">
+		{#if !data.receivedData || data.receivedData.length === 0}
+			<div class="text-2xs italic text-gray-400">Waiting for data...</div>
+		{:else}
+			<div class="space-y-2">
+				{#each data.receivedData as item, index (index)}
+					<div class="rounded border border-gray-200 bg-gray-50 p-1">
+						<pre class="text-2xs whitespace-pre-wrap break-words font-mono">{JSON.stringify(
+								item,
+								null,
+								2
+							)}</pre>
+					</div>
+				{/each}
+			</div>
+		{/if}
+	</div>
+
+	<!-- Error Display Area (Optional) -->
+	{#if data.error}
+		<div class="mt-auto flex-none border-t border-red-200 bg-red-50 p-1.5">
+			<p class="text-2xs font-semibold text-red-700">Error:</p>
+			<p class="text-2xs text-red-600">{@html formatErrorMessage(data.error)}</p>
+		</div>
+	{/if}
+</div>
+
+<style>
+	.text-2xs {
+		font-size: 0.65rem;
+		line-height: 1rem;
+	}
+
+	/* Use global styles for handles/resizers if available */
+	:global(.resize-handle-output) {
+		width: 12px !important;
+		height: 12px !important;
+		border-radius: 3px !important;
+		border: 2px solid var(--color-emerald-200) !important;
+		background-color: rgba(219, 112, 147, 0.2) !important;
+	}
+
+	:global(.resize-line-output) {
+		border-color: var(--color-emerald-200) !important;
+		border-width: 2px !important;
+	}
+</style>

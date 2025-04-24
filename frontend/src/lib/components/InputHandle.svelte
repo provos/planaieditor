@@ -82,9 +82,14 @@
 		// make sourceClassNames unique
 		const uniqueSourceClassNames = [...new Set(sourceClassNames)];
 
-		inferredInputTypes = uniqueSourceClassNames;
-		data.inputTypes = uniqueSourceClassNames;
-		onUpdate(uniqueSourceClassNames);
+		// Update only if there are changes in the inferred input types
+		if (uniqueSourceClassNames.length !== inferredInputTypes.length ||
+			uniqueSourceClassNames.some((type, index) => type !== inferredInputTypes[index])
+		) {
+			inferredInputTypes = uniqueSourceClassNames;
+			data.inputTypes = uniqueSourceClassNames;
+			onUpdate(uniqueSourceClassNames);
+		}
 	}
 </script>
 

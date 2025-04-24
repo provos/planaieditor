@@ -12,6 +12,7 @@
 	import Export from 'phosphor-svelte/lib/Export';
 	import Gear from 'phosphor-svelte/lib/Gear';
 	import Keyboard from 'phosphor-svelte/lib/Keyboard';
+	import Table from 'phosphor-svelte/lib/Table';
 
 	let {
 		onExport,
@@ -54,7 +55,7 @@
 		>
 			<div class="flex items-center gap-1.5">
 				<Cube size={16} weight="fill" class="text-blue-500" />
-				<div class="text-sm font-semibold">Task</div>
+			<div class="text-sm font-semibold">Task</div>
 			</div>
 		</div>
 		<!-- Task Import Node -->
@@ -81,6 +82,19 @@
 			<div class="flex items-center gap-1.5">
 				<Keyboard size={16} weight="fill" class="text-gray-500" />
 				<div class="text-sm font-semibold">DataInput</div>
+			</div>
+		</div>
+		<!-- Data Output Node -->
+		<div
+			class="cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
+			role="button"
+			tabindex="0"
+			draggable="true"
+			ondragstart={(e) => onDragStart(e, 'dataoutput')}
+		>
+			<div class="flex items-center gap-1.5">
+				<Table size={16} weight="fill" class="text-pink-500" />
+				<div class="text-sm font-semibold">DataOutput</div>
 			</div>
 		</div>
 
