@@ -5,6 +5,7 @@
 	import Trash from 'phosphor-svelte/lib/Trash';
 	import type * as Monaco from 'monaco-editor/esm/vs/editor/editor.api';
 	import { tick } from 'svelte';
+	import { monacoInstance } from '$lib/stores/monacoStore.svelte'; // Import the shared instance
 
 	let {
 		title = '',
@@ -31,7 +32,6 @@
 	let collapsed = $state(initialCollapsed);
 	let editorContainer: HTMLDivElement | undefined = $state();
 	let editor: Monaco.editor.IStandaloneCodeEditor | undefined;
-	let monaco: typeof Monaco | undefined;
 	let contentHeight = $state(0); // Track content height
 	let currentCode = $state(code);
 
@@ -39,50 +39,51 @@
 		editor?.dispose();
 	});
 
-	onMount(() => {
-		if (typeof window !== 'undefined') {
-			console.log(`Creating Monaco editor for: ${title || 'Untitled Section'}`);
-			(async () => {
-				if (!monaco) {
-					monaco = (await import('$lib/monaco')).default;
-				}
+	// Effect to create the editor once the monaco instance and container are ready
+	$effect(() => {
+		if (monacoInstance.instance && editorContainer && !editor) {
+			console.log(
+				`Creating Monaco editor instance in container for: ${title || 'Untitled Section'}`
+			);
+			editor = monacoInstance.instance.editor.create(editorContainer!, {
+				value: code,
+				language: language,
+				automaticLayout: false,
+				fontSize: 11,
+				minimap: { enabled: false },
+				scrollBeyondLastLine: false,
+				scrollbar: {
+					vertical: 'auto',
+					horizontalScrollbarSize: 8,
+					verticalScrollbarSize: 8
+				},
+				lineHeight: 18,
+				theme: 'vs-light'
+			});
 
-				editor = monaco.editor.create(editorContainer!, {
-					value: code,
-					language: language,
-					automaticLayout: false, // We'll manage layout ourselves
-					fontSize: 11,
-					minimap: { enabled: false },
-					scrollBeyondLastLine: false,
-					scrollbar: {
-						vertical: 'auto',
-						horizontalScrollbarSize: 8,
-						verticalScrollbarSize: 8
-					},
-					lineHeight: 18, // Explicit line height helps with calculations
-					theme: 'vs-light'
-				});
+			// Listen for content changes *after* editor is created
+			editor.onDidChangeModelContent(() => {
+				currentCode = editor?.getValue() ?? '';
+				updateEditorHeight();
+			});
 
-				// Listen for content changes *after* editor is created
-				editor.onDidChangeModelContent(() => {
-					currentCode = editor?.getValue() ?? '';
-					// Update height after content change
-					updateEditorHeight();
-				});
+			// Set up content height tracking
+			editor.onDidContentSizeChange((e) => {
+				contentHeight = e.contentHeight;
+				updateEditorHeight();
+			});
 
-				// Set up content height tracking
-				editor.onDidContentSizeChange((e) => {
-					contentHeight = e.contentHeight;
-					updateEditorHeight();
-				});
-
-				tick().then(() =>
-					requestAnimationFrame(() => {
-						editor?.layout();
-						updateEditorHeight(); // Initial height calculation
-					})
-				);
-			})();
+			// Initial layout and height calculation
+			tick().then(() =>
+				requestAnimationFrame(() => {
+					if (editor && editorContainer) {
+						editor.layout();
+						updateEditorHeight();
+					} else {
+						console.warn('Editor or container not available during initial layout attempt.');
+					}
+				})
+			);
 		}
 	});
 
@@ -118,10 +119,10 @@
 
 	// Effect to update editor language when 'language' prop changes
 	$effect(() => {
-		if (editor && monaco) {
+		if (editor && monacoInstance.instance) {
 			const model = editor.getModel();
 			if (model) {
-				monaco.editor.setModelLanguage(model, language);
+				monacoInstance.instance.editor.setModelLanguage(model, language);
 			}
 		}
 	});
