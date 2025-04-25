@@ -2,6 +2,7 @@ import json
 import os
 
 from planaieditor.python import (
+    create_all_graph_dependencies,
     create_worker_class,
     generate_python_module,
     worker_to_instance_name,
@@ -329,6 +330,101 @@ def test_fixture_edge_generation_full():
     if not user_chat_to_chat_adapter or not chat_task_to_user_chat:
         print("\nTest failed: Missing expected edges in generated code")
         assert False, "Missing expected edges"
+
+
+def test_create_all_graph_dependencies_simple():
+    """Test create_all_graph_dependencies with a simple graph structure."""
+    graph_data = {
+        "nodes": [
+            {
+                "id": "taskworker-1745444179489",
+                "type": "taskworker",
+                "data": {
+                    "inputTypes": ["Task1"],
+                    "methods": {
+                        "consume_work": 'self.publish_work(Task1(name="processed " + task.name), input_task=task)'
+                    },
+                    "nodeId": "taskworker-1745444179489",
+                    "className": "TaskWorker1",
+                    "classVars": {"output_types": ["Task1"]},
+                },
+            },
+            {
+                "id": "task-1745444182416",
+                "type": "task",
+                "data": {
+                    "className": "Task1",
+                    "fields": [
+                        {
+                            "name": "name",
+                            "type": "string",
+                            "isList": False,
+                            "required": True,
+                        }
+                    ],
+                    "nodeId": "task-1745444182416",
+                },
+            },
+            {
+                "id": "datainput-1745447545023",
+                "type": "datainput",
+                "data": {
+                    "className": "Task1",
+                    "jsonData": '{"name": "niels" }',
+                    "nodeId": "datainput-1745447545023",
+                    "isJsonValid": True,
+                },
+            },
+            {
+                "id": "dataoutput-1745531780182",
+                "type": "dataoutput",
+                "data": {
+                    "nodeId": "dataoutput-1745531780182",
+                    "receivedData": [],
+                    "inputTypes": ["Task1"],
+                    "className": "DataOutput1",
+                },
+            },
+        ],
+        "edges": [
+            {"source": "Task1", "target": "TaskWorker1"},
+            {"source": "datainput-Task1", "target": "TaskWorker1"},
+            {"source": "TaskWorker1", "target": "DataOutput1"},
+        ],
+    }
+
+    nodes = graph_data["nodes"]
+    edges = graph_data["edges"]
+
+    task_nodes = [n for n in nodes if n["type"] == "task"]
+    task_import_nodes = [n for n in nodes if n["type"] == "taskimport"]
+    worker_nodes = [n for n in nodes if n["type"] == "taskworker"]
+    output_nodes = [n for n in nodes if n["type"] == "dataoutput"]
+
+    dependency_code = create_all_graph_dependencies(
+        task_nodes, task_import_nodes, worker_nodes, output_nodes, edges
+    )
+
+    expected_entry_call = "graph.set_entry(taskworker1_worker)"
+    expected_sink_call = (
+        "graph.set_sink(taskworker1_worker, Task1, callback_DataOutput1)"
+    )
+    expected_callback_def = "def callback_DataOutput1(unused, task: Task1):"
+    expected_metadata_def = '"node_id": "dataoutput-1745531780182"'
+
+    # Check for key calls and definitions instead of exact string match
+    assert (
+        expected_entry_call in dependency_code
+    ), f"Expected entry call '{expected_entry_call}' not found in:\n{dependency_code}"
+    assert (
+        expected_sink_call in dependency_code
+    ), f"Expected sink call '{expected_sink_call}' not found in:\n{dependency_code}"
+    assert (
+        expected_callback_def in dependency_code
+    ), f"Expected callback definition '{expected_callback_def}' not found in:\n{dependency_code}"
+    assert (
+        expected_metadata_def in dependency_code
+    ), f"Expected metadata definition containing '{expected_metadata_def}' not found in:\n{dependency_code}"
 
 
 def test_roundtrip_fixture_conversion():

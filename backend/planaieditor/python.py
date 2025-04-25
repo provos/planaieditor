@@ -111,6 +111,7 @@ def create_all_graph_dependencies(
     task_nodes: List[Dict[str, Any]],
     task_import_nodes: List[Dict[str, Any]],
     worker_nodes: List[Dict[str, Any]],
+    output_nodes: List[Dict[str, Any]],
     edges: List[Dict[str, Any]],
 ) -> Optional[str]:
     """
@@ -134,6 +135,10 @@ def create_all_graph_dependencies(
     # Create a lookup for worker instance names by className
     worker_instance_by_class_name = create_worker_to_instance_mapping(worker_nodes)
 
+    output_nodes_by_class_name = {
+        node.get("data", {}).get("className"): node for node in output_nodes
+    }
+
     code = []
     # Create the dependency setting code strings
     for edge in edges:
@@ -147,12 +152,39 @@ def create_all_graph_dependencies(
         source_inst_name = worker_instance_by_class_name.get(source_class_name)
         target_inst_name = worker_instance_by_class_name.get(target_class_name)
 
+        target_type = output_nodes_by_class_name.get(target_class_name, {}).get("type")
+
+        print(f"source_inst_name: {source_inst_name}")
+        print(f"target_inst_name: {target_inst_name}")
+        print(f"target_type: {target_type}")
+
         if source_inst_name and target_inst_name:
             code.append(
                 f"    graph.set_dependency({source_inst_name}, {target_inst_name})"
             )
         elif source_class_name in task_names and target_inst_name:
             code.append(f"    graph.set_entry({target_inst_name})")
+        elif source_inst_name and target_type == "dataoutput":
+            node = output_nodes_by_class_name.get(target_class_name, {})
+            node_id = node.get("id")
+            class_name = node.get("data", {}).get("className")
+            input_types = node.get("data", {}).get("inputTypes", [])
+            if input_types:
+                # we know that class names are unique in the graph
+                sink_code = f"""
+                             metadata_{class_name} = {{
+                                 "input_type": {input_types[0]},
+                                 "node_id": "{node_id}"
+                             }}
+                             def callback_{class_name}(unused, task: {input_types[0]}):
+                                print(f"Received task from {node_id} for metadata_{class_name}: {{task.model_dump_json()}}")
+                             graph.set_sink({source_inst_name}, {input_types[0]}, callback_{class_name})
+                             """
+                code.append(indent(dedent(sink_code).strip(), "    "))
+            else:
+                print(
+                    f"Warning: Could not find input type for dataoutput node {node_id}"
+                )
         else:
             print(
                 f"Warning: Could not find worker instances for edge {source_class_name} -> {target_class_name}"
@@ -695,10 +727,12 @@ def generate_python_module(
         worker_setup.append("# No workers instantiated.")
 
     # --- Generate Code for Dependencies and Entry Point *inside* create_graph ---
+    output_nodes = [n for n in nodes if n.get("type") == "dataoutput"]
+
     dep_code_lines = []
     dep_code_lines.append(
         create_all_graph_dependencies(
-            task_nodes, task_import_nodes, worker_nodes, edges
+            task_nodes, task_import_nodes, worker_nodes, output_nodes, edges
         )
     )
     if not dep_code_lines:
