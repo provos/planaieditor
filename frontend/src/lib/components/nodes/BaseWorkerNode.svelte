@@ -234,7 +234,12 @@
 		if (!data.methods) {
 			data.methods = {};
 		}
-		data.methods[methodName] = newCode;
+		if (newCode === '') {
+			delete data.methods[methodName];
+			customMethods = customMethods.filter((m) => m !== methodName);
+		} else {
+			data.methods[methodName] = newCode;
+		}
 	}
 
 	// Define core methods that might have special display logic
@@ -476,6 +481,8 @@
 							title={methodName}
 							initialCollapsed={true}
 							code={data.methods[methodName]}
+							showReset={true}
+							onReset={() => handleMethodUpdate(methodName, '')}
 							language="python"
 							onUpdate={(newCode) => handleMethodUpdate(methodName, newCode)}
 							onCollapseToggle={handleCollapse}
