@@ -23,6 +23,7 @@
 	import { get } from 'svelte/store';
 	import { allClassNames } from '$lib/stores/classNameStore';
 	import { taskClassNamesStore } from '$lib/stores/taskClassNamesStore';
+	import { socketStore } from '$lib/stores/socketStore.svelte';
 	import {
 		llmConfigs,
 		llmConfigsFromCode,
@@ -34,7 +35,7 @@
 	import type { ContextMenuItem } from '$lib/components/ContextMenu.svelte';
 	import Trash from 'phosphor-svelte/lib/Trash';
 	import Scissors from 'phosphor-svelte/lib/Scissors';
-	import { io, Socket } from 'socket.io-client';
+	import { io } from 'socket.io-client';
 	import { onMount } from 'svelte';
 	import { selectedInterpreterPath } from '$lib/stores/pythonInterpreterStore.svelte';
 	import Code from 'phosphor-svelte/lib/Code';
@@ -98,7 +99,6 @@
 	const edges = persisted<Edge[]>('edges', []);
 
 	// Socket.IO connection state
-	let socket: Socket | null = $state(null);
 	let isConnected = $state(false);
 	let exportStatus = $state<ExportStatus>({
 		// Export status
@@ -132,10 +132,10 @@
 		}
 
 		// Connect to the Socket.IO server using the determined URL
-		socket = io(backendUrl);
+		socketStore.socket = io(backendUrl);
 
-		socket.on('connect', async () => {
-			console.log('Connected to backend:', socket?.id);
+		socketStore.socket.on('connect', async () => {
+			console.log('Connected to backend:', socketStore.socket?.id);
 			isConnected = true;
 
 			loadStatus = { type: 'idle', message: '' };
@@ -168,20 +168,20 @@
 			}
 		});
 
-		socket.on('disconnect', () => {
+		socketStore.socket.on('disconnect', () => {
 			console.log('Disconnected from backend');
 			isConnected = false;
 			exportStatus = { type: 'idle', message: '' }; // Reset status on disconnect
 		});
 
-		socket.on('connect_error', (err) => {
+		socketStore.socket.on('connect_error', (err) => {
 			console.error('Connection error:', err);
 			isConnected = false;
 			exportStatus = { type: 'error', message: `Connection failed: ${err.message}` };
 		});
 
 		// Listen for export results from the backend
-		socket.on(
+		socketStore.socket.on(
 			'export_result',
 			(data: { success: boolean; message?: string; error?: BackendError }) => {
 				// Get current nodes
@@ -201,7 +201,7 @@
 		);
 
 		// Listen for PlanAI debug events
-		socket.on('planai_debug_event', (event: { type: string; data: any }) => {
+		socketStore.socket.on('planai_debug_event', (event: { type: string; data: any }) => {
 			console.log('Received planai_debug_event:', event);
 
 			if (event.type === 'dataoutput_callback' && event.data) {
@@ -263,7 +263,7 @@
 
 		return () => {
 			// Disconnect the socket when the component is destroyed
-			socket?.disconnect();
+			socketStore.socket?.disconnect();
 		};
 	});
 
@@ -664,7 +664,7 @@ Analyze the following information and provide a response.`,
 		unsubEdges();
 
 		// Call the export utility function
-		exportStatus = exportPythonCode(socket, currentNodes, currentEdges);
+		exportStatus = exportPythonCode(socketStore.socket, currentNodes, currentEdges);
 	}
 
 	// --- Python Import Functions ---
