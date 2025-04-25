@@ -5,6 +5,7 @@
 	import { useUpdateNodeInternals } from '@xyflow/svelte';
 	import { formatErrorMessage } from '$lib/utils/utils';
 	import { getColorForType } from '$lib/utils/colorUtils';
+	import TrashSimple from 'phosphor-svelte/lib/TrashSimple';
 
 	// Define the interface for the node's data
 	export interface DataOutputNodeData {
@@ -28,6 +29,8 @@
 		data.inputTypes = [];
 	}
 
+	let receivedData = $derived<Record<string, any>[]>(data.receivedData || []);
+
 	const updateNodeInternals = useUpdateNodeInternals();
 
 	// --- State Variables ---
@@ -44,12 +47,12 @@
 		updateNodeInternals(id);
 	}
 
-	// Reactive update when receivedData changes
-	$effect(() => {
-		if (data.receivedData) {
-			handleContentUpdate();
-		}
-	});
+	// Function to clear all received data
+	function clearReceivedData() {
+		receivedData = [];
+		data.receivedData = [];
+		handleContentUpdate();
+	}
 </script>
 
 <div
@@ -71,9 +74,22 @@
 		onUpdate={updateInferredInputTypes}
 	/>
 
-	<!-- Header -->
-	<div class="flex-none border-b border-gray-200 bg-emerald-200 p-1 text-center text-xs font-medium">
-		{data.workerName}
+	<!-- Header with clear button -->
+	<div
+		class="flex-none border-b border-gray-200 bg-emerald-200 p-1 text-center text-xs font-medium"
+	>
+		<div class="flex items-center justify-between">
+			<div class="w-6"><!-- Spacer to balance the layout --></div>
+			<div class="flex-grow">{data.workerName}</div>
+			<button
+				class="w-6 flex-none rounded p-0.5 text-emerald-700 transition hover:bg-emerald-300/40 hover:text-emerald-900 focus:outline-none"
+				title="Clear received data"
+				onclick={clearReceivedData}
+				aria-label="Clear data"
+			>
+				<TrashSimple size={14} />
+			</button>
+		</div>
 	</div>
 
 	<!-- Input Types Display Section -->
@@ -98,11 +114,11 @@
 
 	<!-- Display Area for Received Data -->
 	<div class="min-h-0 flex-grow overflow-auto p-1.5">
-		{#if !data.receivedData || data.receivedData.length === 0}
+		{#if !receivedData || receivedData.length === 0}
 			<div class="text-2xs italic text-gray-400">Waiting for data...</div>
 		{:else}
 			<div class="space-y-2">
-				{#each data.receivedData as item, index (index)}
+				{#each receivedData as item, index (index)}
 					<div class="rounded border border-gray-200 bg-gray-50 p-1">
 						<pre class="text-2xs whitespace-pre-wrap break-words font-mono">{JSON.stringify(
 								item,
