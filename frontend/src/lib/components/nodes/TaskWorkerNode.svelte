@@ -82,7 +82,7 @@
 </script>
 
 <BaseWorkerNode {id} {data} defaultName="TaskWorker" isCached={data.isCached}>
-	<div class="flex min-h-0 flex-grow flex-col overflow-hidden p-1">
+	<div class="flex min-h-0 flex-grow flex-col p-1">
 		{#if data.methods?.consume_work}
 			<EditableCodeSection
 				title={reactiveTitle}

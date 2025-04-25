@@ -324,7 +324,7 @@
 	</div>
 
 	<!-- Main Content Area -->
-	<div class="flex h-full min-h-0 flex-col overflow-hidden p-1.5">
+	<div class="flex h-full min-h-0 flex-col p-1.5">
 		<!-- Input Types -->
 		<div class="mb-2 flex-none">
 			<h3 class="text-2xs font-semibold text-gray-600">Input Types (Auto)</h3>
@@ -461,7 +461,7 @@
 		{/if}
 
 		<!-- Scrollable Content Area -->
-		<div class="min-h-0 flex-grow overflow-auto">
+		<div class="min-h-0 flex-grow">
 			<!-- Placeholder for derived component content -->
 			<div>
 				{@render children?.()}

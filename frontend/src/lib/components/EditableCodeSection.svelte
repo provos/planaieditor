@@ -59,7 +59,6 @@
 			fontSize: '0.7rem',
 			height: '100%', // Fill container height
 			width: '100%',
-			overflow: 'hidden',
 			display: 'flex',
 			flexDirection: 'column',
 			minHeight: '3rem' // Ensure at least 3 lines height
@@ -108,7 +107,7 @@
 	</div>
 
 	{#if !collapsed}
-		<div class="min-h-0 min-w-[60ch] flex-grow overflow-hidden">
+		<div class="min-h-0 min-w-[60ch] flex-grow">
 			<CodeMirror
 				value={code}
 				lang={langExtension}
