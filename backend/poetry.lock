@@ -1258,15 +1258,15 @@ files = [
 
 [[package]]
 name = "planai"
-version = "0.5"
+version = "0.5.1"
 description = "A simple framework for coordinating classical compute and LLM-based tasks."
 optional = false
 python-versions = "<4.0,>=3.10"
 groups = ["main"]
 markers = "python_version < \"4.0\""
 files = [
-    {file = "planai-0.5-py3-none-any.whl", hash = "sha256:0bef68d4e9b95932b87b817e981bbe15597af57878a553e8bdbb248fb5a1c7da"},
-    {file = "planai-0.5.tar.gz", hash = "sha256:57f6925a87ad4573b3f894265fa9e6f1b7780b2b586260c3bb20dd80172ac864"},
+    {file = "planai-0.5.1-py3-none-any.whl", hash = "sha256:f4fd917ab7632b54007413e618ca532bbb572d08fc7d634810975b436ea5d55d"},
+    {file = "planai-0.5.1.tar.gz", hash = "sha256:0015174c41775b59f48e24faa0d932dedd581da5fb7b9a28d2369251b81da8a9"},
 ]
 
 [package.dependencies]
