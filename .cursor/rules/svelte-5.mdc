@@ -25,3 +25,24 @@ alwaysApply: false
 </script>
 <Accordion.Trigger class="h-12 w-full bg-blue-500 hover:bg-blue-600">Click me</Accordion.Trigger>
 ```
+
+# Svelte Flow Reactivity
+ - Node data changes do not lead to reactivity, e.g.
+
+```svelte
+let someData: number = $state(1);
+
+$effect(() => {
+  number = data.nodeNumber;
+})
+```
+
+The effect above will never be executed. However, node data can be successfully synced the other way:
+
+```svelte
+let someData: number = $state(1);
+
+$effect(() => {
+  data.nodeNumber = number;
+})
+```
