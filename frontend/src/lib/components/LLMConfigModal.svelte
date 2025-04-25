@@ -1,6 +1,16 @@
 <script lang="ts">
 	import { backendUrl } from '$lib/utils/backendUrl';
-	import { X, FloppyDisk, PencilSimple, Trash, Spinner, Code } from 'phosphor-svelte';
+	import {
+		X,
+		FloppyDisk,
+		PencilSimple,
+		Trash,
+		Spinner,
+		Code,
+		CaretDown,
+		Check
+	} from 'phosphor-svelte';
+	import { Combobox } from 'bits-ui';
 	import {
 		llmConfigs,
 		addLLMConfig,
@@ -24,6 +34,27 @@
 	let modelError = $state<string | null>(null);
 	let generalError = $state<string | null>(null);
 
+	// Search values for comboboxes
+	let providerSearchValue = $state('');
+	let modelSearchValue = $state('');
+
+	// Filtered options for comboboxes
+	const filteredProviders = $derived(
+		providerSearchValue === ''
+			? validLLMProviders
+			: validLLMProviders.filter((provider) =>
+					provider.toLowerCase().includes(providerSearchValue.toLowerCase())
+				)
+	);
+
+	const filteredModels = $derived(
+		modelSearchValue === ''
+			? availableModels
+			: availableModels.filter((model) =>
+					model.toLowerCase().includes(modelSearchValue.toLowerCase())
+				)
+	);
+
 	// Reset form state
 	function resetForm() {
 		formState = {};
@@ -33,6 +64,8 @@
 		generalError = null;
 		isAddingNew = false;
 		editingConfigId = null;
+		providerSearchValue = '';
+		modelSearchValue = '';
 	}
 
 	// Fetch models when provider changes
@@ -344,17 +377,55 @@
 							<label for="config-provider" class="mb-1 block text-sm font-medium text-gray-700"
 								>Provider*</label
 							>
-							<select
-								id="config-provider"
-								class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+							<Combobox.Root
+								type="single"
+								name="provider"
 								bind:value={formState.provider}
-								required
+								onOpenChange={(o) => {
+									if (!o) providerSearchValue = '';
+								}}
 							>
-								<option value={undefined}>-- Select Provider --</option>
-								{#each validLLMProviders as provider}
-									<option value={provider}>{provider}</option>
-								{/each}
-							</select>
+								<div class="relative">
+									<Combobox.Input
+										id="config-provider"
+										oninput={(e) => (providerSearchValue = e.currentTarget.value)}
+										class="block w-full rounded-md border-gray-300 pr-8 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+										placeholder="Search for a provider ..."
+									/>
+									<Combobox.Trigger class="absolute right-2 top-1/2 -translate-y-1/2">
+										<CaretDown size={16} class="text-gray-500" />
+									</Combobox.Trigger>
+								</div>
+								<Combobox.Portal>
+									<Combobox.Content
+										class="z-50 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-sm shadow-lg ring-1 ring-black/5"
+										sideOffset={4}
+									>
+										<Combobox.Viewport>
+											{#each filteredProviders as provider (provider)}
+												<Combobox.Item
+													value={provider}
+													label={provider}
+													class="data-highlighted:bg-indigo-100 data-highlighted:text-indigo-900 relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 outline-none"
+												>
+													{#snippet children({ selected })}
+														{provider}
+														{#if selected}
+															<div class="absolute left-2 top-1/2 -translate-y-1/2">
+																<Check size={16} class="text-indigo-600" />
+															</div>
+														{/if}
+													{/snippet}
+												</Combobox.Item>
+											{:else}
+												<span class="block px-4 py-2 text-sm text-gray-500">
+													No provider found
+												</span>
+											{/each}
+										</Combobox.Viewport>
+									</Combobox.Content>
+								</Combobox.Portal>
+							</Combobox.Root>
 						</div>
 
 						<!-- Model ID -->
@@ -362,25 +433,66 @@
 							<label for="config-modelId" class="mb-1 block text-sm font-medium text-gray-700"
 								>Model ID*</label
 							>
-							<select
-								id="config-modelId"
-								class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+							<Combobox.Root
+								type="single"
+								name="modelId"
 								bind:value={formState.modelId}
-								required
+								onOpenChange={(o) => {
+									if (!o) modelSearchValue = '';
+								}}
 								disabled={!formState.provider || modelLoading || !!modelError}
 							>
-								<option value={undefined}>-- Select Model --</option>
-								{#if formState.provider && !modelLoading && !modelError}
-									{#each availableModels as modelName (modelName)}
-										<option value={modelName}>{modelName}</option>
-									{/each}
-								{/if}
-							</select>
-							{#if modelLoading}
-								<div class="absolute inset-y-0 right-0 top-6 flex items-center pr-3">
-									<Spinner size={16} class="animate-spin text-indigo-600" />
+								<div class="relative">
+									<Combobox.Input
+										id="config-modelId"
+										oninput={(e) => (modelSearchValue = e.currentTarget.value)}
+										class="block w-full rounded-md border-gray-300 pr-8 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+										placeholder="Search for a model ..."
+										disabled={!formState.provider || modelLoading || !!modelError}
+									/>
+									<Combobox.Trigger
+										class="absolute right-2 top-1/2 -translate-y-1/2"
+										disabled={!formState.provider || modelLoading || !!modelError}
+									>
+										{#if modelLoading}
+											<Spinner size={16} class="animate-spin text-indigo-600" />
+										{:else}
+											<CaretDown size={16} class="text-gray-500" />
+										{/if}
+									</Combobox.Trigger>
 								</div>
-							{/if}
+								{#if formState.provider && !modelLoading && !modelError}
+									<Combobox.Portal>
+										<Combobox.Content
+											class="z-50 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-sm shadow-lg ring-1 ring-black/5"
+											sideOffset={4}
+										>
+											<Combobox.Viewport>
+												{#each filteredModels as modelName (modelName)}
+													<Combobox.Item
+														value={modelName}
+														label={modelName}
+														class="data-highlighted:bg-indigo-100 data-highlighted:text-indigo-900 relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 outline-none"
+													>
+														{#snippet children({ selected })}
+															{modelName}
+															{#if selected}
+																<div class="absolute left-2 top-1/2 -translate-y-1/2">
+																	<Check size={16} class="text-indigo-600" />
+																</div>
+															{/if}
+														{/snippet}
+													</Combobox.Item>
+												{:else}
+													<span class="block px-4 py-2 text-sm text-gray-500">
+														No models found
+													</span>
+												{/each}
+											</Combobox.Viewport>
+										</Combobox.Content>
+									</Combobox.Portal>
+								{/if}
+							</Combobox.Root>
 							{#if modelError}
 								<p class="mt-1 text-xs text-red-600">{modelError}</p>
 							{/if}
