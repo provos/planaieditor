@@ -23,7 +23,13 @@
 	import { get } from 'svelte/store';
 	import { allClassNames } from '$lib/stores/classNameStore';
 	import { taskClassNamesStore } from '$lib/stores/taskClassNamesStore';
-	import { clearLLMConfigsFromCode } from '$lib/stores/llmConfigsStore';
+	import {
+		llmConfigs,
+		llmConfigsFromCode,
+		clearLLMConfigsFromCode,
+		type LLMConfig,
+		type LLMConfigFromCode
+	} from '$lib/stores/llmConfigsStore';
 	import ContextMenu from '$lib/components/ContextMenu.svelte';
 	import type { ContextMenuItem } from '$lib/components/ContextMenu.svelte';
 	import Trash from 'phosphor-svelte/lib/Trash';
@@ -57,6 +63,15 @@
 	// Import the ELKjs layout function
 	import { layoutGraph } from '$lib/utils/pythonImport';
 
+	// Define the structure for the saved JSON file
+	interface SavedGraphState {
+		version: number;
+		nodes: Node[];
+		edges: Edge[];
+		llmConfigs: LLMConfig[];
+		llmConfigsFromCode: LLMConfigFromCode[];
+	}
+
 	// Define node types and pass stores as props
 	const nodeTypes: any = {
 		task: TaskNode,
@@ -87,7 +102,7 @@
 		type: 'idle',
 		message: ''
 	});
-	let importStatus = $state<ExportStatus>({
+	let loadStatus = $state<ExportStatus>({
 		// Import status
 		type: 'idle',
 		message: ''
@@ -96,8 +111,10 @@
 	// State for LLM Config Modal visibility
 	let showLLMConfigModal = $state(false);
 
-	// Ref for the hidden file input
-	let fileInputRef: HTMLInputElement;
+	// Ref for the hidden file input for Python import
+	let pythonFileInputRef: HTMLInputElement;
+	// Ref for the hidden file input for JSON load
+	let jsonFileInputRef: HTMLInputElement;
 
 	// How often we tried to lay out
 	let layoutAttempts: number = 0;
@@ -115,7 +132,7 @@
 			console.log('Connected to backend:', socket?.id);
 			isConnected = true;
 
-			importStatus = { type: 'idle', message: '' };
+			loadStatus = { type: 'idle', message: '' };
 			exportStatus = { type: 'idle', message: '' };
 
 			// Re-set interpreter on reconnect if one was selected
@@ -618,8 +635,13 @@ Analyze the following information and provide a response.`,
 		if (confirm('Are you sure you want to clear the entire graph? This action cannot be undone.')) {
 			nodes.set([]);
 			edges.set([]);
+			llmConfigs.set([]); // Clear user LLM configs
+			llmConfigsFromCode.set([]); // Clear code LLM configs
 			clearLLMConfigsFromCode();
 			console.log('Graph cleared.');
+			// Optionally reset status messages
+			exportStatus = { type: 'idle', message: '' };
+			loadStatus = { type: 'idle', message: '' };
 		}
 	}
 
@@ -641,9 +663,9 @@ Analyze the following information and provide a response.`,
 
 	// --- Python Import Functions ---
 
-	// Trigger the hidden file input
+	// Trigger the hidden file input for Python import
 	function triggerImport() {
-		fileInputRef?.click();
+		pythonFileInputRef?.click();
 	}
 
 	// Handle file selection
@@ -658,11 +680,11 @@ Analyze the following information and provide a response.`,
 		input.value = '';
 
 		if (!isPythonFile(file)) {
-			importStatus = { type: 'error', message: 'Please select a Python (.py) file.' };
+			loadStatus = { type: 'error', message: 'Please select a Python (.py) file.' };
 			return;
 		}
 
-		importStatus = { type: 'loading', message: 'Reading file...' };
+		loadStatus = { type: 'loading', message: 'Reading file...' };
 
 		try {
 			// Read the selected file as text
@@ -671,19 +693,19 @@ Analyze the following information and provide a response.`,
 			// Process the file content
 			await handlePythonImport(pythonCode);
 		} catch (error: any) {
-			importStatus = { type: 'error', message: error.message || 'Error reading file.' };
+			loadStatus = { type: 'error', message: error.message || 'Error reading file.' };
 		}
 	}
 
 	// Process the Python code and update the graph
 	async function handlePythonImport(pythonCode: string) {
-		importStatus = { type: 'loading', message: 'Importing Python code...' };
+		loadStatus = { type: 'loading', message: 'Importing Python code...' };
 
 		// Call the import utility function
 		const result = await importPythonCode(pythonCode, getNodes);
 
 		// Update the import status
-		importStatus = {
+		loadStatus = {
 			type: result.success ? 'success' : 'error',
 			message: result.message
 		};
@@ -824,6 +846,121 @@ Analyze the following information and provide a response.`,
 			return eds;
 		});
 	}
+
+	// --- Save/Load Graph Functions ---
+
+	// Trigger the hidden JSON file input
+	function triggerLoad() {
+		jsonFileInputRef?.click();
+	}
+
+	// Function to handle saving the graph state to a JSON file
+	function handleSave() {
+		const currentNodes = get(nodes);
+		const currentEdges = get(edges);
+		const currentUserLLMConfigs = get(llmConfigs);
+		const currentCodeLLMConfigs = get(llmConfigsFromCode);
+
+		const graphState: SavedGraphState = {
+			version: 1,
+			nodes: currentNodes,
+			edges: currentEdges,
+			llmConfigs: currentUserLLMConfigs,
+			llmConfigsFromCode: currentCodeLLMConfigs
+		};
+
+		const jsonString = JSON.stringify(graphState, null, 2); // Pretty print JSON
+		const blob = new Blob([jsonString], { type: 'application/json' });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = 'planai-graph.json'; // Default filename
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
+		URL.revokeObjectURL(url);
+
+		console.log('Graph saved to JSON.');
+		// Optionally show a temporary success message for save
+	}
+
+	// Handle JSON file selection for loading
+	async function handleJsonFileSelect(event: Event) {
+		const input = event.target as HTMLInputElement;
+		if (!input.files || input.files.length === 0) {
+			return;
+		}
+		const file = input.files[0];
+
+		// Reset the input value
+		input.value = '';
+
+		if (file.type !== 'application/json') {
+			loadStatus = { type: 'error', message: 'Please select a JSON (.json) file.' };
+			return;
+		}
+
+		loadStatus = { type: 'loading', message: 'Reading JSON file...' };
+
+		try {
+			const jsonContent = await readFileAsText(file);
+			await loadGraphFromJson(jsonContent);
+		} catch (error: any) {
+			loadStatus = { type: 'error', message: error.message || 'Error reading JSON file.' };
+		}
+	}
+
+	// Process the JSON content and update the graph
+	async function loadGraphFromJson(jsonContent: string) {
+		loadStatus = { type: 'loading', message: 'Loading graph from JSON...' };
+
+		try {
+			const loadedState: SavedGraphState = JSON.parse(jsonContent);
+
+			// Basic validation of the loaded structure
+			if (
+				!loadedState ||
+				typeof loadedState !== 'object' ||
+				!Array.isArray(loadedState.nodes) ||
+				!Array.isArray(loadedState.edges) ||
+				!Array.isArray(loadedState.llmConfigs) ||
+				!Array.isArray(loadedState.llmConfigsFromCode)
+			) {
+				throw new Error('Invalid JSON file structure.');
+			}
+
+			// Clear existing graph FIRST
+			nodes.set([]);
+			edges.set([]);
+			llmConfigs.set([]);
+			llmConfigsFromCode.set([]);
+
+			// Introduce a small delay before setting new data to ensure reactivity
+			await new Promise((resolve) => setTimeout(resolve, 10));
+
+			// Load data from the file
+			nodes.set(loadedState.nodes);
+			edges.set(loadedState.edges);
+			llmConfigs.set(loadedState.llmConfigs);
+			llmConfigsFromCode.set(loadedState.llmConfigsFromCode);
+
+			loadStatus = { type: 'success', message: 'Graph loaded successfully.' };
+
+			// Use setTimeout to allow Svelte to render nodes first before layout
+			setTimeout(runElkLayout, 100);
+		} catch (error: any) {
+			console.error('Error loading graph from JSON:', error);
+			loadStatus = {
+				type: 'error',
+				message: `Load failed: ${error.message || 'Invalid JSON format'}`
+			};
+			// Optionally clear again on error to prevent partial loading state
+			nodes.set([]);
+			edges.set([]);
+			llmConfigs.set([]);
+			llmConfigsFromCode.set([]);
+		}
+	}
 </script>
 
 <div class="flex h-screen w-screen flex-col">
@@ -832,17 +969,28 @@ Analyze the following information and provide a response.`,
 			onExport={handleExport}
 			onClearGraph={handleClearGraph}
 			onImport={triggerImport}
+			onSave={handleSave}
+			onLoad={triggerLoad}
 			onConfigureLLMs={() => (showLLMConfigModal = true)}
 		/>
 
-		<!-- File input (hidden) -->
+		<!-- Hidden File input for Python import -->
 		<input
 			type="file"
-			bind:this={fileInputRef}
+			bind:this={pythonFileInputRef}
 			accept=".py,text/x-python"
 			style="display: none;"
 			onchange={handleFileSelect}
 			data-testid="file-input"
+		/>
+		<!-- Hidden File input for JSON load -->
+		<input
+			type="file"
+			bind:this={jsonFileInputRef}
+			accept=".json,application/json"
+			style="display: none;"
+			onchange={handleJsonFileSelect}
+			data-testid="json-file-input"
 		/>
 
 		<!-- Display Connection and Export/Import Status -->
@@ -851,16 +999,14 @@ Analyze the following information and provide a response.`,
 				<span class="rounded bg-red-100 px-1.5 py-0.5 text-red-700">Disconnected</span>
 			{/if}
 
-			<!-- Import Status Message -->
-			{#if importStatus.type === 'loading'}
-				<span class="rounded bg-yellow-100 px-1.5 py-0.5 text-yellow-700"
-					>{importStatus.message}</span
+			<!-- Load Status Message -->
+			{#if loadStatus.type === 'loading'}
+				<span class="rounded bg-yellow-100 px-1.5 py-0.5 text-yellow-700">{loadStatus.message}</span
 				>
-			{:else if importStatus.type === 'success'}
-				<span class="rounded bg-green-100 px-1.5 py-0.5 text-green-700">{importStatus.message}</span
-				>
-			{:else if importStatus.type === 'error'}
-				<span class="rounded bg-red-100 px-1.5 py-0.5 text-red-700">{importStatus.message}</span>
+			{:else if loadStatus.type === 'success'}
+				<span class="rounded bg-green-100 px-1.5 py-0.5 text-green-700">{loadStatus.message}</span>
+			{:else if loadStatus.type === 'error'}
+				<span class="rounded bg-red-100 px-1.5 py-0.5 text-red-700">{loadStatus.message}</span>
 			{/if}
 
 			<!-- Export Status Message -->

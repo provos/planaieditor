@@ -13,6 +13,8 @@
 	import Gear from 'phosphor-svelte/lib/Gear';
 	import Keyboard from 'phosphor-svelte/lib/Keyboard';
 	import Table from 'phosphor-svelte/lib/Table';
+	import FloppyDisk from 'phosphor-svelte/lib/FloppyDisk';
+	import FolderOpen from 'phosphor-svelte/lib/FolderOpen';
 	import { useStore } from '@xyflow/svelte';
 	import type { BaseWorkerData } from './nodes/BaseWorkerNode.svelte';
 	import { Tabs, Tooltip } from 'bits-ui';
@@ -21,17 +23,23 @@
 		onExport,
 		onClearGraph,
 		onImport,
-		onConfigureLLMs
+		onConfigureLLMs,
+		onSave,
+		onLoad
 	}: {
 		onExport: () => void;
 		onClearGraph: () => void;
 		onImport: () => void;
 		onConfigureLLMs: () => void;
+		onSave: () => void;
+		onLoad: () => void;
 	} = $props<{
 		onExport: () => void;
 		onClearGraph: () => void;
 		onImport: () => void;
 		onConfigureLLMs: () => void;
+		onSave: () => void;
+		onLoad: () => void;
 	}>();
 
 	// Handles the start of dragging a new node
@@ -423,7 +431,27 @@
 	<!-- Actions Section -->
 	<div class="flex items-center gap-2 border-r border-gray-300/70 pr-4">
 		<div class="flex flex-wrap gap-2">
-			<!-- Import Button -->
+			<!-- Load Button -->
+			<button
+				onclick={onLoad}
+				class="flex items-center rounded bg-teal-500 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-teal-600"
+				title="Load graph from JSON file"
+				data-testid="load-button"
+			>
+				<FolderOpen size={18} weight="bold" class="mr-1.5" />
+				Load
+			</button>
+			<!-- Save Button -->
+			<button
+				onclick={onSave}
+				class="flex items-center rounded bg-sky-500 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-sky-600"
+				title="Save graph to JSON file"
+				data-testid="save-button"
+			>
+				<FloppyDisk size={18} weight="bold" class="mr-1.5" />
+				Save
+			</button>
+			<!-- Python Import Button -->
 			<button
 				onclick={onImport}
 				class="flex items-center rounded bg-blue-500 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-600 disabled:opacity-50"
