@@ -535,3 +535,171 @@ def test_roundtrip_fixture_conversion():
     finally:
         # Clean up the temporary file
         Path(temp_file_path).unlink()
+
+
+def test_input_types():
+    """Test that input types are correctly set for workers."""
+    json_data = {
+        "nodes": [
+            {
+                "id": "taskworker-1745444179489",
+                "type": "taskworker",
+                "data": {
+                    "inputTypes": ["Task1"],
+                    "methods": {
+                        "consume_work": 'self.publish_work(Task1(name="processed " + task.name), input_task=task)'
+                    },
+                    "nodeId": "taskworker-1745444179489",
+                    "className": "TaskWorker1",
+                    "classVars": {"output_types": ["Task1"]},
+                },
+            },
+            {
+                "id": "task-1745444182416",
+                "type": "task",
+                "data": {
+                    "className": "Task1",
+                    "fields": [
+                        {
+                            "name": "name",
+                            "type": "string",
+                            "isList": False,
+                            "required": True,
+                        }
+                    ],
+                    "nodeId": "task-1745444182416",
+                },
+            },
+            {
+                "id": "datainput-1745447545023",
+                "type": "datainput",
+                "data": {
+                    "className": "Task1",
+                    "jsonData": '{"name": "niels" }',
+                    "nodeId": "datainput-1745447545023",
+                    "isJsonValid": True,
+                },
+            },
+            {
+                "id": "dataoutput-1745531780182",
+                "type": "dataoutput",
+                "data": {
+                    "nodeId": "dataoutput-1745531780182",
+                    "receivedData": [],
+                    "inputTypes": ["Task2"],
+                    "className": "DataOutput1",
+                },
+            },
+            {
+                "id": "llmtaskworker-1745544328318",
+                "type": "llmtaskworker",
+                "data": {
+                    "inputTypes": ["Task1"],
+                    "extraValidation": "return None",
+                    "formatPrompt": "return self.prompt",
+                    "preProcess": "return task",
+                    "postProcess": "return task",
+                    "enabledFunctions": {
+                        "extraValidation": False,
+                        "formatPrompt": False,
+                        "preProcess": False,
+                        "postProcess": False,
+                    },
+                    "nodeId": "llmtaskworker-1745544328318",
+                    "className": "LLMTaskWorker1",
+                    "llmConfig": {
+                        "provider": {"value": "openrouter", "is_literal": True},
+                        "modelId": {
+                            "value": "google/gemini-2.5-flash-preview",
+                            "is_literal": True,
+                        },
+                    },
+                    "classVars": {
+                        "prompt": "Based on the input, provide some short philosophical musings",
+                        "system_prompt": "You are a helpful task processing assistant.",
+                        "use_xml": False,
+                        "debug_mode": False,
+                        "llm_output_type": "",
+                        "output_types": ["Task2"],
+                    },
+                },
+            },
+            {
+                "id": "task-1745544357606",
+                "type": "task",
+                "position": {"x": 12, "y": 12},
+                "data": {
+                    "className": "Task2",
+                    "fields": [
+                        {
+                            "name": "story",
+                            "type": "string",
+                            "isList": False,
+                            "required": True,
+                            "description": "a story based on the input",
+                        },
+                        {
+                            "name": "rationale",
+                            "type": "string",
+                            "isList": False,
+                            "required": True,
+                            "description": "why you chose this story",
+                        },
+                    ],
+                    "nodeId": "task-1745544357606",
+                },
+            },
+        ],
+        "edges": [
+            {"source": "Task1", "target": "TaskWorker1"},
+            {"source": "datainput-Task1", "target": "TaskWorker1"},
+            {"source": "TaskWorker1", "target": "LLMTaskWorker1"},
+            {"source": "LLMTaskWorker1", "target": "DataOutput1"},
+        ],
+    }
+
+    # Extract nodes for processing
+    worker_nodes = [
+        n
+        for n in json_data["nodes"]
+        if n.get("type") in ["taskworker", "llmtaskworker"]
+    ]
+
+    # Get the specific worker nodes to test
+    taskworker_node = next(
+        n for n in worker_nodes if n["data"]["className"] == "TaskWorker1"
+    )
+    llmtaskworker_node = next(
+        n for n in worker_nodes if n["data"]["className"] == "LLMTaskWorker1"
+    )
+
+    # Generate the Python code for the workers
+    from planaieditor.python import create_worker_class
+
+    # Test TaskWorker input and output types
+    taskworker_code = create_worker_class(taskworker_node)
+    assert taskworker_code is not None, "Failed to generate TaskWorker code"
+
+    # Check TaskWorker output_types
+    assert (
+        "output_types: List[Type[Task]] = [Task1]" in taskworker_code
+    ), f"TaskWorker output_types not correctly set in generated code: {taskworker_code}"
+
+    # Check TaskWorker consume_work input type
+    assert (
+        "def consume_work(self, task: Task1):" in taskworker_code
+    ), f"TaskWorker consume_work input type not correctly set in generated code: {taskworker_code}"
+
+    # Test LLMTaskWorker input and output types
+    llmtaskworker_code = create_worker_class(llmtaskworker_node)
+    assert llmtaskworker_code is not None, "Failed to generate LLMTaskWorker code"
+
+    # Check LLMTaskWorker output_types
+    assert (
+        "output_types: List[Type[Task]] = [Task2]" in llmtaskworker_code
+    ), f"LLMTaskWorker output_types not correctly set in generated code: {llmtaskworker_code}"
+
+    # Check LLMTaskWorker llm_input_type
+    assert (
+        "llm_input_type: Type[Task] = Task1" in llmtaskworker_code
+    ), f"LLMTaskWorker llm_input_type not correctly set in generated code: {llmtaskworker_code}"

@@ -375,6 +375,11 @@ def create_worker_class(node: Dict[str, Any]) -> Optional[str]:
     if llm_input_type:
         input_type_class = get_task_class_name(llm_input_type)
         class_body.append(f"    llm_input_type: Type[Task] = {input_type_class}")
+    elif node_type == "llmtaskworker":
+        input_type = data.get("inputTypes", [])
+        if input_type:
+            input_type_class = get_task_class_name(input_type[0])
+            class_body.append(f"    llm_input_type: Type[Task] = {input_type_class}")
 
     # Handle LLM Output Type
     if llm_output_type:
