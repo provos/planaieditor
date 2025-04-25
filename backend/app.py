@@ -29,6 +29,7 @@ from planaieditor.python import (
     create_task_class,
     generate_python_module,
 )
+from planaieditor.socket_server import SocketServer
 
 # Determine mode and configure paths/CORS
 FLASK_ENV = os.environ.get("FLASK_ENV", "production")  # Default to production
@@ -191,7 +192,7 @@ def set_venv():
 
 
 # Function to validate the generated code by running it in a specific venv
-def validate_code_in_venv(module_name, code_string):
+def validate_code_in_venv(module_name, code_string, inject_debug_events=False):
     """Executes Python code in a venv, parses structured JSON output, and returns the result."""
     # Get the selected Python executable path
     python_executable = app.config.get("SELECTED_VENV_PATH")
@@ -226,41 +227,43 @@ def validate_code_in_venv(module_name, code_string):
     # The file is explicitly closed and removed in the finally block.
     tmp_file = None  # Initialize outside try
     process = None  # Initialize process reference
-    sid = request.sid
 
-    # Define the debug event handler
-    def handle_debug_event(event):
-        """Handle debug events received from the subprocess"""
-        event_type = event.get("type", "unknown")
-        event_data = event.get("data", {})
+    # Set up debug infrastructure if requested
+    if inject_debug_events:
+        # this assumes that the call came from a socketio connection
+        sid = request.sid
 
-        print(f"Received debug event: {event_type} - {event_data}")
+        # Define the debug event handler
+        def handle_debug_event(event):
+            """Handle debug events received from the subprocess"""
+            event_type = event.get("type", "unknown")
+            event_data = event.get("data", {})
 
-        # Emit the event to the frontend through SocketIO
-        # Include current socket ID to ensure it goes to the right client
-        socketio.emit(
-            "planai_debug_event",
-            {"type": event_type, "data": event_data},
-            room=sid,
-        )
+            print(f"Received debug event: {event_type} - {event_data}")
 
-    try:
-        from planaieditor.socket_server import SocketServer
+            # Emit the event to the frontend through SocketIO
+            # Include current socket ID to ensure it goes to the right client
+            socketio.emit(
+                "planai_debug_event",
+                {"type": event_type, "data": event_data},
+                room=sid,
+            )
 
-        # Use the SocketServer as a context manager
-        with SocketServer(callback=handle_debug_event) as server:
-            # Create a named temporary file
-            with tempfile.NamedTemporaryFile(
-                mode="w", suffix=".py", delete=False, encoding="utf-8"
-            ) as tmp_file:
-                # Inject debug monitor import at the top of the code
-                debug_monitor_path = os.path.join(
-                    os.path.dirname(__file__),
-                    "planaieditor",
-                    "codesnippets",
-                    "debug_monitor.py",
-                )
-                debug_import = f"""
+        try:
+            # Use the SocketServer as a context manager
+            with SocketServer(callback=handle_debug_event) as server:
+                # Create a named temporary file
+                with tempfile.NamedTemporaryFile(
+                    mode="w", suffix=".py", delete=False, encoding="utf-8"
+                ) as tmp_file:
+                    # Inject debug monitor import at the top of the code
+                    debug_monitor_path = os.path.join(
+                        os.path.dirname(__file__),
+                        "planaieditor",
+                        "codesnippets",
+                        "debug_monitor.py",
+                    )
+                    debug_import = f"""
 # Debug monitoring - injected by PlanAI Editor
 import os, sys
 os.environ['DEBUG_PORT'] = '{server.port}'
@@ -269,10 +272,61 @@ os.environ['DEBUG_PORT'] = '{server.port}'
 
 # End of debug monitoring injection
 """
-                tmp_file.write(debug_import + code_string)
-                module_path = tmp_file.name  # Get the path of the temporary file
+                    tmp_file.write(debug_import + code_string)
+                    module_path = tmp_file.name  # Get the path of the temporary file
 
-            print(f"Starting execution with debug server on port {server.port}")
+                print(f"Starting execution with debug server on port {server.port}")
+
+                # Execute the script using the venv's Python interpreter
+                process = subprocess.run(
+                    [python_executable, module_path],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                    timeout=60,
+                )
+
+                # Process the results (this is the same for both paths)
+                return process_execution_results(process, module_name)
+
+        except subprocess.TimeoutExpired:
+            error_message = f"Execution of '{module_name}' timed out after 60 seconds."
+            print(error_message)
+            # Return structured error
+            return {
+                "success": False,
+                "error": {
+                    "message": error_message,
+                    "nodeName": None,
+                    "fullTraceback": None,
+                },
+            }
+        except Exception as e:
+            tb_str = traceback.format_exc()
+            error_details = f"Error during validation process for '{module_name}': {e}"
+            print(f"{error_details}\n{tb_str}")
+            # Return structured error
+            return {
+                "success": False,
+                "error": {
+                    "message": f"Internal validation error: {e}",
+                    "nodeName": None,
+                    "fullTraceback": tb_str,
+                },
+            }
+        finally:
+            # Clean up the temporary file explicitly if it was created
+            if tmp_file and os.path.exists(tmp_file.name):
+                os.remove(tmp_file.name)
+    else:
+        # Simpler path when not injecting debug events
+        try:
+            # Create a temporary file for the code without debug injection
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".py", delete=False, encoding="utf-8"
+            ) as tmp_file:
+                tmp_file.write(code_string)
+                module_path = tmp_file.name
 
             # Execute the script using the venv's Python interpreter
             process = subprocess.run(
@@ -283,166 +337,167 @@ os.environ['DEBUG_PORT'] = '{server.port}'
                 timeout=60,
             )
 
-            print(f"Execution in venv completed with exit code: {process.returncode}")
-            if process.stdout:
-                # Print label and output separately
-                print("stdout:")
-                print(process.stdout)
-            if process.stderr:
-                # Print label and output separately
-                print("stderr:")
-                print(process.stderr)
+            # Process the results
+            return process_execution_results(process, module_name)
 
-            # Combine stdout and stderr for parsing
-            combined_output = process.stdout + "\n" + process.stderr
+        except subprocess.TimeoutExpired:
+            error_message = f"Execution of '{module_name}' timed out after 60 seconds."
+            print(error_message)
+            # Return structured error
+            return {
+                "success": False,
+                "error": {
+                    "message": error_message,
+                    "nodeName": None,
+                    "fullTraceback": None,
+                },
+            }
+        except Exception as e:
+            tb_str = traceback.format_exc()
+            error_details = f"Error during validation process for '{module_name}': {e}"
+            print(f"{error_details}\n{tb_str}")
+            # Return structured error
+            return {
+                "success": False,
+                "error": {
+                    "message": f"Internal validation error: {e}",
+                    "nodeName": None,
+                    "fullTraceback": tb_str,
+                },
+            }
+        finally:
+            # Clean up the temporary file explicitly if it was created
+            if tmp_file and os.path.exists(tmp_file.name):
+                os.remove(tmp_file.name)
 
-            # Try to parse structured JSON error output first
-            error_match = re.search(
-                r"##ERROR_JSON_START##\s*(.*?)\s*##ERROR_JSON_END##",
-                combined_output,
-                re.DOTALL,
-            )
-            if error_match:
-                json_str = error_match.group(1)
-                try:
-                    error_data = json.loads(json_str)
-                    print(f"Parsed error JSON from script output: {error_data}")
-                    return error_data  # Return the structured error from the script
-                except json.JSONDecodeError as e:
-                    print(
-                        f"Error decoding JSON from script error output: {e}\nJSON string: {json_str}"
-                    )
-                    # Fallback to generic error if JSON parsing fails
-                    return {
-                        "success": False,
-                        "error": {
-                            "message": "Script failed with undecipherable JSON error output.",
-                            "nodeName": None,
-                            "fullTraceback": combined_output,
-                        },
-                    }
 
-            # Try to parse special errors in output
-            error_match = re.search(
-                r"ERROR:root:Worker (\w+) on Task (\w+) failed with exception: (.*)",
-                process.stderr,
-            )
-            if error_match:
-                error_data = {
-                    "success": False,
-                    "error": {
-                        "message": f"Worker {error_match.group(1)} on Task {error_match.group(2)} failed with exception: {error_match.group(3)}",
-                        "nodeName": error_match.group(1),
-                        "fullTraceback": process.stderr,
-                    },
-                }
-                return error_data
+# Helper function to process execution results - extracted from validate_code_in_venv to avoid code duplication
+def process_execution_results(process, module_name):
+    """Processes the results of a subprocess execution, parsing output for structured JSON or errors."""
+    print(f"Execution in venv completed with exit code: {process.returncode}")
+    if process.stdout:
+        # Print label and output separately
+        print("stdout:")
+        print(process.stdout)
+    if process.stderr:
+        # Print label and output separately
+        print("stderr:")
+        print(process.stderr)
 
-            # Try to parse structured JSON success output
-            success_match = re.search(
-                r"##SUCCESS_JSON_START##\s*(.*?)\s*##SUCCESS_JSON_END##",
-                combined_output,
-                re.DOTALL,
-            )
-            if success_match:
-                json_str = success_match.group(1)
-                try:
-                    success_data = json.loads(json_str)
-                    print(f"Parsed success JSON from script output: {success_data}")
-                    return success_data  # Return the structured success info
-                except json.JSONDecodeError as e:
-                    print(
-                        f"Error decoding JSON from script success output: {e}\nJSON string: {json_str}"
-                    )
-                    # Fallback, but assume success if marker was present
-                    return {
-                        "success": True,
-                        "message": "Script indicated success, but JSON output was malformed.",
-                    }
+    # Combine stdout and stderr for parsing
+    combined_output = process.stdout + "\n" + process.stderr
 
-            # --- Fallback Logic (if no JSON markers found) ---
+    # Try to parse structured JSON error output first
+    error_match = re.search(
+        r"##ERROR_JSON_START##\s*(.*?)\s*##ERROR_JSON_END##",
+        combined_output,
+        re.DOTALL,
+    )
+    if error_match:
+        json_str = error_match.group(1)
+        try:
+            error_data = json.loads(json_str)
+            print(f"Parsed error JSON from script output: {error_data}")
+            return error_data  # Return the structured error from the script
+        except json.JSONDecodeError as e:
             print(
-                "No structured JSON markers found in script output. Falling back to exit code check."
+                f"Error decoding JSON from script error output: {e}\nJSON string: {json_str}"
             )
+            # Fallback to generic error if JSON parsing fails
+            return {
+                "success": False,
+                "error": {
+                    "message": "Script failed with undecipherable JSON error output.",
+                    "nodeName": None,
+                    "fullTraceback": combined_output,
+                },
+            }
 
-            if process.returncode == 0:
-                # Script finished with exit code 0 but didn't print success JSON
-                print(
-                    f"Script '{module_name}' completed with exit code 0 but no success JSON marker."
-                )
-                return {
-                    "success": True,
-                    "message": "Script validation finished without explicit success confirmation.",
-                }  # Assume success?
-            else:
-                # Script failed before printing JSON markers (e.g., syntax error)
-                print(
-                    f"Script failed with exit code {process.returncode} before printing JSON markers."
-                )
-                error_output = (
-                    process.stderr or process.stdout or "Unknown execution error"
-                )
-                lines = error_output.strip().split("\n")
-                core_error_message = (
-                    lines[-1] if lines else "Unknown execution error line."
-                )
+    # Try to parse special errors from planai logs in output
+    error_match = re.search(
+        r"ERROR:root:Worker (\w+) on Task (\w+) failed with exception: (.*)",
+        process.stderr,
+    )
+    if error_match:
+        error_data = {
+            "success": False,
+            "error": {
+                "message": f"Worker {error_match.group(1)} on Task {error_match.group(2)} failed with exception: {error_match.group(3)}",
+                "nodeName": error_match.group(1),
+                "fullTraceback": process.stderr,
+            },
+        }
+        return error_data
 
-                # Use the simpler regex fallback for node name from raw output
-                name_regex = (
-                    r"\b([A-Za-z_][A-Za-z0-9_]*?)(?:Task|Worker)\d+\b(?:\s*=|\s*\()"
-                )
-                found_node_name = None
-                matches = re.findall(name_regex, error_output)
-                if matches:
-                    found_node_name = matches[0]
-                    if (
-                        found_node_name.startswith("l")
-                        and len(found_node_name) > 1
-                        and found_node_name[1].isupper()
-                    ):
-                        found_node_name = found_node_name[1:]
+    # Try to parse structured JSON success output
+    success_match = re.search(
+        r"##SUCCESS_JSON_START##\s*(.*?)\s*##SUCCESS_JSON_END##",
+        combined_output,
+        re.DOTALL,
+    )
+    if success_match:
+        json_str = success_match.group(1)
+        try:
+            success_data = json.loads(json_str)
+            print(f"Parsed success JSON from script output: {success_data}")
+            return success_data  # Return the structured success info
+        except json.JSONDecodeError as e:
+            print(
+                f"Error decoding JSON from script success output: {e}\nJSON string: {json_str}"
+            )
+            # Fallback, but assume success if marker was present
+            return {
+                "success": True,
+                "message": "Script indicated success, but JSON output was malformed.",
+            }
 
-                print(
-                    f"Fallback Error: Node found: {found_node_name}, Error: {core_error_message}"
-                )
-                return {
-                    "success": False,
-                    "error": {
-                        "message": core_error_message,
-                        "nodeName": found_node_name,
-                        "fullTraceback": error_output,  # Provide the raw output as traceback
-                    },
-                }
+    # --- Fallback Logic (if no JSON markers found) ---
+    print(
+        "No structured JSON markers found in script output. Falling back to exit code check."
+    )
 
-    except subprocess.TimeoutExpired:
-        error_message = f"Execution of '{module_name}' timed out after 60 seconds."
-        print(error_message)
-        # Return structured error
+    if process.returncode == 0:
+        # Script finished with exit code 0 but didn't print success JSON
+        print(
+            f"Script '{module_name}' completed with exit code 0 but no success JSON marker."
+        )
+        return {
+            "success": True,
+            "message": "Script validation finished without explicit success confirmation.",
+        }  # Assume success?
+    else:
+        # Script failed before printing JSON markers (e.g., syntax error)
+        print(
+            f"Script failed with exit code {process.returncode} before printing JSON markers."
+        )
+        error_output = process.stderr or process.stdout or "Unknown execution error"
+        lines = error_output.strip().split("\n")
+        core_error_message = lines[-1] if lines else "Unknown execution error line."
+
+        # Use the simpler regex fallback for node name from raw output
+        name_regex = r"\b([A-Za-z_][A-Za-z0-9_]*?)(?:Task|Worker)\d+\b(?:\s*=|\s*\()"
+        found_node_name = None
+        matches = re.findall(name_regex, error_output)
+        if matches:
+            found_node_name = matches[0]
+            if (
+                found_node_name.startswith("l")
+                and len(found_node_name) > 1
+                and found_node_name[1].isupper()
+            ):
+                found_node_name = found_node_name[1:]
+
+        print(
+            f"Fallback Error: Node found: {found_node_name}, Error: {core_error_message}"
+        )
         return {
             "success": False,
             "error": {
-                "message": error_message,
-                "nodeName": None,
-                "fullTraceback": None,
+                "message": core_error_message,
+                "nodeName": found_node_name,
+                "fullTraceback": error_output,  # Provide the raw output as traceback
             },
         }
-    except Exception as e:
-        tb_str = traceback.format_exc()
-        error_details = f"Error during validation process for '{module_name}': {e}"
-        print(f"{error_details}\n{tb_str}")
-        # Return structured error
-        return {
-            "success": False,
-            "error": {
-                "message": f"Internal validation error: {e}",
-                "nodeName": None,
-                "fullTraceback": tb_str,
-            },
-        }
-    finally:
-        # Clean up the temporary file explicitly if it was created
-        if tmp_file and os.path.exists(tmp_file.name):
-            os.remove(tmp_file.name)
 
 
 @socketio.on("connect")
@@ -513,7 +568,9 @@ def handle_export_graph(data):
         return
 
     # Attempt to validate the generated module in the specified venv
-    validation_result = validate_code_in_venv(module_name, python_code)
+    validation_result = validate_code_in_venv(
+        module_name, python_code, inject_debug_events=True
+    )
 
     # Construct the final response
     response_data = {
