@@ -253,7 +253,7 @@
 </script>
 
 <div
-	class="base-worker-node relative flex h-full flex-col rounded-md border border-gray-300 bg-white shadow-md {additionalClassStyle}"
+	class="base-worker-node relative flex flex-col rounded-md border border-gray-300 bg-white shadow-md {additionalClassStyle}"
 >
 	<NodeResizer
 		{minWidth}
@@ -324,7 +324,7 @@
 	</div>
 
 	<!-- Main Content Area -->
-	<div class="flex h-full min-h-0 flex-col p-1.5">
+	<div class="flex flex-col overflow-auto p-1.5">
 		<!-- Input Types -->
 		<div class="mb-2 flex-none">
 			<h3 class="text-2xs font-semibold text-gray-600">Input Types (Auto)</h3>
@@ -460,8 +460,8 @@
 			</div>
 		{/if}
 
-		<!-- Scrollable Content Area -->
-		<div class="min-h-0 flex-grow">
+		<!-- Content Area - Modified to allow editor growth -->
+		<div class="flex-auto">
 			<!-- Placeholder for derived component content -->
 			<div>
 				{@render children?.()}

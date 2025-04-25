@@ -1,12 +1,10 @@
 <script lang="ts">
-	import CodeMirror from 'svelte-codemirror-editor';
-	import { python } from '@codemirror/lang-python';
-	import { markdown } from '@codemirror/lang-markdown';
-	import { json } from '@codemirror/lang-json';
+	import { onDestroy, onMount } from 'svelte';
 	import ChevronDown from 'phosphor-svelte/lib/ArrowDown';
 	import ChevronRight from 'phosphor-svelte/lib/ArrowRight';
 	import Trash from 'phosphor-svelte/lib/Trash';
-	import type { LanguageSupport } from '@codemirror/language';
+	import type * as Monaco from 'monaco-editor/esm/vs/editor/editor.api';
+	import { tick } from 'svelte';
 
 	let {
 		title = '',
@@ -16,69 +14,149 @@
 		onUpdate,
 		onReset = undefined,
 		showReset = false,
-		onCollapseToggle
+		onCollapseToggle,
+		maxHeight = 400 // Add a maxHeight prop with default
 	} = $props<{
 		title?: string;
 		code: string;
-		language?: 'python' | 'markdown' | 'json';
+		language?: 'python' | 'markdown' | 'json' | 'javascript' | 'typescript';
 		initialCollapsed?: boolean;
 		onUpdate: (newCode: string) => void;
 		onReset?: () => void;
 		showReset?: boolean;
 		onCollapseToggle?: () => void;
+		maxHeight?: number; // Maximum height before scrolling
 	}>();
 
 	let collapsed = $state(initialCollapsed);
+	let editorContainer: HTMLDivElement | undefined = $state();
+	let editor: Monaco.editor.IStandaloneCodeEditor | undefined;
+	let monaco: typeof Monaco | undefined;
+	let contentHeight = $state(0); // Track content height
+	let currentCode = $state(code);
 
-	let langExtension: LanguageSupport | undefined = $derived.by(() => {
-		switch (language) {
-			case 'python':
-				return python();
-			case 'markdown':
-				return markdown();
-			case 'json':
-				return json();
-			default:
-				return undefined;
+	onDestroy(() => {
+		editor?.dispose();
+	});
+
+	onMount(() => {
+		if (typeof window !== 'undefined') {
+			console.log(`Creating Monaco editor for: ${title || 'Untitled Section'}`);
+			(async () => {
+				if (!monaco) {
+					monaco = (await import('$lib/monaco')).default;
+				}
+
+				editor = monaco.editor.create(editorContainer!, {
+					value: code,
+					language: language,
+					automaticLayout: false, // We'll manage layout ourselves
+					fontSize: 11,
+					minimap: { enabled: false },
+					scrollBeyondLastLine: false,
+					scrollbar: {
+						vertical: 'auto',
+						horizontalScrollbarSize: 8,
+						verticalScrollbarSize: 8
+					},
+					lineHeight: 18, // Explicit line height helps with calculations
+					theme: 'vs-light'
+				});
+
+				// Listen for content changes *after* editor is created
+				editor.onDidChangeModelContent(() => {
+					currentCode = editor?.getValue() ?? '';
+					// Update height after content change
+					updateEditorHeight();
+				});
+
+				// Set up content height tracking
+				editor.onDidContentSizeChange((e) => {
+					contentHeight = e.contentHeight;
+					updateEditorHeight();
+				});
+
+				tick().then(() =>
+					requestAnimationFrame(() => {
+						editor?.layout();
+						updateEditorHeight(); // Initial height calculation
+					})
+				);
+			})();
+		}
+	});
+
+	// Effect to update the code when the currentCode state changes
+	$effect(() => {
+		onUpdate(currentCode);
+	});
+
+	// Function to update editor height based on content
+	function updateEditorHeight() {
+		if (!editor || !editorContainer) return;
+
+		// Get current content height
+		const height = editor.getContentHeight();
+
+		// Apply height with a maximum limit
+		const newHeight = Math.min(height, maxHeight);
+		editorContainer.style.height = `${newHeight}px`;
+
+		// Update the editor layout with the new dimensions
+		const width = editorContainer.clientWidth;
+		editor.layout({ width, height: newHeight });
+
+		// Show/hide scrollbar based on content height versus container height
+		if (height > maxHeight) {
+			// Content exceeds max height, enable scrollbar
+			editor.updateOptions({ scrollbar: { vertical: 'visible' } });
+		} else {
+			// Content fits, hide scrollbar
+			editor.updateOptions({ scrollbar: { vertical: 'hidden' } });
+		}
+	}
+
+	// Effect to update editor language when 'language' prop changes
+	$effect(() => {
+		if (editor && monaco) {
+			const model = editor.getModel();
+			if (model) {
+				monaco.editor.setModelLanguage(model, language);
+			}
 		}
 	});
 
 	function toggleCollapse() {
 		collapsed = !collapsed;
 		onCollapseToggle?.();
-	}
+		if (!collapsed && editor) {
+			console.log('Editor container should now be visible. Scheduling layout.');
 
-	function handleCodeUpdate(event: CustomEvent) {
-		onUpdate(event.detail);
-	}
-
-	const editorStyles = {
-		'&': {
-			border: '1px solid #e2e8f0',
-			borderRadius: '0.25rem',
-			fontSize: '0.7rem',
-			height: '100%', // Fill container height
-			width: '100%',
-			display: 'flex',
-			flexDirection: 'column',
-			minHeight: '3rem' // Ensure at least 3 lines height
-		},
-		'.cm-content': {
-			fontFamily: 'monospace',
-			cursor: 'text' // Ensure text cursor in editor content
-		},
-		'.cm-scroller': {
-			overflow: 'auto'
-		},
-		'.cm-editor': {
-			height: '100%',
-			cursor: 'text' // Ensure text cursor in editor
+			// Wait for Svelte to update the DOM
+			tick().then(() => {
+				// Then, wait for the browser's next rendering frame
+				// to ensure the container has its dimensions calculated.
+				requestAnimationFrame(() => {
+					if (editor && editorContainer && editorContainer.offsetParent !== null) {
+						// Check if the container is actually visible and has dimensions
+						const { width, height } = editorContainer.getBoundingClientRect();
+						if (width > 0 && height > 0) {
+							console.log(`Layouting editor in container: ${width}x${height}`);
+							editor.layout();
+							updateEditorHeight(); // Update height when becoming visible
+						} else {
+							console.warn('Editor container has zero dimensions when attempting layout.');
+						}
+					} else {
+						console.warn('Editor or editor container not ready or not visible for layout.');
+					}
+				});
+			});
 		}
-	};
+	}
 </script>
 
 <div class="flex h-full min-h-0 flex-col">
-	<!-- Title section with possible reset button -->
 	<div class="mb-1 flex flex-none items-center justify-between">
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<div
@@ -106,22 +184,27 @@
 		{/if}
 	</div>
 
-	{#if !collapsed}
-		<div class="min-h-0 min-w-[60ch] flex-grow">
-			<CodeMirror
-				value={code}
-				lang={langExtension}
-				styles={editorStyles}
-				on:change={handleCodeUpdate}
-				basic={true}
-			/>
-		</div>
-	{/if}
+	<div class="min-w-[60ch] {collapsed ? 'hidden h-0' : 'flex-grow'} transition-height duration-200">
+		<div
+			bind:this={editorContainer}
+			class="min-h-[3rem] w-full rounded border border-gray-300"
+			style="height: {contentHeight ? Math.min(contentHeight, maxHeight) : 'auto'}px;"
+		></div>
+	</div>
 </div>
 
 <style>
 	.text-2xs {
 		font-size: 0.65rem;
 		line-height: 1rem;
+	}
+	/* Enable transition on height */
+	.transition-height {
+		transition: height 0.2s ease-in-out;
+	}
+	/* Ensure editor container takes up space */
+	:global(.monaco-editor) {
+		height: 100% !important;
+		width: 100% !important;
 	}
 </style>

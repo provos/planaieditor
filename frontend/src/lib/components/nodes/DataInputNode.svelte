@@ -167,7 +167,7 @@
 	</div>
 
 	<!-- JSON Data Editor -->
-	<div class="relative flex h-full min-h-0 flex-col overflow-hidden p-1.5">
+	<div class="relative flex h-full min-h-0 flex-col p-1.5">
 		<EditableCodeSection
 			title="JSON Data"
 			code={data.jsonData}
