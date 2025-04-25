@@ -110,205 +110,223 @@
 	});
 </script>
 
-<div class="flex items-center gap-4" data-testid="toolshelf-container">
+<div
+	class="mb-1 flex flex-wrap items-stretch gap-4 rounded-md p-0 md:gap-6"
+	data-testid="toolshelf-container"
+>
 	<!-- Draggable Nodes Section -->
-	<div class="flex items-center gap-2 border-r border-gray-300 pr-4">
-		<Tabs.Root value={selectedTab} class="w-full">
-			<Tabs.List class="flex space-x-1 rounded-t bg-gray-100 p-1">
-				<Tabs.Trigger
-					value="tasks"
-					class="rounded px-3 py-1 text-sm data-[state=active]:bg-white data-[state=active]:font-semibold"
-				>
-					Tasks
-				</Tabs.Trigger>
-				<Tabs.Trigger
-					value="data"
-					class="rounded px-3 py-1 text-sm data-[state=active]:bg-white data-[state=active]:font-semibold"
-				>
-					Data
-				</Tabs.Trigger>
-				<Tabs.Trigger
-					value="workers"
-					class="rounded px-3 py-1 text-sm data-[state=active]:bg-white data-[state=active]:font-semibold"
-				>
-					Workers
-				</Tabs.Trigger>
-			</Tabs.List>
+	<div class="flex min-w-[300px] flex-1 items-center gap-2 border-r border-gray-300/70 pr-4">
+		<div class="w-[300px]">
+			<Tabs.Root value={selectedTab} class="w-full">
+				<Tabs.List class="flex rounded-md bg-gray-300/80 p-1">
+					<Tabs.Trigger
+						value="tasks"
+						class="flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-150 data-[state=active]:bg-white data-[state=active]:shadow-sm"
+					>
+						Tasks
+					</Tabs.Trigger>
+					<Tabs.Trigger
+						value="data"
+						class="flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-150 data-[state=active]:bg-white data-[state=active]:shadow-sm"
+					>
+						Data
+					</Tabs.Trigger>
+					<Tabs.Trigger
+						value="workers"
+						class="flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-150 data-[state=active]:bg-white data-[state=active]:shadow-sm"
+					>
+						Workers
+					</Tabs.Trigger>
+				</Tabs.List>
 
-			<Tabs.Content value="tasks" class="flex gap-2 pt-2">
-				<!-- Task Node -->
-				<div
-					class="cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
-					role="button"
-					tabindex="0"
-					draggable="true"
-					ondragstart={(e) => onDragStart(e, 'task')}
-				>
-					<div class="flex items-center gap-1.5">
-						<Cube size={16} weight="fill" class="text-blue-500" />
-						<div class="text-sm font-semibold">Task</div>
-					</div>
-				</div>
-				<!-- Task Import Node -->
-				<div
-					class="cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
-					role="button"
-					tabindex="0"
-					draggable="true"
-					ondragstart={(e) => onDragStart(e, 'taskimport')}
-				>
-					<div class="flex items-center gap-1.5">
-						<FileMagnifyingGlass size={16} weight="fill" class="text-cyan-500" />
-						<div class="text-sm font-semibold">TaskImport</div>
-					</div>
-				</div>
-			</Tabs.Content>
+				<div class="h-[32px] pt-2">
+					<Tabs.Content
+						value="tasks"
+						class="animate-in fade-in-50 flex gap-2 transition-all duration-200 ease-in-out"
+					>
+						<!-- Task Node -->
+						<div
+							class="cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
+							role="button"
+							tabindex="0"
+							draggable="true"
+							ondragstart={(e) => onDragStart(e, 'task')}
+						>
+							<div class="flex items-center gap-1.5">
+								<Cube size={16} weight="fill" class="text-blue-500" />
+								<div class="text-sm font-semibold">Task</div>
+							</div>
+						</div>
+						<!-- Task Import Node -->
+						<div
+							class="cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
+							role="button"
+							tabindex="0"
+							draggable="true"
+							ondragstart={(e) => onDragStart(e, 'taskimport')}
+						>
+							<div class="flex items-center gap-1.5">
+								<FileMagnifyingGlass size={16} weight="fill" class="text-cyan-500" />
+								<div class="text-sm font-semibold">TaskImport</div>
+							</div>
+						</div>
+					</Tabs.Content>
 
-			<Tabs.Content value="data" class="flex gap-2 pt-2">
-				<!-- DataInput Node -->
-				<div
-					class="cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
-					role="button"
-					tabindex="0"
-					draggable="true"
-					ondragstart={(e) => onDragStart(e, 'datainput')}
-				>
-					<div class="flex items-center gap-1.5">
-						<Keyboard size={16} weight="fill" class="text-gray-500" />
-						<div class="text-sm font-semibold">DataInput</div>
-					</div>
-				</div>
-				<!-- Data Output Node -->
-				<div
-					class="cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
-					role="button"
-					tabindex="0"
-					draggable="true"
-					ondragstart={(e) => onDragStart(e, 'dataoutput')}
-				>
-					<div class="flex items-center gap-1.5">
-						<Table size={16} weight="fill" class="text-pink-500" />
-						<div class="text-sm font-semibold">DataOutput</div>
-					</div>
-				</div>
-			</Tabs.Content>
+					<Tabs.Content
+						value="data"
+						class="animate-in fade-in-50 flex gap-2 transition-all duration-200 ease-in-out"
+					>
+						<!-- DataInput Node -->
+						<div
+							class="cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
+							role="button"
+							tabindex="0"
+							draggable="true"
+							ondragstart={(e) => onDragStart(e, 'datainput')}
+						>
+							<div class="flex items-center gap-1.5">
+								<Keyboard size={16} weight="fill" class="text-gray-500" />
+								<div class="text-sm font-semibold">DataInput</div>
+							</div>
+						</div>
+						<!-- Data Output Node -->
+						<div
+							class="cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
+							role="button"
+							tabindex="0"
+							draggable="true"
+							ondragstart={(e) => onDragStart(e, 'dataoutput')}
+						>
+							<div class="flex items-center gap-1.5">
+								<Table size={16} weight="fill" class="text-pink-500" />
+								<div class="text-sm font-semibold">DataOutput</div>
+							</div>
+						</div>
+					</Tabs.Content>
 
-			<Tabs.Content value="workers" class="flex gap-2 pt-2">
-				<!-- TaskWorker Node -->
-				<div
-					class="cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
-					role="button"
-					tabindex="0"
-					draggable="true"
-					ondragstart={(e) => onDragStart(e, 'taskworker')}
-				>
-					<div class="flex items-center gap-1.5">
-						<Robot size={16} weight="fill" class="text-purple-500" />
-						<div class="text-sm font-semibold">TaskWorker</div>
-					</div>
+					<Tabs.Content
+						value="workers"
+						class="animate-in fade-in-50 flex gap-2 transition-all duration-200 ease-in-out"
+					>
+						<!-- TaskWorker Node -->
+						<div
+							class="cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
+							role="button"
+							tabindex="0"
+							draggable="true"
+							ondragstart={(e) => onDragStart(e, 'taskworker')}
+						>
+							<div class="flex items-center gap-1.5">
+								<Robot size={16} weight="fill" class="text-purple-500" />
+								<div class="text-sm font-semibold">TaskWorker</div>
+							</div>
+						</div>
+						<!-- LLMTaskWorker Node -->
+						<div
+							class="cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
+							role="button"
+							tabindex="0"
+							draggable="true"
+							ondragstart={(e) => onDragStart(e, 'llmtaskworker')}
+						>
+							<div class="flex items-center gap-1.5">
+								<Brain size={16} weight="fill" class="text-green-500" />
+								<div class="text-sm font-semibold">LLMTaskWorker</div>
+							</div>
+						</div>
+						<!-- JoinedTaskWorker Node -->
+						<div
+							class="cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
+							role="button"
+							tabindex="0"
+							draggable="true"
+							ondragstart={(e) => onDragStart(e, 'joinedtaskworker')}
+						>
+							<div class="flex items-center gap-1.5">
+								<ArrowsIn size={16} weight="fill" class="text-orange-500" />
+								<div class="text-sm font-semibold">JoinedTaskWorker</div>
+							</div>
+						</div>
+						<!-- SubGraphWorker Node -->
+						<div
+							class="cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
+							role="button"
+							tabindex="0"
+							draggable="true"
+							ondragstart={(e) => onDragStart(e, 'subgraphworker')}
+						>
+							<div class="flex items-center gap-1.5">
+								<Network size={16} weight="fill" class="text-teal-500" />
+								<div class="text-sm font-semibold">SubGraphWorker</div>
+							</div>
+						</div>
+						<!-- ChatWorker Node -->
+						<div
+							class="cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
+							role="button"
+							tabindex="0"
+							draggable="true"
+							ondragstart={(e) => onDragStart(e, 'chattaskworker')}
+						>
+							<div class="flex items-center gap-1.5">
+								<Chat size={16} weight="fill" class="text-red-500" />
+								<div class="text-sm font-semibold">ChatTaskWorker</div>
+							</div>
+						</div>
+					</Tabs.Content>
 				</div>
-				<!-- LLMTaskWorker Node -->
-				<div
-					class="cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
-					role="button"
-					tabindex="0"
-					draggable="true"
-					ondragstart={(e) => onDragStart(e, 'llmtaskworker')}
-				>
-					<div class="flex items-center gap-1.5">
-						<Brain size={16} weight="fill" class="text-green-500" />
-						<div class="text-sm font-semibold">LLMTaskWorker</div>
-					</div>
-				</div>
-				<!-- JoinedTaskWorker Node -->
-				<div
-					class="cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
-					role="button"
-					tabindex="0"
-					draggable="true"
-					ondragstart={(e) => onDragStart(e, 'joinedtaskworker')}
-				>
-					<div class="flex items-center gap-1.5">
-						<ArrowsIn size={16} weight="fill" class="text-orange-500" />
-						<div class="text-sm font-semibold">JoinedTaskWorker</div>
-					</div>
-				</div>
-				<!-- SubGraphWorker Node -->
-				<div
-					class="cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
-					role="button"
-					tabindex="0"
-					draggable="true"
-					ondragstart={(e) => onDragStart(e, 'subgraphworker')}
-				>
-					<div class="flex items-center gap-1.5">
-						<Network size={16} weight="fill" class="text-teal-500" />
-						<div class="text-sm font-semibold">SubGraphWorker</div>
-					</div>
-				</div>
-				<!-- ChatWorker Node -->
-				<div
-					class="cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
-					role="button"
-					tabindex="0"
-					draggable="true"
-					ondragstart={(e) => onDragStart(e, 'chattaskworker')}
-				>
-					<div class="flex items-center gap-1.5">
-						<Chat size={16} weight="fill" class="text-red-500" />
-						<div class="text-sm font-semibold">ChatTaskWorker</div>
-					</div>
-				</div>
-			</Tabs.Content>
-		</Tabs.Root>
+			</Tabs.Root>
+		</div>
 	</div>
 
 	<!-- Actions Section -->
-	<div class="flex items-center gap-2 border-r border-gray-300 pr-4">
-		<!-- Import Button -->
-		<button
-			onclick={onImport}
-			class="flex items-center rounded bg-blue-500 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-600 disabled:opacity-50"
-			title="Import Task definitions from Python file"
-			data-testid="import-button"
-		>
-			<UploadSimple size={18} weight="bold" class="mr-1.5" />
-			Import
-		</button>
-		<!-- Execute Button -->
-		<button
-			onclick={onExport}
-			class="flex items-center rounded bg-green-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-green-600"
-			data-testid="execute-button"
-			disabled={!isExecutionReady}
-			title={unconnectedWorkersTooltip ? unconnectedWorkersTooltip : 'Execute Graph'}
-		>
-			<Play size={18} class="mr-1.5" />
-			Execute
-		</button>
-		<!-- Clear Button -->
-		<button
-			onclick={onClearGraph}
-			class="flex items-center rounded bg-red-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-red-700"
-			title="Clear the entire graph"
-		>
-			<Eraser size={18} class="mr-1.5" />
-			Clear
-		</button>
-		<!-- Configure LLMs Button -->
-		<button
-			onclick={onConfigureLLMs}
-			class="flex items-center rounded bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"
-			title="Configure LLM Models"
-		>
-			<Gear size={18} class="mr-1.5" />
-			Configure LLMs
-		</button>
+	<div class="flex items-center gap-2 border-r border-gray-300/70 pr-4">
+		<div class="flex flex-wrap gap-2">
+			<!-- Import Button -->
+			<button
+				onclick={onImport}
+				class="flex items-center rounded bg-blue-500 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-600 disabled:opacity-50"
+				title="Import Task definitions from Python file"
+				data-testid="import-button"
+			>
+				<UploadSimple size={18} weight="bold" class="mr-1.5" />
+				Import
+			</button>
+			<!-- Execute Button -->
+			<button
+				onclick={onExport}
+				class="flex items-center rounded bg-green-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-green-600"
+				data-testid="execute-button"
+				disabled={!isExecutionReady}
+				title={unconnectedWorkersTooltip ? unconnectedWorkersTooltip : 'Execute Graph'}
+			>
+				<Play size={18} class="mr-1.5" />
+				Execute
+			</button>
+			<!-- Clear Button -->
+			<button
+				onclick={onClearGraph}
+				class="flex items-center rounded bg-red-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-red-700"
+				title="Clear the entire graph"
+			>
+				<Eraser size={18} class="mr-1.5" />
+				Clear
+			</button>
+			<!-- Configure LLMs Button -->
+			<button
+				onclick={onConfigureLLMs}
+				class="flex items-center rounded bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"
+				title="Configure LLM Models"
+			>
+				<Gear size={18} class="mr-1.5" />
+				Configure LLMs
+			</button>
+		</div>
 	</div>
 
 	<!-- Interpreter Section -->
 	<div class="flex items-center gap-2">
-		<span class="font-semibold">Interpreter:</span>
+		<span class="text-xs uppercase tracking-wider text-gray-500">Interpreter</span>
 		<PythonInterpreterSelector />
 	</div>
 </div>
