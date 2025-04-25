@@ -116,9 +116,9 @@
 >
 	<!-- Draggable Nodes Section -->
 	<div class="flex min-w-[300px] flex-1 items-center gap-2 border-r border-gray-300/70 pr-4">
-		<div class="w-[300px]">
+		<div class="w-full md:w-auto">
 			<Tabs.Root value={selectedTab} class="w-full">
-				<Tabs.List class="flex rounded-md bg-gray-300/80 p-1">
+				<Tabs.List class="flex rounded-md bg-gray-300/80 p-1 w-[300px]">
 					<Tabs.Trigger
 						value="tasks"
 						class="flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-150 data-[state=active]:bg-white data-[state=active]:shadow-sm"
@@ -139,14 +139,14 @@
 					</Tabs.Trigger>
 				</Tabs.List>
 
-				<div class="h-[32px] pt-2">
+				<div class="min-h-[32px] overflow-x-auto pt-2">
 					<Tabs.Content
 						value="tasks"
-						class="animate-in fade-in-50 flex gap-2 transition-all duration-200 ease-in-out"
+						class="animate-in fade-in-50 flex flex-wrap gap-2 transition-all duration-200 ease-in-out md:flex-nowrap"
 					>
 						<!-- Task Node -->
 						<div
-							class="cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
+							class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
 							role="button"
 							tabindex="0"
 							draggable="true"
@@ -159,7 +159,7 @@
 						</div>
 						<!-- Task Import Node -->
 						<div
-							class="cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
+							class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
 							role="button"
 							tabindex="0"
 							draggable="true"
@@ -174,11 +174,11 @@
 
 					<Tabs.Content
 						value="data"
-						class="animate-in fade-in-50 flex gap-2 transition-all duration-200 ease-in-out"
+						class="animate-in fade-in-50 flex flex-wrap gap-2 transition-all duration-200 ease-in-out md:flex-nowrap"
 					>
 						<!-- DataInput Node -->
 						<div
-							class="cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
+							class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
 							role="button"
 							tabindex="0"
 							draggable="true"
@@ -191,7 +191,7 @@
 						</div>
 						<!-- Data Output Node -->
 						<div
-							class="cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
+							class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
 							role="button"
 							tabindex="0"
 							draggable="true"
@@ -206,11 +206,11 @@
 
 					<Tabs.Content
 						value="workers"
-						class="animate-in fade-in-50 flex gap-2 transition-all duration-200 ease-in-out"
+						class="animate-in fade-in-50 flex flex-wrap gap-2 transition-all duration-200 ease-in-out md:flex-nowrap"
 					>
 						<!-- TaskWorker Node -->
 						<div
-							class="cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
+							class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
 							role="button"
 							tabindex="0"
 							draggable="true"
@@ -223,7 +223,7 @@
 						</div>
 						<!-- LLMTaskWorker Node -->
 						<div
-							class="cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
+							class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
 							role="button"
 							tabindex="0"
 							draggable="true"
@@ -236,7 +236,7 @@
 						</div>
 						<!-- JoinedTaskWorker Node -->
 						<div
-							class="cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
+							class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
 							role="button"
 							tabindex="0"
 							draggable="true"
@@ -249,7 +249,7 @@
 						</div>
 						<!-- SubGraphWorker Node -->
 						<div
-							class="cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
+							class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
 							role="button"
 							tabindex="0"
 							draggable="true"
@@ -262,7 +262,7 @@
 						</div>
 						<!-- ChatWorker Node -->
 						<div
-							class="cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
+							class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
 							role="button"
 							tabindex="0"
 							draggable="true"
