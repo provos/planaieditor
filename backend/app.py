@@ -66,12 +66,12 @@ else:
 
 app.config["SECRET_KEY"] = "secret!"  # Change this in production!
 app.config["SELECTED_VENV_PATH"] = (
-    None  # Will store the selected Python interpreter path
+    sys.executable  # Will store the selected Python interpreter path
 )
 
 
 # Function to discover Python environments
-def discover_python_environments() -> List[Dict[str, str]]:
+def discover_python_environments(sort_venv_paths=True) -> List[Dict[str, str]]:
     """
     Discover Python interpreters available on the system.
     Returns a list of dictionaries with 'path' and 'name' keys.
@@ -84,6 +84,10 @@ def discover_python_environments() -> List[Dict[str, str]]:
     common_venv_paths = [
         dir / "bin" / "python" for dir in potential_dirs if dir.is_dir()
     ]
+    if sys.executable not in common_venv_paths:
+        common_venv_paths.append(sys.executable)
+    if sort_venv_paths:
+        common_venv_paths.sort()
 
     # Add macOS/Linux specific paths
     if sys.platform != "win32":
@@ -108,7 +112,7 @@ def discover_python_environments() -> List[Dict[str, str]]:
             environments.append(
                 {
                     "path": str(venv_path),
-                    "name": f"Python ({venv_path.parent.parent.parent.name})",
+                    "name": f"Python ({venv_path.parent.parent.parent.name if venv_path != sys.executable else 'planaieditor'})",
                 }
             )
 
