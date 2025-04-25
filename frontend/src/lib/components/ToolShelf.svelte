@@ -129,7 +129,7 @@
 				<Tabs.Root value={selectedTab} class="w-full">
 					<Tabs.List class="flex w-[300px] rounded-md bg-gray-300/80 p-1">
 						<Tooltip.Root delayDuration={400}>
-							<Tooltip.Trigger>
+							<Tooltip.Trigger asChild>
 								<Tabs.Trigger
 									value="tasks"
 									class="flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-150 data-[state=active]:bg-white data-[state=active]:shadow-sm"
@@ -147,7 +147,7 @@
 						</Tooltip.Root>
 
 						<Tooltip.Root delayDuration={400}>
-							<Tooltip.Trigger>
+							<Tooltip.Trigger asChild>
 								<Tabs.Trigger
 									value="data"
 									class="flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-150 data-[state=active]:bg-white data-[state=active]:shadow-sm"
@@ -164,7 +164,7 @@
 						</Tooltip.Root>
 
 						<Tooltip.Root delayDuration={400}>
-							<Tooltip.Trigger>
+							<Tooltip.Trigger asChild>
 								<Tabs.Trigger
 									value="workers"
 									class="flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-150 data-[state=active]:bg-white data-[state=active]:shadow-sm"
