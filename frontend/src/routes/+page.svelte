@@ -63,12 +63,8 @@
 	// Import the ELKjs layout function
 	import { layoutGraph } from '$lib/utils/pythonImport';
 
-	// Monaco worker imports (moved from monaco.ts)
-	import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
-	import cssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker';
-	import htmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker';
-	import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
-	import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
+	// Import the Monaco setup utility
+	import { setupMonacoEnvironment } from '$lib/monaco';
 
 	// Define the structure for the saved JSON file
 	interface SavedGraphState {
@@ -127,33 +123,8 @@
 	let layoutAttempts: number = 0;
 
 	onMount(() => {
-		// --- Monaco Editor Worker Setup ---
-		// Moved here from monaco.ts to ensure it runs only once per page load
-		if (typeof window !== 'undefined') {
-			// MonacoEnvironment is a global variable
-			(self as any).MonacoEnvironment = {
-				getWorker: function (_: string, label: string) {
-					switch (label) {
-						case 'json':
-							return new jsonWorker();
-						case 'css':
-						case 'scss':
-						case 'less':
-							return new cssWorker();
-						case 'html':
-						case 'handlebars':
-						case 'razor':
-							return new htmlWorker();
-						case 'typescript':
-						case 'javascript':
-							return new tsWorker();
-						default:
-							return new editorWorker();
-					}
-				}
-			};
-		}
-		// --- End Monaco Setup ---
+		// Set up Monaco editor environment
+		setupMonacoEnvironment();
 
 		if (dev) {
 			// Define the convertGraphToJSON function so it can be used in the backend tests
