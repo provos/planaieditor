@@ -226,6 +226,7 @@ def validate_code_in_venv(module_name, code_string):
     # The file is explicitly closed and removed in the finally block.
     tmp_file = None  # Initialize outside try
     process = None  # Initialize process reference
+    sid = request.sid
 
     # Define the debug event handler
     def handle_debug_event(event):
@@ -240,7 +241,7 @@ def validate_code_in_venv(module_name, code_string):
         socketio.emit(
             "planai_debug_event",
             {"type": event_type, "data": event_data},
-            room=request.sid,
+            room=sid,
         )
 
     try:

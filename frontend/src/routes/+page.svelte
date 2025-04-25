@@ -19,6 +19,7 @@
 	import DataOutputNode from '$lib/components/nodes/DataOutputNode.svelte';
 	import type { BaseWorkerData } from '$lib/components/nodes/BaseWorkerNode.svelte';
 	import type { NodeData } from '$lib/components/nodes/TaskNode.svelte';
+	import type { DataOutputNodeData } from '$lib/components/nodes/DataOutputNode.svelte';
 	import { get } from 'svelte/store';
 	import { allClassNames } from '$lib/stores/classNameStore';
 	import { taskClassNamesStore } from '$lib/stores/taskClassNamesStore';
@@ -175,6 +176,52 @@
 				}
 			}
 		);
+
+		// Listen for PlanAI debug events
+		socket.on('planai_debug_event', (event: { type: string; data: any }) => {
+			console.log('Received planai_debug_event:', event);
+
+			if (event.type === 'dataoutput_callback' && event.data) {
+				const { node_id, task: taskJsonString } = event.data;
+
+				if (!node_id || !taskJsonString) {
+					console.error('Missing node_id or task data in dataoutput_callback event:', event.data);
+					return;
+				}
+
+				try {
+					const taskData = JSON.parse(taskJsonString);
+
+					nodes.update((currentNodes) => {
+						return currentNodes.map((node) => {
+							if (node.id === node_id && node.type === 'dataoutput') {
+								// Prepend the new data to the receivedData array
+								const nodeData = node.data as unknown as DataOutputNodeData;
+								const previousReceivedData = nodeData.receivedData || [];
+								const updatedReceivedData = [taskData, ...previousReceivedData];
+								// Limit history if needed, e.g., keep last 10 items
+								// updatedReceivedData = updatedReceivedData.slice(0, 10);
+
+								return {
+									...node,
+									data: {
+										...node.data,
+										receivedData: updatedReceivedData
+									}
+								};
+							}
+							return node;
+						});
+					});
+				} catch (parseError) {
+					console.error(
+						'Error parsing task JSON in dataoutput_callback:',
+						parseError,
+						taskJsonString
+					);
+				}
+			}
+		});
 
 		// ensure consistent edge styling after reload
 		edges.update((currentEdges: Edge[]) => {

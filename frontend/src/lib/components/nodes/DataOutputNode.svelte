@@ -9,7 +9,7 @@
 	// Define the interface for the node's data
 	export interface DataOutputNodeData {
 		nodeId: string;
-		receivedData?: any[]; // Array to store received JSON objects
+		receivedData?: Record<string, any>[]; // Array to store received JSON objects
 		inputTypes: string[]; // Inferred input types
 		error?: string; // Optional error display
 	}

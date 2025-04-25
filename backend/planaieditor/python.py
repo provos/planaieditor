@@ -172,14 +172,15 @@ def create_all_graph_dependencies(
             if input_types:
                 # we know that class names are unique in the graph
                 sink_code = f"""
-                             metadata_{class_name} = {{
-                                 "input_type": {input_types[0]},
-                                 "node_id": "{node_id}"
-                             }}
-                             def callback_{class_name}(unused, task: {input_types[0]}):
-                                print(f"Received task from {node_id} for metadata_{class_name}: {{task.model_dump_json()}}")
-                             graph.set_sink({source_inst_name}, {input_types[0]}, callback_{class_name})
-                             """
+                    def callback_{class_name}(unused, task: {input_types[0]}):
+                        print(f"Received task from {node_id} for metadata_{class_name}: {{task.model_dump_json()}}")
+                        send_debug_event("dataoutput_callback", {{
+                            "task": task.model_dump_json(),
+                            "node_id": "{node_id}",
+                            "input_type": "{input_types[0]}"
+                        }})
+                    graph.set_sink({source_inst_name}, {input_types[0]}, callback_{class_name})
+                    """
                 code.append(indent(dedent(sink_code).strip(), "    "))
             else:
                 print(
