@@ -128,13 +128,15 @@
 			<Tooltip.Provider>
 				<Tabs.Root value={selectedTab} class="w-full">
 					<Tabs.List class="flex w-[300px] rounded-md bg-gray-300/80 p-1">
-						<Tooltip.Root delayDuration={400}>
-							<Tooltip.Trigger asChild>
+						<Tooltip.Root delayDuration={800}>
+							<Tooltip.Trigger class="flex-1">
 								<Tabs.Trigger
 									value="tasks"
 									class="flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-150 data-[state=active]:bg-white data-[state=active]:shadow-sm"
 								>
-									Tasks
+									{#snippet child({ props }: { props: Record<string, unknown> })}
+										<div {...props}>Tasks</div>
+									{/snippet}
 								</Tabs.Trigger>
 							</Tooltip.Trigger>
 							<Tooltip.Content
@@ -146,13 +148,15 @@
 							</Tooltip.Content>
 						</Tooltip.Root>
 
-						<Tooltip.Root delayDuration={400}>
-							<Tooltip.Trigger asChild>
+						<Tooltip.Root delayDuration={800}>
+							<Tooltip.Trigger class="flex-1">
 								<Tabs.Trigger
 									value="data"
 									class="flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-150 data-[state=active]:bg-white data-[state=active]:shadow-sm"
 								>
-									Data
+									{#snippet child({ props }: { props: Record<string, unknown> })}
+										<div {...props}>Data</div>
+									{/snippet}
 								</Tabs.Trigger>
 							</Tooltip.Trigger>
 							<Tooltip.Content
@@ -163,13 +167,15 @@
 							</Tooltip.Content>
 						</Tooltip.Root>
 
-						<Tooltip.Root delayDuration={400}>
-							<Tooltip.Trigger asChild>
+						<Tooltip.Root delayDuration={800}>
+							<Tooltip.Trigger class="flex-1">
 								<Tabs.Trigger
 									value="workers"
 									class="flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-150 data-[state=active]:bg-white data-[state=active]:shadow-sm"
 								>
-									Workers
+									{#snippet child({ props }: { props: Record<string, unknown> })}
+										<div {...props}>Workers</div>
+									{/snippet}
 								</Tabs.Trigger>
 							</Tooltip.Trigger>
 							<Tooltip.Content
