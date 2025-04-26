@@ -108,3 +108,16 @@ def test_split_invalid_input():
     assert signature is None
     # Should return the original lines
     assert body_lines == method_source.splitlines()
+
+
+def test_split_no_signature_just_code():
+    """Test handling input that has no method signature at all."""
+    method_source = """# Process the input task and produce output
+self.publish_work(Task1(name=\"processed this: \" + task.name, input_task=task))"""
+
+    signature, body_lines = split_method_signature_body(method_source)
+
+    # Should return None for signature when there's no method signature
+    assert signature is None
+    # Should return the original lines
+    assert body_lines == method_source.splitlines()

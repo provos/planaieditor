@@ -27,6 +27,10 @@ def split_method_signature_body(method_source: str) -> Tuple[Optional[str], List
         # Dedent source before parsing to handle indentation correctly
         dedented_source = dedent(method_source).strip()
 
+        # Check if this is actually a method definition
+        if not re.search(r"^\s*def\s+", dedented_source):
+            return None, method_source.splitlines()
+
         # Using a simpler but reliable approach for splitting signature and body
         # Look for the first occurrence of "):", ")->" or ") ->" which typically marks the end of a signature
         lines = dedented_source.splitlines()
