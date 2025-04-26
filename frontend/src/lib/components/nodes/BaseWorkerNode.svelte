@@ -240,6 +240,9 @@
 		} else {
 			data.methods[methodName] = newCode;
 		}
+		tick().then(() => {
+			updateNodeInternals(id);
+		});
 	}
 
 	// Define core methods that might have special display logic
