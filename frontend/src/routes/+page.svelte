@@ -1001,7 +1001,7 @@ Analyze the following information and provide a response.`,
 		<!-- Display Connection and Export/Import Status -->
 		<div class="mt-2 flex items-center justify-end space-x-2 text-xs">
 			{#if !socketStore.isConnected}
-				<span class="rounded bg-red-100 px-1.5 py-0.5 text-red-700">DsocketStore.isConnected</span>
+				<span class="rounded bg-red-100 px-1.5 py-0.5 text-red-700">Disconnected</span>
 			{/if}
 
 			<!-- Load Status Message -->
