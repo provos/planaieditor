@@ -99,7 +99,6 @@
 	const edges = persisted<Edge[]>('edges', []);
 
 	// Socket.IO connection state
-	let isConnected = $state(false);
 	let exportStatus = $state<ExportStatus>({
 		// Export status
 		type: 'idle',
@@ -136,7 +135,7 @@
 
 		socketStore.socket.on('connect', async () => {
 			console.log('Connected to backend:', socketStore.socket?.id);
-			isConnected = true;
+			socketStore.isConnected = true;
 
 			loadStatus = { type: 'idle', message: '' };
 			exportStatus = { type: 'idle', message: '' };
@@ -170,13 +169,13 @@
 
 		socketStore.socket.on('disconnect', () => {
 			console.log('Disconnected from backend');
-			isConnected = false;
+			socketStore.isConnected = false;
 			exportStatus = { type: 'idle', message: '' }; // Reset status on disconnect
 		});
 
 		socketStore.socket.on('connect_error', (err) => {
 			console.error('Connection error:', err);
-			isConnected = false;
+			socketStore.isConnected = false;
 			exportStatus = { type: 'error', message: `Connection failed: ${err.message}` };
 		});
 
@@ -1001,8 +1000,8 @@ Analyze the following information and provide a response.`,
 
 		<!-- Display Connection and Export/Import Status -->
 		<div class="mt-2 flex items-center justify-end space-x-2 text-xs">
-			{#if !isConnected}
-				<span class="rounded bg-red-100 px-1.5 py-0.5 text-red-700">Disconnected</span>
+			{#if !socketStore.isConnected}
+				<span class="rounded bg-red-100 px-1.5 py-0.5 text-red-700">DsocketStore.isConnected</span>
 			{/if}
 
 			<!-- Load Status Message -->
