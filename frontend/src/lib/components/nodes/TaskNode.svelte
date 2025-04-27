@@ -139,6 +139,12 @@
 	}
 
 	function updateClassName() {
+		if (data.className === tempClassName) {
+			editingClassName = false;
+			classNameError = '';
+			return;
+		}
+
 		if (!validateClassName(tempClassName)) {
 			return;
 		}
