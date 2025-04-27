@@ -16,7 +16,7 @@
 		onReset = undefined,
 		showReset = false,
 		onCollapseToggle,
-		maxHeight = 400 // Add a maxHeight prop with default
+		maxHeight = 400,
 	} = $props<{
 		title?: string;
 		code: string;
