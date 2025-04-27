@@ -455,7 +455,7 @@
 		</div>
 
 		<!-- Other Members Section -->
-		{#if data.otherMembersSource}
+		{#if data.otherMembersSource !== undefined}
 			<div class="mt-3 flex-none border-t border-gray-200 p-1.5">
 				<h3 class="text-2xs mb-1 font-semibold text-gray-600">Other Class Members</h3>
 				<EditableCodeSection

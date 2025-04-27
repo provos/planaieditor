@@ -548,7 +548,7 @@ Analyze the following information and provide a response.`,
 	// Context menu items - now dynamic with Phosphor icons
 	const getContextMenuItems = (): ContextMenuItem[] => {
 		if (contextMenuNode) {
-			const baseNodeItems = [
+			let baseNodeItems = [
 				{
 					label: 'Delete Node',
 					iconComponent: Trash,
@@ -556,6 +556,24 @@ Analyze the following information and provide a response.`,
 					danger: true
 				}
 			];
+
+			if (!contextMenuNode.data?.otherMembersSource) {
+				baseNodeItems.unshift({
+					label: 'Add Other Members',
+					iconComponent: Code,
+					action: () => {
+						nodes.update((currentNodes) => {
+							return currentNodes.map((node) => {
+								if (node.id === contextMenuNode!.id) {
+									return { ...node, data: { ...node.data, otherMembersSource: '' } };
+								}
+								return node;
+							});
+						});
+						closeContextMenu();
+					}
+				});
+			}
 
 			// Define optional methods per worker type
 			const OPTIONAL_METHODS: Record<string, string[]> = {
