@@ -66,12 +66,20 @@
 		'llmtaskworker',
 		'joinedtaskworker',
 		'subgraphworker',
-		'chattaskworker'
+		'chattaskworker',
+		'datainput'
 	]);
 
 	$effect(() => {
 		const currentNodes = $nodes;
 		const currentEdges = $edges;
+
+		const hasDataInput = currentNodes.filter((node) => node.type === 'datainput').length > 0;
+		if (!hasDataInput) {
+			isExecutionReady = false;
+			unconnectedWorkersTooltip = 'No DataInput node found';
+			return;
+		}
 
 		// Create a set of node IDs that are used as a source in any edge
 		const sourceNodeIds = new Set(currentEdges.map((edge) => edge.source));
@@ -96,9 +104,6 @@
 					// Don't break here, collect all unconnected nodes
 				}
 			}
-		} else {
-			// If there are no worker nodes requiring output, then technically all required outputs *are* connected.
-			allRequiredOutputsConnected = true;
 		}
 
 		// Determine if there are any nodes that actually require an output connection
