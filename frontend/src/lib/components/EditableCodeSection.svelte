@@ -34,9 +34,11 @@
 	let editor: Monaco.editor.IStandaloneCodeEditor | undefined;
 	let contentHeight = $state(0); // Track content height
 	let currentCode = $state(code);
+	let resizeObserver: ResizeObserver | undefined;
 
 	onDestroy(() => {
 		editor?.dispose();
+		resizeObserver?.disconnect(); // Disconnect observer on destroy
 	});
 
 	// Effect to create the editor once the monaco instance and container are ready
@@ -58,7 +60,8 @@
 					verticalScrollbarSize: 8
 				},
 				lineHeight: 18,
-				theme: 'vs-light'
+				theme: 'vs-light',
+				fixedOverflowWidgets: false
 			});
 
 			// Listen for content changes *after* editor is created
@@ -145,6 +148,25 @@
 			});
 		}
 	}
+
+	onMount(() => {
+		if (!editorContainer) return;
+
+		resizeObserver = new ResizeObserver(() => {
+			// When the container div resizes, tell the editor to re-layout.
+			// RAF ensures we run after the browser has painted the resize.
+			requestAnimationFrame(() => {
+				editor?.layout();
+			});
+		});
+
+		resizeObserver.observe(editorContainer);
+
+		// Cleanup function is implicitly returned by onMount
+		return () => {
+			resizeObserver?.disconnect();
+		};
+	});
 </script>
 
 <div class="flex h-full min-h-0 flex-col">
@@ -175,7 +197,7 @@
 		{/if}
 	</div>
 
-	<div class="min-w-[60ch] {collapsed ? 'hidden h-0' : 'flex-grow'} transition-height duration-200">
+	<div class="min-w-[60ch] {collapsed ? 'hidden h-0' : 'flex-grow'} transition-height duration-200 p-1">
 		<div
 			bind:this={editorContainer}
 			class="min-h-[3rem] w-full rounded border border-gray-300"
