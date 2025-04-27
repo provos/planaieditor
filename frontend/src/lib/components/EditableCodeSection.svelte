@@ -117,16 +117,6 @@
 		}
 	}
 
-	// Effect to update editor language when 'language' prop changes
-	$effect(() => {
-		if (editor && monacoInstance.instance) {
-			const model = editor.getModel();
-			if (model) {
-				monacoInstance.instance.editor.setModelLanguage(model, language);
-			}
-		}
-	});
-
 	function toggleCollapse() {
 		collapsed = !collapsed;
 		onCollapseToggle?.();
