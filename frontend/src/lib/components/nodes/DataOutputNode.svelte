@@ -82,12 +82,12 @@
 			<div class="w-6"><!-- Spacer to balance the layout --></div>
 			<div class="flex-grow">{data.workerName}</div>
 			<button
-				class="w-6 flex-none rounded p-0.5 text-emerald-700 transition hover:bg-emerald-300/40 hover:text-emerald-900 focus:outline-none"
+				class="w-4 flex-none rounded mt-0.5 p-0.5 text-emerald-700 transition hover:bg-emerald-300/40 hover:text-emerald-900 focus:outline-none"
 				title="Clear received data"
 				onclick={clearReceivedData}
 				aria-label="Clear data"
 			>
-				<TrashSimple size={14} />
+				<TrashSimple size={12} />
 			</button>
 		</div>
 	</div>
