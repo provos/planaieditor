@@ -41,6 +41,8 @@ from pydantic import ConfigDict, Field, PrivateAttr  # noqa: F401
 
 # {worker_definitions}
 
+# End Worker Definitions (used for error handling)
+
 # --- Graph Setup ---
 
 

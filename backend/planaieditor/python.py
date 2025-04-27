@@ -154,10 +154,6 @@ def create_all_graph_dependencies(
 
         target_type = output_nodes_by_class_name.get(target_class_name, {}).get("type")
 
-        print(f"source_inst_name: {source_inst_name}")
-        print(f"target_inst_name: {target_inst_name}")
-        print(f"target_type: {target_type}")
-
         if source_inst_name and target_inst_name:
             code.append(
                 f"    graph.set_dependency({source_inst_name}, {target_inst_name})"
@@ -352,6 +348,7 @@ def create_worker_class(node: Dict[str, Any]) -> Optional[str]:
     elif node_type == "chattaskworker":
         base_class = "ChatTaskWorker"
 
+    code.append(f"# Worker class: {worker_name}")
     code.append(f"\nclass {worker_name}({base_class}):")
     class_body = []  # Store lines for the current class body
 
@@ -781,9 +778,19 @@ def generate_python_module(
         return formatted_code, module_name, None
     except black.InvalidInput as e:
         print(f"Error formatting generated code with black: {e}")
-        print("--- Generated Code (Unformatted) ---")
-        print(final_code)
-        print("--- End Generated Code (Unformatted) ---")
+        # cannot parse: 57:14: 'some error message'
+        error_match = re.match(r"Cannot parse: (\d+):(\d+): (.*)", str(e))
+        worker_name = None
+        if error_match:
+            line_number = error_match.group(1)
+            lines = final_code.split("\n")[: int(line_number) - 1]
+            lines.reverse()
+            for line in lines:
+                if line.strip().startswith("# End Worker Definitions"):
+                    break
+                if line.strip().startswith("# Worker class: "):
+                    worker_name = line.split(": ")[1].strip()
+                    break
         return (
             None,
             None,
@@ -791,7 +798,7 @@ def generate_python_module(
                 "success": False,
                 "error": {
                     "message": f"Error formatting generated code with black: {e}",
-                    "nodeName": None,
+                    "nodeName": worker_name,
                     "fullTraceback": None,
                 },
             },
