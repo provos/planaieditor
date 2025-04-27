@@ -17,7 +17,7 @@ import sys
 import tempfile
 import traceback
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
@@ -378,6 +378,46 @@ os.environ['DEBUG_PORT'] = '{server.port}'
                 os.remove(tmp_file.name)
 
 
+def parse_traceback(traceback_str: str) -> Optional[Dict[str, Any]]:
+    """Parses a traceback string and returns a structured error message."""
+    # Traceback (most recent call last):
+    # File "/tmp/tmpg2bbp4sq.py", line 92, in <module>
+    #   class TaskWorker1(TaskWorker):
+    # File "/tmp/tmpg2bbp4sq.py", line 100, in TaskWorker1
+    #   blubber
+    # NameError: name 'blubber' is not defined
+
+    in_traceback = False
+    collected_lines = []
+    class_name = None
+    for line in traceback_str.split("\n"):
+        if not in_traceback:
+            if line.startswith("Traceback (most recent call last):"):
+                in_traceback = True
+            continue
+
+        class_worker_match = re.search(r"File \"(.*)\", line (\d+), in (\w+)", line)
+        if class_worker_match:
+            class_name = class_worker_match.group(3)
+            collected_lines = []
+            continue
+
+        if class_name:
+            collected_lines.append(line)
+
+    if not class_name:
+        return None
+
+    return {
+        "success": False,
+        "error": {
+            "message": "\n".join(collected_lines),
+            "nodeName": class_name,
+            "fullTraceback": None,
+        },
+    }
+
+
 # Helper function to process execution results - extracted from validate_code_in_venv to avoid code duplication
 def process_execution_results(process, module_name):
     """Processes the results of a subprocess execution, parsing output for structured JSON or errors."""
@@ -435,6 +475,10 @@ def process_execution_results(process, module_name):
             },
         }
         return error_data
+
+    traceback_data = parse_traceback(process.stderr)
+    if traceback_data:
+        return traceback_data
 
     # Try to parse structured JSON success output
     success_match = re.search(
