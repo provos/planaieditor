@@ -54,7 +54,9 @@
 
 	// --- Effects ---
 	onMount(() => {
-		validateJsonData();
+		if (selectedClassName) {
+			validateJsonData();
+		}
 	});
 
 	// Update data when selectedClassName changes
@@ -72,6 +74,10 @@
 
 	// Handler for code updates from EditableCodeSection
 	function handleJsonUpdate(newCode: string) {
+		if (!selectedClassName) {
+			return;
+		}
+		
 		data.jsonData = newCode;
 		errorMessage = null;
 		jsonIsValid = false;
