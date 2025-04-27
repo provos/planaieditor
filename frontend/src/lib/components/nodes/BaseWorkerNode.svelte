@@ -226,8 +226,17 @@
 	}
 
 	// Handler for code updates
-	function handleOtherMembersSourceUpdate(newCode: string) {
-		data.otherMembersSource = newCode;
+	function handleOtherMembersSourceUpdate(newCode: string | undefined) {
+		if (newCode === undefined) {
+			delete data.otherMembersSource;
+			otherMembersSource = undefined;
+		} else {
+			data.otherMembersSource = newCode;
+			otherMembersSource = newCode;
+		}
+		tick().then(() => {
+			updateNodeInternals(id);
+		});
 	}
 
 	function handleMethodUpdate(methodName: string, newCode: string) {
@@ -249,6 +258,7 @@
 	const coreMethods = data.requiredMembers || ['consume_work', 'prompt', 'system_prompt'];
 	let availableMethods = $derived(Object.keys(data.methods || {}));
 	let customMethods = $derived(availableMethods.filter((m) => !coreMethods.includes(m)));
+	let otherMembersSource = $derived(data.otherMembersSource);
 
 	async function handleCollapse() {
 		await tick();
@@ -455,13 +465,15 @@
 		</div>
 
 		<!-- Other Members Section -->
-		{#if data.otherMembersSource !== undefined}
+		{#if otherMembersSource !== undefined}
 			<div class="mt-3 flex-none border-t border-gray-200 p-1.5">
 				<h3 class="text-2xs mb-1 font-semibold text-gray-600">Other Class Members</h3>
 				<EditableCodeSection
 					title="Custom Code"
 					code={data.otherMembersSource}
 					language="python"
+					showReset={true}
+					onReset={() => handleOtherMembersSourceUpdate(undefined)}
 					onUpdate={handleOtherMembersSourceUpdate}
 					onCollapseToggle={handleCollapse}
 				/>
