@@ -571,7 +571,8 @@ Analyze the following information and provide a response.`,
 							});
 						});
 						closeContextMenu();
-					}
+					},
+					danger: false
 				});
 			}
 
@@ -628,7 +629,8 @@ Analyze the following information and provide a response.`,
 							});
 						});
 						closeContextMenu();
-					}
+					},
+					danger: false
 				}));
 
 			return [...addMethodItems, ...baseNodeItems]; // Combine add method items and base items
