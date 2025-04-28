@@ -25,6 +25,7 @@ def test_dir(tmp_path):
     subdir1.mkdir()
     (subdir1 / "file1.txt").write_text("File 1 content")
     (subdir1 / "file2.txt").write_text("File 2 content")
+    (subdir1 / "file3.exe").write_text("File 3 content")  # should never be listed
 
     # Subdirectory 2 (empty)
     subdir2 = root / "subdir2"
@@ -213,6 +214,22 @@ class TestReadFilesystem:
             data = json.loads(response.data)
             assert "message" in data
 
+    def test_read_disallowed_extension(self, app, test_dir):
+        """Test reading a file with a disallowed extension."""
+        setup_filesystem(app, test_dir)
+
+        # Create a file with disallowed extension
+        disallowed_file = test_dir / "test.exe"
+        disallowed_file.write_text("Test content")
+
+        with app.test_client() as client:
+            response = client.get("/api/filesystem/read?path=/test.exe")
+
+            assert response.status_code == 400
+            data = json.loads(response.data)
+            assert "message" in data
+            assert "disallowed extension" in data["message"].lower()
+
 
 class TestWriteFilesystem:
     """Tests for the write_filesystem endpoint."""
@@ -301,6 +318,44 @@ class TestWriteFilesystem:
             # Verify file was not created outside root
             outside_path = test_dir.parent / "outside.txt"
             assert not outside_path.exists()
+
+    def test_write_disallowed_extension(self, app, test_dir):
+        """Test writing a file with a disallowed extension."""
+        setup_filesystem(app, test_dir)
+
+        with app.test_client() as client:
+            response = client.post(
+                "/api/filesystem/write",
+                json={"path": "/test.exe", "content": "Test content"},
+            )
+
+            assert response.status_code == 400
+            data = json.loads(response.data)
+            assert "message" in data
+            assert "disallowed extension" in data["message"].lower()
+
+            # Verify file was not created
+            assert not (test_dir / "test.exe").exists()
+
+    def test_write_allowed_extension(self, app, test_dir):
+        """Test writing a file with an allowed extension."""
+        setup_filesystem(app, test_dir)
+
+        with app.test_client() as client:
+            response = client.post(
+                "/api/filesystem/write",
+                json={"path": "/test.py", "content": "print('Hello')"},
+            )
+
+            assert response.status_code == 200
+            data = json.loads(response.data)
+            assert "message" in data
+            assert data["path"] == "/test.py"
+
+            # Verify file was created with correct content
+            file_path = test_dir / "test.py"
+            assert file_path.exists()
+            assert file_path.read_text() == "print('Hello')"
 
 
 if __name__ == "__main__":

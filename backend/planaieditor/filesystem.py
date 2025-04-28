@@ -3,6 +3,8 @@ from pathlib import Path
 
 from flask import Flask, jsonify, request, send_file
 
+ALLOWED_EXTENSIONS = [".py", ".json", ".jsonl", ".txt"]
+
 
 def sanitize_path(root_path: Path, requested_path: str) -> Path:
     input_path = "./" + str(requested_path)
@@ -45,6 +47,11 @@ def setup_filesystem(app: Flask, root_path: Path):
             for item in full_path.iterdir():
                 try:
                     is_dir = item.is_dir()
+                    if not is_dir:
+                        extension = item.suffix
+                        if extension not in ALLOWED_EXTENSIONS:
+                            continue
+
                     relative_item_path = item.relative_to(absolute_root_path)
                     # Ensure each path starts with a forward slash for consistent API
                     item_path_str = "/" + str(relative_item_path).replace(os.sep, "/")
@@ -52,9 +59,7 @@ def setup_filesystem(app: Flask, root_path: Path):
                         {
                             "name": item.name,
                             "type": "directory" if is_dir else "file",
-                            "path": str(relative_item_path).replace(
-                                os.sep, "/"
-                            ),  # Use forward slashes for consistency
+                            "path": item_path_str,
                         }
                     )
                 except OSError as e:
@@ -101,6 +106,13 @@ def setup_filesystem(app: Flask, root_path: Path):
             if not full_path.is_file():
                 app.logger.warning(f"Read request: Path is not a file: {full_path}")
                 return jsonify({"message": "Path is not a file."}), 400
+
+            extension = full_path.suffix
+            if extension not in ALLOWED_EXTENSIONS:
+                app.logger.warning(
+                    f"Read request: Path has disallowed extension: {full_path}"
+                )
+                return jsonify({"message": "Path has disallowed extension."}), 400
 
             # Use send_file for efficient file sending and potential MIME type detection
             app.logger.info(f"Sending file: {full_path}")
@@ -156,6 +168,13 @@ def setup_filesystem(app: Flask, root_path: Path):
         try:
             # Sanitize the *full* path first to ensure the target location is valid
             full_path = sanitize_path(absolute_root_path, requested_path_str)
+
+            extension = full_path.suffix
+            if extension not in ALLOWED_EXTENSIONS:
+                app.logger.warning(
+                    f"Write request: Path has disallowed extension: {full_path}"
+                )
+                return jsonify({"message": "Path has disallowed extension."}), 400
 
             # Now, check the parent directory to ensure it exists and is writable within the root
             parent_dir = full_path.parent
