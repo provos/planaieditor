@@ -111,18 +111,6 @@
 
 	// Setup on component mount
 	onMount(() => {
-		// On backend disconnect, let's try to reset the interpreter
-		/* // Removed socket logic - will be handled in +page.svelte
-		if (socket) {
-			socket.on('connect', () => {
-				if (selectedPath) {
-					console.log('Resetting interpreter on backend reconnect:', selectedPath);
-				selectInterpreter(selectedPath);
-				}
-			});
-		}
-		*/
-
 		fetchCurrentInterpreter();
 		document.addEventListener('click', handleClickOutside);
 
