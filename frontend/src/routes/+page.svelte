@@ -2,7 +2,7 @@
 	import { dev } from '$app/environment';
 	import { persisted } from 'svelte-persisted-store';
 	import { backendUrl } from '$lib/utils/backendUrl';
-
+	import { downloadFile } from '$lib/utils/utils';
 	import { SvelteFlow, Background, Controls, ControlButton, useSvelteFlow } from '@xyflow/svelte';
 	import { getEdgeStyleProps } from '$lib/utils/edgeUtils';
 	import type { Node, Edge, Connection } from '@xyflow/svelte';
@@ -182,7 +182,14 @@
 		// Listen for export results from the backend
 		socketStore.socket.on(
 			'export_result',
-			(data: { success: boolean; message?: string; error?: BackendError }) => {
+			(data: {
+				success: boolean;
+				message?: string;
+				mode?: 'export' | 'execute' | undefined;
+				error?: BackendError;
+				python_code?: string;
+				validation_result?: any;
+			}) => {
 				// Get current nodes
 				const currentNodes = get(nodes);
 
@@ -195,6 +202,11 @@
 				// If there are updated nodes (with errors), update the store
 				if (result.updatedNodes) {
 					nodes.set(result.updatedNodes);
+				}
+
+				// If the export was successful, download the Python code
+				if (data.success && data.mode === 'export' && data.python_code) {
+					downloadFile('planai-graph.py', data.python_code);
 				}
 			}
 		);
@@ -673,7 +685,7 @@ Analyze the following information and provide a response.`,
 	// --- Python Export Function ---
 
 	// Function to handle the export button click
-	function handleExport() {
+	function handleExport(mode: 'export' | 'execute' = 'execute') {
 		// Get current nodes and edges from the stores
 		let currentNodes: Node[] = [];
 		let currentEdges: Edge[] = [];
@@ -683,7 +695,7 @@ Analyze the following information and provide a response.`,
 		unsubEdges();
 
 		// Call the export utility function
-		exportStatus = exportPythonCode(socketStore.socket, currentNodes, currentEdges);
+		exportStatus = exportPythonCode(socketStore.socket, currentNodes, currentEdges, mode);
 	}
 
 	// --- Python Import Functions ---
@@ -895,15 +907,7 @@ Analyze the following information and provide a response.`,
 		};
 
 		const jsonString = JSON.stringify(graphState, null, 2); // Pretty print JSON
-		const blob = new Blob([jsonString], { type: 'application/json' });
-		const url = URL.createObjectURL(blob);
-		const a = document.createElement('a');
-		a.href = url;
-		a.download = 'planai-graph.json'; // Default filename
-		document.body.appendChild(a);
-		a.click();
-		document.body.removeChild(a);
-		URL.revokeObjectURL(url);
+		downloadFile('planai-graph.json', jsonString);
 
 		console.log('Graph saved to JSON.');
 		// Optionally show a temporary success message for save
@@ -991,7 +995,8 @@ Analyze the following information and provide a response.`,
 <div class="flex h-screen w-screen flex-col">
 	<div class="w-full border-b border-gray-300 bg-gray-100 p-4">
 		<ToolShelf
-			onExport={handleExport}
+			onExport={() => handleExport('export')}
+			onExecute={() => handleExport('execute')}
 			onClearGraph={handleClearGraph}
 			onImport={triggerImport}
 			onSave={handleSave}

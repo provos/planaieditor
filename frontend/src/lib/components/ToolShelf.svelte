@@ -9,6 +9,7 @@
 	import UploadSimple from 'phosphor-svelte/lib/UploadSimple';
 	import Network from 'phosphor-svelte/lib/Network';
 	import PythonInterpreterSelector from '$lib/components/PythonInterpreterSelector.svelte';
+	import Export from 'phosphor-svelte/lib/Export';
 	import Play from 'phosphor-svelte/lib/Play';
 	import Gear from 'phosphor-svelte/lib/Gear';
 	import Keyboard from 'phosphor-svelte/lib/Keyboard';
@@ -21,6 +22,7 @@
 
 	let {
 		onExport,
+		onExecute,
 		onClearGraph,
 		onImport,
 		onConfigureLLMs,
@@ -28,6 +30,7 @@
 		onLoad
 	}: {
 		onExport: () => void;
+		onExecute: () => void;
 		onClearGraph: () => void;
 		onImport: () => void;
 		onConfigureLLMs: () => void;
@@ -35,6 +38,7 @@
 		onLoad: () => void;
 	} = $props<{
 		onExport: () => void;
+		onExecute: () => void;
 		onClearGraph: () => void;
 		onImport: () => void;
 		onConfigureLLMs: () => void;
@@ -472,9 +476,19 @@
 				<UploadSimple size={18} weight="bold" class="mr-1.5" />
 				Import
 			</button>
-			<!-- Execute Button -->
+			<!-- Export Button -->
 			<button
 				onclick={onExport}
+				class="flex items-center rounded bg-orange-500 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-orange-600"
+				data-testid="export-button"
+				title={unconnectedWorkersTooltip ? unconnectedWorkersTooltip : 'Export'}
+			>
+				<Export size={18} class="mr-1.5" />
+				Export
+			</button>
+			<!-- Execute Button -->
+			<button
+				onclick={onExecute}
 				class="flex items-center rounded bg-green-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-green-600"
 				data-testid="execute-button"
 				disabled={!isExecutionReady}

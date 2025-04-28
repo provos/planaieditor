@@ -674,6 +674,18 @@ def handle_export_graph(data):
         )
         return
 
+    if data.get("mode") == "export":
+        emit(
+            "export_result",
+            {
+                "success": True,
+                "mode": "export",
+                "python_code": python_code,
+            },
+            room=request.sid,
+        )
+        return
+
     # Attempt to validate the generated module in the specified venv
     validation_result = validate_code_in_venv(
         module_name, python_code, inject_debug_events=True
@@ -682,12 +694,15 @@ def handle_export_graph(data):
     # Construct the final response
     response_data = {
         "success": validation_result.get("success", False),
+        "mode": "execute",
         "python_code": python_code,
         "validation_result": validation_result,  # Include the validation details
     }
     # Add error details to the main level if validation failed
     if not response_data["success"]:
         response_data["error"] = validation_result.get("error", "Validation failed.")
+    else:
+        response_data["message"] = "Execution successful!"
 
     emit("export_result", response_data, room=request.sid)
 

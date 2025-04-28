@@ -8,6 +8,7 @@ import { llmConfigs, type LLMConfig } from '$lib/stores/llmConfigsStore';
 export interface ExportStatus {
     type: 'idle' | 'loading' | 'success' | 'error';
     message: string;
+    python_code?: string;
 }
 
 /**
@@ -20,7 +21,8 @@ export interface ExportStatus {
 export function exportPythonCode(
     socket: Socket | null,
     nodes: Node[],
-    edges: Edge[]
+    edges: Edge[],
+    mode: 'export' | 'execute' = 'execute'
 ): ExportStatus {
     if (!socket || !socket.connected) {
         console.error('Socket not connected. Cannot export.');
@@ -29,7 +31,8 @@ export function exportPythonCode(
 
     // --- Transformation Step ---
     // Create a map from nodeId to className/workerName
-    const graphData = convertGraphtoJSON(nodes, edges); // Use transformed nodes and edges
+    const graphData = convertGraphtoJSON(nodes, edges, mode);
+
     console.log('Exporting transformed graph:', graphData);
 
     socket.emit('export_graph', graphData);
@@ -39,6 +42,7 @@ export function exportPythonCode(
 interface GraphData {
     nodes: { id: string; data: any }[];
     edges: { source: string; target: string }[];
+    mode: 'export' | 'execute' | undefined;
 }
 
 function convertLLMConfigToBackendFormat(config: LLMConfig): Record<string, any> {
@@ -55,7 +59,7 @@ function convertLLMConfigToBackendFormat(config: LLMConfig): Record<string, any>
     return convertedConfig;
 }
 
-export function convertGraphtoJSON(nodes: Node[], edges: Edge[]): GraphData {
+export function convertGraphtoJSON(nodes: Node[], edges: Edge[], mode: 'export' | 'execute' = 'execute'): GraphData {
     const nodeIdToNameMap = new Map<string, string>();
     nodes.forEach(node => {
         const data = node.data as any; // Use any for broader compatibility during processing
@@ -184,7 +188,7 @@ export function convertGraphtoJSON(nodes: Node[], edges: Edge[]): GraphData {
 
     // --- End Transformation ---
     // Send transformed data
-    const graphData = { nodes: exportedNodes, edges: exportedEdges }; // Use transformed nodes and edges
+    const graphData = { nodes: exportedNodes, edges: exportedEdges, mode: mode }; // Use transformed nodes and edges
     return graphData;
 }
 
@@ -211,7 +215,7 @@ export function clearNodeErrors(nodes: Node[]): Node[] {
  * @returns Object containing updated status and nodes with error flags if necessary
  */
 export function processExportResult(
-    resultData: { success: boolean; message?: string; error?: BackendError },
+    resultData: { success: boolean; message?: string; error?: BackendError; mode?: 'export' | 'execute' | undefined; python_code?: string; validation_result?: any },
     nodes: Node[]
 ): { status: ExportStatus; updatedNodes?: Node[] } {
     // First clear any existing errors
