@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from flask import Flask, abort, jsonify, request, send_file
+from flask import Flask, jsonify, request, send_file
 
 
 def sanitize_path(root_path: Path, requested_path: str) -> Path:
@@ -23,7 +23,7 @@ def setup_filesystem(app: Flask, root_path: Path):
 
     @app.route("/api/filesystem/list", methods=["GET"])
     def list_filesystem():
-        requested_path_str = request.args.get("path", default=".", type=str)
+        requested_path_str = request.args.get("path", default="/", type=str)
         app.logger.debug(f"Received list request for path: {requested_path_str}")
 
         try:
@@ -45,8 +45,9 @@ def setup_filesystem(app: Flask, root_path: Path):
             for item in full_path.iterdir():
                 try:
                     is_dir = item.is_dir()
-                    # Construct path relative to the *original* request root for the frontend
                     relative_item_path = item.relative_to(absolute_root_path)
+                    # Ensure each path starts with a forward slash for consistent API
+                    item_path_str = "/" + str(relative_item_path).replace(os.sep, "/")
                     items.append(
                         {
                             "name": item.name,
@@ -63,19 +64,19 @@ def setup_filesystem(app: Flask, root_path: Path):
                     # Should not happen if iterdir is within root, but log just in case
                     app.logger.error(f"Error calculating relative path for {item}: {e}")
 
-            # Return the requested path relative to the root as well
-            display_path = str(full_path.relative_to(absolute_root_path)).replace(
+            display_path = "/" + str(full_path.relative_to(absolute_root_path)).replace(
                 os.sep, "/"
             )
-            # Handle root case explicitly
-            if display_path == ".":
+            if display_path == "/.":
                 display_path = "/"
-            elif not display_path.startswith("/"):
-                display_path = "/" + display_path
 
             app.logger.debug(f"Successfully listed items for: {display_path}")
             return jsonify({"path": display_path, "items": items}), 200
 
+        except ValueError as e:
+            # Specifically handle path validation errors (like traversal attempts)
+            app.logger.warning(f"Path validation error for '{requested_path_str}': {e}")
+            return jsonify({"message": f"Access denied: {e}"}), 403
         except Exception as e:
             app.logger.error(
                 f"Unexpected error in list_filesystem for path '{requested_path_str}': {e}",
