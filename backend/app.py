@@ -16,12 +16,14 @@ import subprocess
 import sys
 import tempfile
 import traceback
+from argparse import ArgumentParser
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
+from planaieditor.filesystem import setup_filesystem
 from planaieditor.llm_interface_utils import list_models_for_provider
 from planaieditor.patch import get_definitions_from_file
 from planaieditor.python import (
@@ -1075,6 +1077,14 @@ if not is_development:
 
 # Main execution block - Refactored to be callable by entry point
 def main():
+    parser = ArgumentParser()
+    parser.add_argument("--root-path", type=Path, default=None)
+    args = parser.parse_args()
+    if args.root_path:
+        setup_filesystem(app, args.root_path)
+    else:
+        setup_filesystem(app, Path.cwd())
+
     print(f"Starting Flask-SocketIO server in {FLASK_ENV} mode...")
     # Use different settings for development vs production
     run_config = {
