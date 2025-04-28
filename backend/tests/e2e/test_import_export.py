@@ -472,7 +472,7 @@ def test_import_export_roundtrip(page: Page, test_fixture_path: Path, request):
         with page.expect_response(
             lambda response: "/api/import-python" in response.url
             and response.request.method == "POST",
-            timeout=TIMEOUT * 2,
+            timeout=TIMEOUT,
         ) as response_info:
             import_button = page.locator('button[data-testid="import-button"]')
             expect(import_button).to_be_visible(timeout=TIMEOUT)
@@ -532,7 +532,7 @@ def test_import_export_roundtrip(page: Page, test_fixture_path: Path, request):
                 }
                 console.log('Executing window.convertGraphToJSON...');
                 try {
-                    const result = window.convertGraphToJSON(nodes_raw, edges_raw);
+                    const result = window.convertGraphToJSON(nodes_raw, edges_raw, mode="export");
                     console.log('window.convertGraphToJSON result:', result);
                     return result;
                 } catch (error) {

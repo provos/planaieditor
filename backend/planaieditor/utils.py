@@ -1,6 +1,6 @@
 import re
 from textwrap import dedent
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 
 def is_valid_python_class_name(name: str) -> bool:
@@ -82,3 +82,43 @@ def split_method_signature_body(method_source: str) -> Tuple[Optional[str], List
         print(f"Info: Splitting failed: {e}")
         # Parsing failed, return None for signature, and original lines as body
         return None, method_source.splitlines()
+
+
+def parse_traceback(traceback_str: str) -> Optional[Dict[str, Any]]:
+    """Parses a traceback string and returns a structured error message."""
+    # Traceback (most recent call last):
+    # File "/tmp/tmpg2bbp4sq.py", line 92, in <module>
+    #   class TaskWorker1(TaskWorker):
+    # File "/tmp/tmpg2bbp4sq.py", line 100, in TaskWorker1
+    #   blubber
+    # NameError: name 'blubber' is not defined
+
+    in_traceback = False
+    collected_lines = []
+    class_name = None
+    for line in traceback_str.split("\n"):
+        if not in_traceback:
+            if line.startswith("Traceback (most recent call last):"):
+                in_traceback = True
+            continue
+
+        class_worker_match = re.search(r"File \"(.*)\", line (\d+), in (\w+)", line)
+        if class_worker_match:
+            class_name = class_worker_match.group(3)
+            collected_lines = []
+            continue
+
+        if class_name:
+            collected_lines.append(line)
+
+    if not class_name:
+        return None
+
+    return {
+        "success": False,
+        "error": {
+            "message": "\n".join(collected_lines),
+            "nodeName": class_name,
+            "fullTraceback": None,
+        },
+    }

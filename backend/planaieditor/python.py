@@ -496,7 +496,7 @@ def wrap_instantiation_in_try_except(
 
 
 def create_factory_worker_instance(
-    node: Dict[str, Any], factories_used: Set[str]
+    node: Dict[str, Any], factories_used: Set[str], wrap_in_try_except: bool = True
 ) -> str:
     data = node.get("data", {})
     worker_class_name = data.get("className")
@@ -514,14 +514,21 @@ def create_factory_worker_instance(
     # Use the directly retrieved invocation string
     code.append(f"{instance_name} = {factory_function}({factory_invocation})")
 
-    return wrap_instantiation_in_try_except(
-        "\n".join(code),
-        worker_class_name,
-        f"Failed to create {worker_class_name} using {factory_function}",
-    )
+    if wrap_in_try_except:
+        return wrap_instantiation_in_try_except(
+            "\n".join(code),
+            worker_class_name,
+            f"Failed to create {worker_class_name} using {factory_function}",
+        )
+    else:
+        return "\n".join(code)
 
 
-def create_worker_instance(node: Dict[str, Any], llm_name: Optional[str] = None) -> str:
+def create_worker_instance(
+    node: Dict[str, Any],
+    llm_name: Optional[str] = None,
+    wrap_in_try_except: bool = True,
+) -> str:
     data = node.get("data", {})
     worker_class_name = data.get("className")
     instance_name = worker_to_instance_name(node)
@@ -551,9 +558,14 @@ def create_worker_instance(node: Dict[str, Any], llm_name: Optional[str] = None)
     else:
         code.append(f"{instance_name} = {worker_class_name}()")
 
-    return wrap_instantiation_in_try_except(
-        "\n".join(code), worker_class_name, f"Failed to instantiate {worker_class_name}"
-    )
+    if wrap_in_try_except:
+        return wrap_instantiation_in_try_except(
+            "\n".join(code),
+            worker_class_name,
+            f"Failed to instantiate {worker_class_name}",
+        )
+    else:
+        return "\n".join(code)
 
 
 def create_llm_args(llm_config: Dict[str, Any]) -> List[str]:
@@ -625,7 +637,10 @@ def generate_python_module(
     # --- Code Generation Start ---
 
     # 1. Imports
-    code_to_format = return_code_snippet("imports")
+    mode = graph_data.get("mode", "export")
+    code_to_format = return_code_snippet(
+        "export_execute" if mode == "execute" else "export_clean"
+    )
 
     imported_tasks = {}  # Store details of imported tasks: {className: modulePath}
     task_import_nodes = [n for n in nodes if n.get("type") == "taskimport"]
@@ -703,7 +718,11 @@ def generate_python_module(
         # Check if this is a factory-created worker
         if factory_function:
             # Handle factory-created SubGraphWorker
-            worker_setup.append(create_factory_worker_instance(node, factories_used))
+            worker_setup.append(
+                create_factory_worker_instance(
+                    node, factories_used, wrap_in_try_except=mode == "execute"
+                )
+            )
         else:  # Only process regular workers here
             llm_config = data.get("llmConfig")
             llm_name = data.get("llmConfigVar")
@@ -712,7 +731,11 @@ def generate_python_module(
                     f"    {llm_name} = llm_from_config({', '.join(create_llm_args(llm_config))})"
                 )
                 llm_names_used.add(llm_name)
-            worker_setup.append(create_worker_instance(node, llm_name))
+            worker_setup.append(
+                create_worker_instance(
+                    node, llm_name, wrap_in_try_except=mode == "execute"
+                )
+            )
 
     # Assuming factory functions come from planai.patterns for now
     factory_import_line = ""

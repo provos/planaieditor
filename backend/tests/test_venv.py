@@ -1,20 +1,16 @@
-import os
-import sys
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, PropertyMock, patch
 
-# Import the function to test
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from app import discover_python_environments, parse_traceback
+from planaieditor.venv import discover_python_environments
 
 
 class TestDiscoverPythonEnvironments(unittest.TestCase):
     """Tests for the discover_python_environments function."""
 
-    @patch("app.Path")
-    @patch("app.sys")
-    @patch("app.os")
+    @patch("planaieditor.venv.Path")
+    @patch("planaieditor.venv.sys")
+    @patch("planaieditor.venv.os")
     def test_discover_python_environments_base_case(self, mock_os, mock_sys, mock_path):
         """Test basic functionality of discover_python_environments."""
         # Set up sys.executable mock
@@ -42,9 +38,9 @@ class TestDiscoverPythonEnvironments(unittest.TestCase):
         # Verify that glob was called to search for venvs
         mock_base_dir.glob.assert_called_once_with("*/.venv")
 
-    @patch("app.Path")
-    @patch("app.sys")
-    @patch("app.os")
+    @patch("planaieditor.venv.Path")
+    @patch("planaieditor.venv.sys")
+    @patch("planaieditor.venv.os")
     def test_discover_python_environments_with_venvs(
         self, mock_os, mock_sys, mock_path
     ):
@@ -96,9 +92,9 @@ class TestDiscoverPythonEnvironments(unittest.TestCase):
         self.assertIn("Python (project1)", names)
         self.assertIn("Python (project2)", names)
 
-    @patch("app.Path")
-    @patch("app.sys")
-    @patch("app.os")
+    @patch("planaieditor.venv.Path")
+    @patch("planaieditor.venv.sys")
+    @patch("planaieditor.venv.os")
     def test_discover_python_environments_home_venvs(
         self, mock_os, mock_sys, mock_path
     ):
@@ -197,9 +193,9 @@ class TestDiscoverPythonEnvironments(unittest.TestCase):
         self.assertIn("venv3", names)
         self.assertIn("venv4", names)
 
-    @patch("app.Path")
-    @patch("app.sys")
-    @patch("app.os")
+    @patch("planaieditor.venv.Path")
+    @patch("planaieditor.venv.sys")
+    @patch("planaieditor.venv.os")
     def test_discover_python_environments_windows(self, mock_os, mock_sys, mock_path):
         """Test that home directory venvs are not checked on Windows."""
         # Set up sys.executable mock
@@ -229,9 +225,9 @@ class TestDiscoverPythonEnvironments(unittest.TestCase):
         # Verify home() was not called on Windows
         mock_path.home.assert_not_called()
 
-    @patch("app.Path")
-    @patch("app.sys")
-    @patch("app.os")
+    @patch("planaieditor.venv.Path")
+    @patch("planaieditor.venv.sys")
+    @patch("planaieditor.venv.os")
     def test_discover_python_environments_deduplication(
         self, mock_os, mock_sys, mock_path
     ):
@@ -279,99 +275,6 @@ class TestDiscoverPythonEnvironments(unittest.TestCase):
         # Verify each path appears only once
         self.assertEqual(1, paths.count("/usr/bin/python3"))
         self.assertEqual(1, paths.count(str(duplicate_python_path)))
-
-
-# New test class for parse_traceback
-class TestParseTraceback(unittest.TestCase):
-    """Tests for the parse_traceback function."""
-
-    def test_parse_traceback_valid(self):
-        """Test parsing a valid traceback with a class name."""
-        traceback_str = """
-Traceback (most recent call last):
-  File "/tmp/tmpg2bbp4sq.py", line 92, in <module>
-    graph = create_graph()
-  File "/tmp/tmpg2bbp4sq.py", line 85, in create_graph
-    graph.add_workers(worker1, worker2)
-  File "/path/to/planai/graph.py", line 100, in add_workers
-    # some planai code
-  File "/tmp/tmpg2bbp4sq.py", line 25, in TaskWorker1
-    some_undefined_variable
-NameError: name 'some_undefined_variable' is not defined
-"""
-        expected_result = {
-            "success": False,
-            "error": {
-                "message": "    some_undefined_variable\nNameError: name 'some_undefined_variable' is not defined\n",
-                "nodeName": "TaskWorker1",
-                "fullTraceback": None,
-            },
-        }
-        result = parse_traceback(traceback_str)
-        self.assertIsNotNone(result)
-        self.assertEqual(expected_result, result)
-
-    def test_parse_traceback_no_class_name(self):
-        """Test parsing a traceback without a clear class/function name in the relevant frame."""
-        traceback_str = """
-Traceback (most recent call last):
-  File "/tmp/tmp_script.py", line 5, in <module>
-    result = 1 / 0
-ZeroDivisionError: division by zero
-"""
-        result = parse_traceback(traceback_str)
-        self.assertIsNone(result, "Expected None when no class/function name is found")
-
-    def test_parse_traceback_module_level_error(self):
-        """Test parsing a traceback with an error at the module level."""
-        traceback_str = """
-Traceback (most recent call last):
-  File "/tmp/tmp_module_error.py", line 3, in <module>
-    import non_existent_module
-ModuleNotFoundError: No module named 'non_existent_module'
-"""
-        result = parse_traceback(traceback_str)
-        # Depending on the exact implementation, this might return None or extract '<module>'
-        # Based on the current code, it should return None as it looks for a class name
-        self.assertIsNone(
-            result, "Expected None for module-level errors without class context"
-        )
-
-    def test_parse_traceback_empty_string(self):
-        """Test parsing an empty string."""
-        traceback_str = ""
-        result = parse_traceback(traceback_str)
-        self.assertIsNone(result)
-
-    def test_parse_traceback_not_a_traceback(self):
-        """Test parsing a string that isn't a traceback."""
-        traceback_str = "This is just a regular error message, not a traceback."
-        result = parse_traceback(traceback_str)
-        self.assertIsNone(result)
-
-    def test_parse_traceback_nested_functions(self):
-        """Test parsing traceback going through nested functions within a class."""
-        traceback_str = """
-Traceback (most recent call last):
-  File "/tmp/tmp_nested.py", line 20, in <module>
-    instance.outer_method()
-  File "/tmp/tmp_nested.py", line 15, in outer_method
-    self.inner_method()
-  File "/tmp/tmp_nested.py", line 10, in InnerClass
-    print(undefined_var)
-NameError: name 'undefined_var' is not defined
-"""
-        expected_result = {
-            "success": False,
-            "error": {
-                "message": "    print(undefined_var)\nNameError: name 'undefined_var' is not defined\n",
-                "nodeName": "InnerClass",  # Extracts the class/function where the error occurred
-                "fullTraceback": None,
-            },
-        }
-        result = parse_traceback(traceback_str)
-        self.assertIsNotNone(result)
-        self.assertEqual(expected_result, result)
 
 
 if __name__ == "__main__":

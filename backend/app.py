@@ -32,6 +32,8 @@ from planaieditor.python import (
     generate_python_module,
 )
 from planaieditor.socket_server import SocketServer
+from planaieditor.utils import parse_traceback
+from planaieditor.venv import discover_python_environments
 
 # Import LSP handling functions
 from planaieditor import lsp_handler
@@ -73,64 +75,6 @@ app.config["SECRET_KEY"] = "secret!"  # Change this in production!
 app.config["SELECTED_VENV_PATH"] = (
     sys.executable  # Will store the selected Python interpreter path
 )
-
-
-# Function to discover Python environments
-def discover_python_environments(sort_venv_paths=True) -> List[Dict[str, str]]:
-    """
-    Discover Python interpreters available on the system.
-    Returns a list of dictionaries with 'path' and 'name' keys.
-    """
-    environments = []
-
-    # Current directory venvs
-    base_dir = Path(os.path.abspath(__file__)).parent.parent.parent
-    potential_dirs = base_dir.glob("*/.venv")
-    common_venv_paths = [
-        dir / "bin" / "python" for dir in potential_dirs if dir.is_dir()
-    ]
-    if sys.executable not in common_venv_paths:
-        common_venv_paths.append(sys.executable)
-    if sort_venv_paths:
-        common_venv_paths.sort()
-
-    # Add macOS/Linux specific paths
-    if sys.platform != "win32":
-        # Check home directory for virtual environments
-        home_dir = Path.home()
-        for env_dir in [".virtualenvs", "venvs", "Envs", ".cache/pypoetry/virtualenvs"]:
-            venvs_dir = home_dir / env_dir
-            if venvs_dir.exists():
-                for venv in venvs_dir.iterdir():
-                    venv_path = venv / "bin" / "python"
-                    if venv_path.exists() and venv_path.is_file():
-                        environments.append(
-                            {
-                                "path": str(venv_path),
-                                "name": f"{venv.name}",
-                            }
-                        )
-
-    # Add common venv paths
-    for venv_path in common_venv_paths:
-        if os.path.isfile(venv_path) and os.access(venv_path, os.X_OK):
-            environments.append(
-                {
-                    "path": str(venv_path),
-                    "name": f"Python ({venv_path.parent.parent.parent.name if venv_path != sys.executable else 'planaieditor'})",
-                }
-            )
-
-    # Filter out all duplicate paths
-    unique_environments = []
-    seen = set()
-    for env in environments:
-        env_path = env["path"]
-        if env_path not in seen:
-            unique_environments.append(env)
-            seen.add(env_path)
-
-    return unique_environments
 
 
 # API endpoints for Python interpreter selection
@@ -378,46 +322,6 @@ os.environ['DEBUG_PORT'] = '{server.port}'
             # Clean up the temporary file explicitly if it was created
             if tmp_file and os.path.exists(tmp_file.name):
                 os.remove(tmp_file.name)
-
-
-def parse_traceback(traceback_str: str) -> Optional[Dict[str, Any]]:
-    """Parses a traceback string and returns a structured error message."""
-    # Traceback (most recent call last):
-    # File "/tmp/tmpg2bbp4sq.py", line 92, in <module>
-    #   class TaskWorker1(TaskWorker):
-    # File "/tmp/tmpg2bbp4sq.py", line 100, in TaskWorker1
-    #   blubber
-    # NameError: name 'blubber' is not defined
-
-    in_traceback = False
-    collected_lines = []
-    class_name = None
-    for line in traceback_str.split("\n"):
-        if not in_traceback:
-            if line.startswith("Traceback (most recent call last):"):
-                in_traceback = True
-            continue
-
-        class_worker_match = re.search(r"File \"(.*)\", line (\d+), in (\w+)", line)
-        if class_worker_match:
-            class_name = class_worker_match.group(3)
-            collected_lines = []
-            continue
-
-        if class_name:
-            collected_lines.append(line)
-
-    if not class_name:
-        return None
-
-    return {
-        "success": False,
-        "error": {
-            "message": "\n".join(collected_lines),
-            "nodeName": class_name,
-            "fullTraceback": None,
-        },
-    }
 
 
 # Helper function to process execution results - extracted from validate_code_in_venv to avoid code duplication
