@@ -5,14 +5,7 @@
 	import ArrowUp from 'phosphor-svelte/lib/ArrowUp';
 	import Spinner from 'phosphor-svelte/lib/Spinner';
 	import { onMount } from 'svelte';
-	import { backendUrl } from '$lib/utils/backendUrl';
-
-	// Define Item type for clarity
-	type Item = {
-		name: string;
-		type: 'file' | 'directory';
-		path: string;
-	};
+	import { listDirectory, type FilesystemItem as Item } from '$lib/utils/filesystemApi';
 
 	// --- Props ---
 	let {
@@ -35,8 +28,8 @@
 
 	// --- State ---
 	let currentPath = $state(initialPath);
-	let items = $state<Item[]>([]); // Use Item type
-	let selectedItem = $state<Item | null>(null); // Use Item type
+	let items = $state<Item[]>([]); // Use imported Item type
+	let selectedItem = $state<Item | null>(null); // Use imported Item type
 	let fileNameInput = $state(defaultFileName);
 	let isLoading = $state(false);
 	let error = $state<string | null>(null);
@@ -46,36 +39,19 @@
 		isLoading = true;
 		error = null;
 		selectedItem = null; // Reset selection when path changes
-		// Reset filename input only if not in save mode, or if opening and the input doesn't match the selected item
 		if (
 			mode !== 'save' &&
 			(selectedItem === null || fileNameInput !== (selectedItem as Item).name)
 		) {
 			fileNameInput = '';
 		}
-		console.log(`Fetching items for path: ${path}`); // Debug log
+		console.log(`Fetching items for path: ${path}`);
+
 		try {
-			// Replace with your actual API endpoint and fetch logic
-			// Make sure your backend API is running and accessible
-			const response = await fetch(
-				`${backendUrl}/api/filesystem/list?path=${encodeURIComponent(path)}`
-			);
-
-			if (!response.ok) {
-				const errorData = await response
-					.json()
-					.catch(() => ({ message: 'Failed to fetch directory listing.' }));
-				throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-			}
-			const data = await response.json();
-			console.log('Received data:', data); // Debug log
-
-			if (!data || !data.path || !Array.isArray(data.items)) {
-				throw new Error('Invalid response format from server.');
-			}
+			const data = await listDirectory(path);
 
 			currentPath = data.path;
-			items = (data.items as Item[])
+			items = data.items
 				.sort((a: Item, b: Item) => {
 					if (a.type !== b.type) {
 						return a.type === 'directory' ? -1 : 1;
@@ -91,8 +67,8 @@
 					);
 				});
 		} catch (e: any) {
-			console.error('Fetch error:', e);
-			error = e.message || 'An unknown error occurred.';
+			console.error('Fetch items error:', e);
+			error = e.message || 'An unknown error occurred while listing directory.';
 			items = [];
 		} finally {
 			isLoading = false;
@@ -107,19 +83,15 @@
 
 	// --- Event Handlers ---
 	function handleItemClick(item: Item) {
-		// Use Item type
 		if (item.type === 'directory') {
-			// Navigate into directory
 			fetchItems(item.path);
 		} else {
-			// Select file
 			selectedItem = item;
 			fileNameInput = item.name; // Pre-fill input with selected file name
 		}
 	}
 
 	function handleUpDirectory() {
-		// Basic parent directory logic, relies on server-side canonicalization/validation
 		const parentPath = currentPath.substring(0, currentPath.lastIndexOf('/')) || '/';
 		fetchItems(parentPath);
 	}
@@ -136,27 +108,23 @@
 
 		let finalPath: string;
 		if (mode === 'save') {
-			// Ensure filename doesn't contain path separators and sanitize if needed
 			const sanitizedFileName = fileNameInput.trim().replace(/[\\/]/g, '');
 			if (!sanitizedFileName) {
 				error = 'Invalid filename.';
 				return;
 			}
-			// Combine current directory path with the filename
 			finalPath = currentPath.endsWith('/')
 				? `${currentPath}${sanitizedFileName}`
 				: `${currentPath}/${sanitizedFileName}`;
 		} else if (selectedItem) {
-			// mode === 'open' (selectedItem is guaranteed non-null here by validation)
 			finalPath = selectedItem.path;
 		} else {
-			// This case should ideally not be reached due to prior validation
 			error = 'No file selected.';
 			return;
 		}
 
-		console.log(`Saving/Opening path: ${finalPath}`); // Debug log
-		onSave(finalPath); // Pass the final path to the parent
+		console.log(`Saving/Opening path: ${finalPath}`);
+		onSave(finalPath);
 	}
 
 	// --- Derived State ---
@@ -172,7 +140,6 @@
 <Dialog.Root
 	open={true}
 	onOpenChange={(open) => {
-		// If Bits UI closes the dialog internally (e.g., Escape key / outside click), call our onClose
 		if (!open) {
 			onClose();
 		}
@@ -181,7 +148,7 @@
 	<Dialog.Portal>
 		<Dialog.Overlay class="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" />
 		<Dialog.Content
-			class="bg-white fixed left-1/2 top-1/2 z-50 max-h-[85vh] w-[90vw] max-w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-md border p-6 shadow-lg focus:outline-none"
+			class="fixed left-1/2 top-1/2 z-50 max-h-[85vh] w-[90vw] max-w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-md border bg-white p-6 shadow-lg focus:outline-none"
 		>
 			<Dialog.Title class="text-lg font-semibold leading-none tracking-tight">{title}</Dialog.Title>
 
@@ -209,7 +176,11 @@
 				{:else}
 					<ul class="divide-y">
 						{#each items as item (item.path)}
-							<li class="p-0 {selectedItem?.path === item.path ? 'bg-accent bg-blue-200 font-medium' : ''}">
+							<li
+								class="p-0 {selectedItem?.path === item.path
+									? 'bg-accent bg-blue-200 font-medium'
+									: ''}"
+							>
 								<button
 									class="hover:bg-accent flex w-full cursor-pointer appearance-none items-center space-x-3 px-4 py-2 text-left text-sm"
 									onclick={() => handleItemClick(item)}
