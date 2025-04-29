@@ -210,7 +210,6 @@ def validate_code_in_venv(module_name, code_string, inject_debug_events=False):
                     # Inject debug monitor import at the top of the code
                     debug_monitor_path = os.path.join(
                         os.path.dirname(__file__),
-                        "planaieditor",
                         "codesnippets",
                         "debug_monitor.py",
                     )
@@ -394,7 +393,6 @@ def process_execution_results(process, module_name):
         json_str = success_match.group(1)
         try:
             success_data = json.loads(json_str)
-            print(f"Parsed success JSON from script output: {success_data}")
             return success_data  # Return the structured success info
         except json.JSONDecodeError as e:
             print(
@@ -556,7 +554,9 @@ def handle_export_graph(data):
     print(f"Received export_graph event from {request.sid}")
     # You might want to add validation for the 'data' structure here
 
-    python_code, module_name, error_json = generate_python_module(data)
+    python_code, module_name, error_json = generate_python_module(
+        data, debug_print=is_development
+    )
     if error_json:
         emit("export_result", error_json, room=request.sid)
         return
@@ -705,9 +705,19 @@ def get_llm_models():
 
 # --- Helper function to run the inspection script --- #
 def run_inspection_script(
-    module_path: str, action: str, class_name: Optional[str] = None
+    module_path: str,
+    action: str,
+    class_name: Optional[str] = None,
+    debug_print: bool = False,
 ) -> dict:
     """Runs the inspect_module.py script in the selected venv and returns parsed JSON output."""
+    if debug_print:
+        dprint = print
+    else:
+
+        def dprint(*args, **kwargs):
+            pass
+
     python_executable = app.config.get("SELECTED_VENV_PATH")
     if not python_executable:
         return {"success": False, "error": "No Python interpreter selected."}
@@ -717,9 +727,7 @@ def run_inspection_script(
             "error": f"Selected Python interpreter not found: {python_executable}",
         }
 
-    script_path = (
-        Path(__file__).parent / "planaieditor" / "codesnippets" / "inspect_module.py"
-    )
+    script_path = Path(__file__).parent / "codesnippets" / "inspect_module.py"
     if not script_path.exists():
         return {
             "success": False,
@@ -743,14 +751,14 @@ def run_inspection_script(
         )
 
         # Debugging output
-        print("--- Inspect Script Start ---")
-        print(f"Command: {' '.join(command)}")
-        print(f"Return Code: {process.returncode}")
+        dprint("--- Inspect Script Start ---")
+        dprint(f"Command: {' '.join(command)}")
+        dprint(f"Return Code: {process.returncode}")
         if process.stdout:
-            print(f"stdout:\n{process.stdout.strip()}")
+            dprint(f"stdout:\n{process.stdout.strip()}")
         if process.stderr:
-            print(f"stderr:\n{process.stderr.strip()}")
-        print("--- Inspect Script End ---")
+            dprint(f"stderr:\n{process.stderr.strip()}")
+        dprint("--- Inspect Script End ---")
 
         # Attempt to parse JSON from stdout first (expected output)
         try:
@@ -789,7 +797,9 @@ def import_task_classes():
             400,
         )
 
-    result = run_inspection_script(module_path, action="list_classes")
+    result = run_inspection_script(
+        module_path, action="list_classes", debug_print=is_development
+    )
     status_code = 200 if result.get("success") else 400  # Or 500 for internal errors?
     return jsonify(result), status_code
 
@@ -815,7 +825,10 @@ def get_task_fields():
         )
 
     result = run_inspection_script(
-        module_path, action="get_fields", class_name=class_name
+        module_path,
+        action="get_fields",
+        class_name=class_name,
+        debug_print=is_development,
     )
     status_code = 200 if result.get("success") else 400  # Or 500?
     return jsonify(result), status_code
@@ -911,8 +924,6 @@ except Exception as e:
     sys.exit(1)
 """
 
-    print(validation_script)
-
     # Execute the validation script in the selected Python environment
     result = validate_code_in_venv("pydantic_validation", validation_script)
 
@@ -945,7 +956,9 @@ if is_development:
             )
 
         # Directly generate code from the pre-transformed data
-        python_code, module_name, error_json = generate_python_module(graph_data)
+        python_code, module_name, error_json = generate_python_module(
+            graph_data, debug_print=is_development
+        )
 
         if error_json:
             # Generation itself failed, return the error JSON from generate_python_module

@@ -614,6 +614,7 @@ def get_task_class_name(type_name: str) -> str:
 
 def generate_python_module(
     graph_data: dict,
+    debug_print: bool = False,
 ) -> Tuple[Optional[str], Optional[str], Optional[dict]]:
     """
     Converts the graph data (nodes, edges) into executable PlanAI Python code,
@@ -621,18 +622,27 @@ def generate_python_module(
 
     Args:
         graph_data (dict): Dictionary containing 'nodes' and 'edges'.
+        debug_print (bool): If True, print debug information during generation.
 
     Returns:
         tuple: (python_code_string, suggested_module_name, error_json)
                Returns (None, None, error_json) if conversion fails.
     """
-    print("Generating PlanAI Python module from graph data...")
+    # Define conditional print function
+    if debug_print:
+        dprint = print
+    else:
+
+        def dprint(*args, **kwargs):
+            pass
+
+    dprint("Generating PlanAI Python module from graph data...")
     module_name = "generated_plan"
     nodes = graph_data.get("nodes", [])
     edges = graph_data.get("edges", [])
 
-    print("--------------------------------")
-    print(json.dumps(graph_data, indent=4))
+    dprint("--------------------------------")
+    dprint(json.dumps(graph_data, indent=4))
 
     # --- Code Generation Start ---
 
@@ -794,10 +804,10 @@ def generate_python_module(
     # Format the generated code using black
     try:
         formatted_code = black.format_str(final_code, mode=black.FileMode())
-        print(f"Successfully generated and formatted code for module: {module_name}")
-        print("--- Generated Code ---")
-        print(formatted_code)
-        print("--- End Generated Code ---")
+        dprint(f"Successfully generated and formatted code for module: {module_name}")
+        dprint("--- Generated Code ---")
+        dprint(formatted_code)
+        dprint("--- End Generated Code ---")
         return formatted_code, module_name, None
     except black.InvalidInput as e:
         print(f"Error formatting generated code with black: {e}")
