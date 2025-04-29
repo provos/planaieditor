@@ -110,20 +110,20 @@ jobs:
         cd backend
         pip install poetry
     - name: Copy Frontend Assets to Backend Package
-        run: |
-          echo "Copying frontend build assets..."
-          # Define paths relative to the repo root
-          FRONTEND_BUILD_DIR="frontend/build"
-          BACKEND_TARGET_DIR="backend/planaieditor/static_frontend"
-          # Ensure target parent directory exists (it should, but belt-and-suspenders)
-          mkdir -p $(dirname "$BACKEND_TARGET_DIR")
-          # Remove existing target directory if it exists (clean copy)
-          rm -rf "$BACKEND_TARGET_DIR"
-          # Copy the frontend build output
-          cp -rp "$FRONTEND_BUILD_DIR" "$BACKEND_TARGET_DIR"
-          echo "Frontend assets copied."
-          echo "Listing target directory contents:"
-          ls -lR "$BACKEND_TARGET_DIR" || echo "Target directory not found or empty." # Add fallback message
+      run: |
+        echo "Copying frontend build assets..."
+        # Define paths relative to the repo root
+        FRONTEND_BUILD_DIR="frontend/build"
+        BACKEND_TARGET_DIR="backend/planaieditor/static_frontend"
+        # Ensure target parent directory exists (it should, but belt-and-suspenders)
+        mkdir -p $(dirname "$BACKEND_TARGET_DIR")
+        # Remove existing target directory if it exists (clean copy)
+        rm -rf "$BACKEND_TARGET_DIR"
+        # Copy the frontend build output
+        cp -rp "$FRONTEND_BUILD_DIR" "$BACKEND_TARGET_DIR"
+        echo "Frontend assets copied."
+        echo "Listing target directory contents:"
+        ls -lR "$BACKEND_TARGET_DIR" || echo "Target directory not found or empty." # Add fallback message
     - name: Build and Inspect Package
       run: |
         cd backend
