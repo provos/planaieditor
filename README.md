@@ -1,6 +1,8 @@
 # PlanAI Editor
 
+[![PyPI version](https://badge.fury.io/py/planaieditor.svg)](https://badge.fury.io/py/planaieditor)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Python Versions](https://img.shields.io/pypi/pyversions/planaieditor.svg)](https://pypi.org/project/planaieditor/)
 [![CI/CD Status](https://github.com/provos/planaieditor/actions/workflows/ci_cd.yml/badge.svg)](https://github.com/provos/planaieditor/actions/workflows/ci_cd.yml)
 
 A graphical user interface (GUI) for visually building and managing AI workflows using the [PlanAI](https://github.com/provos/planai) framework.
