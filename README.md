@@ -1,6 +1,6 @@
 # PlanAI Editor
 
-[![Status](https://img.shields.io/badge/status-pre--release-orange)](https://shields.io/) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 A graphical user interface (GUI) for visually building and managing AI workflows using the [PlanAI](https://github.com/provos/planai) framework.
 
@@ -27,7 +27,7 @@ The backend is powered by Python using Flask and Flask-SocketIO to handle graph 
 
 ## Technologies Used
 
-*   **Frontend:** Svelte 5, SvelteKit, svelte-flow, TypeScript
+*   **Frontend:** Svelte 5, SvelteKit, svelte-flow, Monaco Editor, TypeScript
 *   **Backend:** Python 3.10+, Flask, Flask-SocketIO
 *   **Core AI Framework:** PlanAI
 
@@ -124,10 +124,6 @@ This mode builds the frontend into static files, bundles them with the Python ba
         ```
     *   This will start the backend server, serving the bundled frontend.
     *   Navigate to `http://localhost:5001` (or the address shown in the console) in your web browser.
-
-## Disclaimer
-
-**This project is currently in a pre-release state.** It is intended for development and testing purposes only and is not officially supported. Features may change, and bugs are expected.
 
 ## Contributing
 
