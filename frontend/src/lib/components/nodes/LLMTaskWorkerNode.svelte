@@ -239,7 +239,6 @@
 	additionalOutputType={currentOutputType}
 	defaultName="LLMTaskWorker"
 	minHeight={400}
-	isCached={data.isCached}
 >
 	<!-- LLM Configuration Selector -->
 	<LLMConfigSelector

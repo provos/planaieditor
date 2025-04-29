@@ -81,7 +81,7 @@
 	}
 </script>
 
-<BaseWorkerNode {id} {data} defaultName="TaskWorker" isCached={data.isCached}>
+<BaseWorkerNode {id} {data} defaultName="TaskWorker">
 	<div class="flex min-h-0 flex-grow flex-col p-1">
 		{#if data.methods?.consume_work}
 			<EditableCodeSection

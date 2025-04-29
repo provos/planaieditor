@@ -7,6 +7,8 @@
 	import InputHandle from '../InputHandle.svelte';
 	import Trash from 'phosphor-svelte/lib/Trash';
 	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
+	import Archive from 'phosphor-svelte/lib/Archive';
+	import { Toggle } from 'bits-ui';
 	import type { Node } from '@xyflow/svelte';
 	import type { Snippet } from 'svelte';
 	import { tick } from 'svelte';
@@ -38,7 +40,6 @@
 		minWidth = 250,
 		minHeight = 200,
 		defaultName = 'BaseWorker',
-		isCached,
 		isEditable = true
 	} = $props<{
 		id: string;
@@ -49,7 +50,6 @@
 		minWidth?: number;
 		minHeight?: number;
 		defaultName?: string;
-		isCached?: boolean;
 		isEditable?: boolean;
 	}>();
 
@@ -71,6 +71,7 @@
 	);
 	let currentOutputTypes = $derived<string[]>([...(data.output_types || [])]);
 	let currentHeight = $state(minHeight); // State for reactive height
+	let localIsCached = $state(data.isCached ?? false); // Local state for the toggle
 
 	let combinedOutputTypes = $derived(
 		currentOutputTypes.length > 0
@@ -79,6 +80,22 @@
 				? [additionalOutputType]
 				: []
 	);
+	let workerType: string | undefined = undefined;
+	store.nodes.subscribe((values: Node[]) => {
+		const node = values.find((n) => n.id === id);
+		if (node) {
+			workerType = node.type;
+		}
+	})();
+	const allowedCacheTypes = [
+		'taskworker',
+		'llmtaskworker',
+		'chattaskworker',
+		'cachedtaskworker',
+		'cachedllmtaskworker',
+		'cachedchattaskworker'
+	];
+	const showCachedOption = workerType && allowedCacheTypes.includes(workerType);
 
 	// --- Effects for Reactivity ---
 	onMount(() => {
@@ -107,6 +124,14 @@
 			unsubNodes();
 			unsubClassNames();
 		};
+	});
+
+	// Effect to sync localIsCached back to data.isCached
+	$effect(() => {
+		// Only update if the value actually changed to avoid loops if data is also reactive
+		if (data.isCached !== localIsCached) {
+			data.isCached = localIsCached;
+		}
 	});
 
 	// --- Worker Name Editing Logic ---
@@ -304,11 +329,30 @@
 
 	<!-- Header -->
 	<div class="flex-none border-b border-gray-200 bg-gray-50 p-1">
-		{#if isCached}
-			<span
-				class="text-2xs absolute right-1 top-1 z-10 rounded bg-yellow-400 px-1 py-0.5 font-bold text-yellow-900 shadow-sm"
-				>CACHED</span
-			>
+		{#if showCachedOption}
+			<div class="absolute right-1 top-1 z-10 flex items-center justify-between">
+				{#if localIsCached}
+					<span
+						class="text-2xs rounded bg-yellow-400 px-1 py-0.5 font-bold text-yellow-900 shadow-sm"
+						>CACHED</span
+					>
+				{:else}
+					<span class="text-2xs rounded bg-gray-400/20 px-1 py-0.5 text-gray-900/20 shadow-sm"
+						>NOT CACHED</span
+					>
+				{/if}
+				<!-- Cache Toggle -->
+				{#if isEditable}
+					<Toggle.Root
+						aria-label="Toggle cached state"
+						class="hover:bg-muted active:bg-dark-10 ml-0.5 h-4 w-4 rounded transition-all data-[state=off]:text-gray-400 data-[state=on]:text-yellow-700"
+						bind:pressed={localIsCached}
+						title={localIsCached ? 'Worker is Cached' : 'Worker is Not Cached'}
+					>
+						<Archive size={10} weight="bold" />
+					</Toggle.Root>
+				{/if}
+			</div>
 		{/if}
 		{#if editingWorkerName}
 			<!-- Worker Name Edit Input -->

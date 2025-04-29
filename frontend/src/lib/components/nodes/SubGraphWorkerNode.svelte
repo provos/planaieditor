@@ -87,7 +87,6 @@
 	{id}
 	data={dataCopy}
 	defaultName={data.workerName || 'SubGraphWorker'}
-	isCached={data.isCached}
 	minWidth={200}
 	minHeight={150}
 	isEditable={false}

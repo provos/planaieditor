@@ -30,7 +30,6 @@
 	{id}
 	{data}
 	defaultName={data.workerName || 'ChatTaskWorker'}
-	isCached={data.isCached}
 	minWidth={200}
 	minHeight={150}
 	isEditable={false}
