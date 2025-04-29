@@ -12,6 +12,7 @@ This application provides a node-based interface, built with Svelte 5 and svelte
 *   Configure the properties of each node.
 *   Export the designed graph into a Python module compatible with PlanAI.
 *   Import existing PlanAI Python modules into the visual editor for modification.
+*   Execute a PlanAI graph within the UI and see its output
 
 The backend is powered by Python using Flask and Flask-SocketIO to handle graph processing and communication with the PlanAI framework.
 
