@@ -589,6 +589,8 @@ def extract_worker_details(
 
     # Clean up trailing newlines from the consolidated source
     details["otherMembersSource"] = details["otherMembersSource"].strip()
+    if details["otherMembersSource"] == "":
+        del details["otherMembersSource"]
 
     # Special case for ChatTaskWorker
     if worker_type == "chattaskworker":

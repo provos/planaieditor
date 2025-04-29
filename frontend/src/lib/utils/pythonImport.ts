@@ -56,7 +56,7 @@ export interface ImportedWorker {
     classVars: Record<string, any>; // Dictionary of known parsed class vars
     inputTypes?: string[]; // Optional: Parsed from consume_work type hint
     methods: Record<string, string>; // Dictionary of known method sources
-    otherMembersSource: string; // Consolidated source code of other members
+    otherMembersSource?: string; // Consolidated source code of other members
     variableName?: string; // Optional: Variable name assigned
     factoryFunction?: string; // Name of the factory function if applicable
     factoryInvocation?: string; // Combined invocation string
@@ -339,7 +339,7 @@ export async function importPythonCode(
                 output_types: worker.classVars.output_types || [], // Map output_types
                 // Store unparsed methods and members for potential display/editing later
                 methods: worker.methods || {}, // Ensure methods exists
-                otherMembersSource: worker.otherMembersSource || '', // Store consolidated source
+                otherMembersSource: worker.otherMembersSource || undefined, // Store consolidated source
                 classVars: worker.classVars || {}, // Store the rest of class vars for now
             };
 
