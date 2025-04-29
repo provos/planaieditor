@@ -7,6 +7,10 @@ from pathlib import Path
 import pytest
 from playwright.sync_api import APIResponse, Page, Route, expect
 
+# Skip e2e tests if SKIP_E2E_TESTS is set
+if os.environ.get("SKIP_E2E_TESTS") == "true":
+    pytest.skip("Skipping e2e tests as SKIP_E2E_TESTS is set", allow_module_level=True)
+
 # Ensure planaieditor can be imported (adjust if your structure differs)
 # This might be handled by running pytest from the 'backend' dir
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
