@@ -215,4 +215,3 @@ NameError: name 'undefined_var' is not defined
         result = parse_traceback(traceback_str)
         self.assertIsNotNone(result)
         self.assertEqual(expected_result, result)
-

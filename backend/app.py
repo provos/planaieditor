@@ -18,7 +18,7 @@ import tempfile
 import traceback
 from argparse import ArgumentParser
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Optional
 
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
@@ -1025,7 +1025,7 @@ def main():
     # Use eventlet for better performance if available
     try:
         # Verify if eventlet was successfully imported and patched earlier
-        import eventlet  # Re-import shouldn't hurt, just checks if it's available
+        import eventlet  # Re-import shouldn't hurt, just checks if it's available  # noqa: F401
 
         print("Using eventlet WSGI server for socketio.run().")
         if is_development:
