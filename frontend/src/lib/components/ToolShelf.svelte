@@ -27,7 +27,9 @@
 		onImport,
 		onConfigureLLMs,
 		onSave,
-		onLoad
+		onLoad,
+		graphName = '',
+		onGraphNameChange = (name: string) => {}
 	}: {
 		onExport: () => void;
 		onExecute: () => void;
@@ -36,15 +38,9 @@
 		onConfigureLLMs: () => void;
 		onSave: () => void;
 		onLoad: () => void;
-	} = $props<{
-		onExport: () => void;
-		onExecute: () => void;
-		onClearGraph: () => void;
-		onImport: () => void;
-		onConfigureLLMs: () => void;
-		onSave: () => void;
-		onLoad: () => void;
-	}>();
+		graphName: string;
+		onGraphNameChange: (name: string) => void;
+	} = $props();
 
 	// Handles the start of dragging a new node
 	function onDragStart(event: DragEvent, nodeType: string) {
@@ -444,7 +440,23 @@
 	</div>
 
 	<!-- Actions Section -->
-	<div class="flex items-center gap-2 border-r border-gray-300/70 pr-4">
+	<div class="flex flex-col gap-2 border-r border-gray-300/70 pr-4">
+		<!-- Graph Name Input -->
+		<div class="flex items-center gap-2">
+			<label for="graph-name" class="text-xs uppercase tracking-wider text-gray-500"
+				>Graph Name</label
+			>
+			<input
+				id="graph-name"
+				type="text"
+				value={graphName}
+				placeholder="Unnamed Graph"
+				class="h-[34px] rounded-md border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+				oninput={(e) => onGraphNameChange(e.currentTarget.value)}
+			/>
+		</div>
+
+		<!-- Action Buttons -->
 		<div class="flex flex-wrap gap-2">
 			<!-- Load Button -->
 			<button

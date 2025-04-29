@@ -67,9 +67,13 @@
 	// Import the Monaco setup utility
 	import { setupMonacoEnvironment } from '$lib/monaco';
 
+	// Import the graphName store
+	import { graphName } from '$lib/stores/graphNameStore.svelte';
+
 	// Define the structure for the saved JSON file
 	interface SavedGraphState {
 		version: number;
+		name?: string;
 		nodes: Node[];
 		edges: Edge[];
 		llmConfigs: LLMConfig[];
@@ -898,19 +902,26 @@ Analyze the following information and provide a response.`,
 		const currentUserLLMConfigs = get(llmConfigs);
 		const currentCodeLLMConfigs = get(llmConfigsFromCode);
 
+		// Prompt for name if unnamed
+		if (!get(graphName).trim()) {
+			const name = prompt('Please enter a name for your graph:', '');
+			if (!name) return; // User cancelled
+			graphName.set(name);
+		}
+
 		const graphState: SavedGraphState = {
 			version: 1,
+			name: get(graphName),
 			nodes: currentNodes,
 			edges: currentEdges,
 			llmConfigs: currentUserLLMConfigs,
 			llmConfigsFromCode: currentCodeLLMConfigs
 		};
 
-		const jsonString = JSON.stringify(graphState, null, 2); // Pretty print JSON
-		downloadFile('planai-graph.json', jsonString);
+		const jsonString = JSON.stringify(graphState, null, 2);
+		downloadFile(`${get(graphName) || 'planai-graph'}.json`, jsonString);
 
 		console.log('Graph saved to JSON.');
-		// Optionally show a temporary success message for save
 	}
 
 	// Handle JSON file selection for loading
@@ -973,6 +984,11 @@ Analyze the following information and provide a response.`,
 			llmConfigs.set(loadedState.llmConfigs);
 			llmConfigsFromCode.set(loadedState.llmConfigsFromCode);
 
+			// Restore graph name if it exists in the loaded state
+			if (loadedState.name) {
+				graphName.set(loadedState.name);
+			}
+
 			loadStatus = { type: 'success', message: 'Graph loaded successfully.' };
 
 			// Use setTimeout to allow Svelte to render nodes first before layout
@@ -988,6 +1004,7 @@ Analyze the following information and provide a response.`,
 			edges.set([]);
 			llmConfigs.set([]);
 			llmConfigsFromCode.set([]);
+			graphName.set(''); // Reset graph name on error
 		}
 	}
 </script>
@@ -1002,6 +1019,8 @@ Analyze the following information and provide a response.`,
 			onSave={handleSave}
 			onLoad={triggerLoad}
 			onConfigureLLMs={() => (showLLMConfigModal = true)}
+			graphName={get(graphName)}
+			onGraphNameChange={(name) => graphName.set(name)}
 		/>
 
 		<!-- Hidden File input for Python import -->
@@ -1078,7 +1097,7 @@ Analyze the following information and provide a response.`,
 		>
 			<Background />
 			<Controls>
-				<ControlButton on:click={runElkLayout} title="Re-run Layout">
+				<ControlButton onclick={runElkLayout} title="Re-run Layout">
 					<ArrowsClockwise size={16} />
 				</ControlButton>
 			</Controls>
