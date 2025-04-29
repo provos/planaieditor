@@ -45,7 +45,7 @@ is_development = FLASK_ENV == "development"
 # Define the build directory *within the package* for production
 # This path is relative to app.py's location
 package_static_dir = os.path.join(
-    os.path.dirname(__file__), "planaieditor", "static_frontend"
+    os.path.dirname(__file__), "static_frontend"
 )
 
 # Initialize Flask differently based on mode
@@ -1008,7 +1008,7 @@ def main():
     # Use different settings for development vs production
     run_config = {
         "app": app,
-        "host": "0.0.0.0",  # Listen on all interfaces
+        "host": "localhost",  # Listen only on localhost because of dangerous exposed interfaces
         "port": 5001,
     }
     if is_development:
