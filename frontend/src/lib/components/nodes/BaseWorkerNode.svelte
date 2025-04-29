@@ -258,7 +258,7 @@
 	const coreMethods = data.requiredMembers || ['consume_work', 'prompt', 'system_prompt'];
 	let availableMethods = $derived(Object.keys(data.methods || {}));
 	let customMethods = $derived(availableMethods.filter((m) => !coreMethods.includes(m)));
-	let otherMembersSource = $derived(data?.otherMembersSource || undefined);
+	let otherMembersSource = $derived(data?.otherMembersSource ?? undefined);
 
 	async function handleCollapse() {
 		await tick();

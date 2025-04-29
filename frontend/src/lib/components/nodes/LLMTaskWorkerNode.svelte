@@ -6,9 +6,11 @@
 	import { taskClassNamesStore } from '$lib/stores/taskClassNamesStore';
 	import { getColorForType } from '$lib/utils/colorUtils';
 	import Trash from 'phosphor-svelte/lib/Trash';
-	import { useUpdateNodeInternals } from '@xyflow/svelte';
+	import { useUpdateNodeInternals, useStore } from '@xyflow/svelte';
 	import { tick } from 'svelte';
 	import type { Action } from 'svelte/action';
+	import { onMount } from 'svelte';
+	import { addAvailableMethod } from '$lib/utils/nodeUtils';
 
 	// Extend the base data interface
 	export interface LLMWorkerData extends BaseWorkerData {
@@ -35,14 +37,52 @@
 		llmConfigVar?: string;
 	}
 
-	let { id, data } = $props<{ id: string; data: LLMWorkerData }>();
+	let { id, data } = $props<{
+		id: string;
+		data: LLMWorkerData;
+	}>();
 
 	const updateNodeInternals = useUpdateNodeInternals();
+	const { nodes } = useStore();
 
 	// Create local state variables for reactivity
 	let availableTaskClasses = $state<string[]>([]);
 	let showLLMOutputTypeDropdown = $state(false);
 	let currentOutputType = $state(data.llm_output_type || '');
+	let nodeOutputTypes = $state<string[]>([]);
+
+	onMount(() => {
+		const unsubNodes = nodes.subscribe((values) => {
+			// find the node with the same id as the current node
+			const node = values.find((node) => node.id === id);
+			if (node && (node.data as LLMWorkerData).output_types !== $state.snapshot(nodeOutputTypes)) {
+				nodeOutputTypes = (node.data as LLMWorkerData).output_types;
+				if ((node.data as LLMWorkerData).methods?.post_process) {
+					// we already have a post_process method and don't need to add it
+					return;
+				}
+
+				let needExtraMethod = false;
+				if (nodeOutputTypes.length > 1) {
+					needExtraMethod = true;
+				} else if (
+					nodeOutputTypes.length == 1 &&
+					nodeOutputTypes[0] != $state.snapshot(currentOutputType)
+				) {
+					needExtraMethod = true;
+				}
+				if (needExtraMethod) {
+					addAvailableMethod(nodes, id, 'post_process');
+				}
+			}
+		});
+
+		return unsubNodes;
+	});
+
+	// Local state for boolean flags
+	let useXml = $state(data.use_xml);
+	let debugMode = $state(data.debug_mode);
 
 	// Ensure all fields are initialized
 	if (!data.prompt) {
@@ -93,10 +133,6 @@
 		data.debug_mode = false;
 	}
 
-	// Local state for boolean flags
-	let useXml = $state(data.use_xml);
-	let debugMode = $state(data.debug_mode);
-
 	// Subscribe to the taskClassNamesStore for output type selection
 	$effect(() => {
 		const unsubClassNames = taskClassNamesStore.subscribe((taskClasses) => {
@@ -114,11 +150,6 @@
 	});
 
 	// Sync local state with data object
-	$effect(() => {
-		currentOutputType = data.llm_output_type || '';
-	});
-
-	// Sync local checkbox state back to data prop
 	$effect(() => {
 		data.use_xml = useXml;
 	});

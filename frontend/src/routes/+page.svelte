@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { nodes, edges } from '$lib/stores/graphStore';
 	import { dev } from '$app/environment';
 	import { persisted } from 'svelte-persisted-store';
 	import { backendUrl } from '$lib/utils/backendUrl';
@@ -35,14 +36,12 @@
 	import type { ContextMenuItem } from '$lib/components/ContextMenu.svelte';
 	import Trash from 'phosphor-svelte/lib/Trash';
 	import Scissors from 'phosphor-svelte/lib/Scissors';
+	import Code from 'phosphor-svelte/lib/Code';
+	import ArrowsClockwise from 'phosphor-svelte/lib/ArrowsClockwise'; // Icon for layout
 	import { io } from 'socket.io-client';
 	import { onMount } from 'svelte';
 	import { selectedInterpreterPath } from '$lib/stores/pythonInterpreterStore.svelte';
-	import Code from 'phosphor-svelte/lib/Code';
-	import ArrowsClockwise from 'phosphor-svelte/lib/ArrowsClockwise'; // Icon for layout
-
-	// Import utility for default method bodies
-	import { getDefaultMethodBody } from '$lib/utils/defaults';
+	import { addAvailableMethod } from '$lib/utils/nodeUtils';
 
 	// Import the LLM Config Modal
 	import LLMConfigModal from '$lib/components/LLMConfigModal.svelte';
@@ -100,10 +99,6 @@
 
 	// Use SvelteFlow hook
 	const { screenToFlowPosition, getNodes, fitView } = useSvelteFlow();
-
-	// Use persisted Svelte stores for nodes and edges
-	const nodes = persisted<Node[]>('nodes', []);
-	const edges = persisted<Edge[]>('edges', []);
 
 	// Socket.IO connection state
 	let exportStatus = $state<ExportStatus>({
@@ -587,7 +582,14 @@ Analyze the following information and provide a response.`,
 						nodes.update((currentNodes) => {
 							return currentNodes.map((node) => {
 								if (node.id === contextMenuNode!.id) {
-									return { ...node, data: { ...node.data, otherMembersSource: '' } };
+									console.log('adding other members');
+									return {
+										...node,
+										data: {
+											...node.data,
+											otherMembersSource: '# add member variables or custom functions here'
+										}
+									};
 								}
 								return node;
 							});
@@ -632,24 +634,7 @@ Analyze the following information and provide a response.`,
 					label: `Add ${methodName}()`,
 					iconComponent: Code,
 					action: () => {
-						nodes.update((currentNodes) => {
-							return currentNodes.map((node) => {
-								if (node.id === contextMenuNode!.id) {
-									const updatedMethods = {
-										...(node.data.methods || {}),
-										[methodName]: getDefaultMethodBody(methodName)
-									};
-									return {
-										...node,
-										data: {
-											...node.data,
-											methods: updatedMethods
-										}
-									};
-								}
-								return node;
-							});
-						});
+						addAvailableMethod(nodes, contextMenuNode!.id, methodName);
 						closeContextMenu();
 					},
 					danger: false
