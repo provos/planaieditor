@@ -1,6 +1,7 @@
 # PlanAI Editor
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![CI/CD Status](https://github.com/provos/planaieditor/actions/workflows/ci_cd.yml/badge.svg)](https://github.com/provos/planaieditor/actions/workflows/ci_cd.yml)
 
 A graphical user interface (GUI) for visually building and managing AI workflows using the [PlanAI](https://github.com/provos/planai) framework.
 
@@ -26,20 +27,37 @@ The backend is powered by Python using Flask and Flask-SocketIO to handle graph 
 *   **Python Export:** Generate runnable Python code from your visual graph.
 *   **Python Import:** Load existing PlanAI Python files into the editor for visualization and modification. (Backend uses `ast` module for parsing and patching).
 
-## Technologies Used
+## Installation
 
-*   **Frontend:** Svelte 5, SvelteKit, svelte-flow, Monaco Editor, TypeScript
-*   **Backend:** Python 3.10+, Flask, Flask-SocketIO
-*   **Core AI Framework:** PlanAI
+The easiest way to install the PlanAI Editor is using pip:
 
-## Getting Started (Preliminary)
+```bash
+pip install planaieditor
+```
+
+**Prerequisites:** You need Python 3.10+ installed.
+
+## Usage
+
+Once installed, run the application from your terminal:
+
+```bash
+planaieditor
+```
+
+Then, open your web browser and navigate to `http://localhost:5001`.
+
+## Development
+
+This section is for developers who want to contribute to the PlanAI Editor or run it from the source code.
 
 **Prerequisites:**
 
 *   Python 3.10+
 *   Node.js and [npm](https://www.npmjs.com/) (Node Package Manager)
+*   [Poetry](https://python-poetry.org/) for Python package management.
 
-**Installation:**
+**Setup:**
 
 1.  **Clone the repository:**
     ```bash
@@ -49,7 +67,7 @@ The backend is powered by Python using Flask and Flask-SocketIO to handle graph 
 2.  **Backend Setup:**
     ```bash
     cd backend
-    poetry install
+    poetry install --with dev # Install main and development dependencies
     cd ..
     ```
 3.  **Frontend Setup:**
@@ -59,13 +77,9 @@ The backend is powered by Python using Flask and Flask-SocketIO to handle graph 
     cd ..
     ```
 
-## Usage
+### Running in Development Mode
 
-There are two main ways to run the application:
-
-### 1. Development Mode
-
-This mode runs the frontend and backend separately, allowing for hot-reloading during development.
+This mode runs the frontend and backend separately, allowing for hot-reloading when code changes are made.
 
 1.  **Run the Backend (Development Mode):**
     *   Open a terminal in the `backend` directory.
@@ -73,7 +87,7 @@ This mode runs the frontend and backend separately, allowing for hot-reloading d
       *   On Linux/macOS: `export FLASK_ENV=development`
       *   On Windows (Command Prompt): `set FLASK_ENV=development`
       *   On Windows (PowerShell): `$env:FLASK_ENV = "development"`
-    *   Run the backend:
+    *   Run the backend using Poetry:
         ```bash
         poetry run python app.py
         ```
@@ -87,44 +101,48 @@ This mode runs the frontend and backend separately, allowing for hot-reloading d
         ```
         *(Keep this terminal running)*
 
-    This will usually open your browser automatically to `http://localhost:5173`. Changes to the frontend code will trigger automatic updates.
+    This will usually open your browser automatically to `http://localhost:5173`.
 
-### 2. Building and Running the Packaged Application (Distribution/Usage)
+### Building and Running the Packaged Application from Source
 
-This mode builds the frontend into static files, bundles them with the Python backend into a standard Python package (wheel), and provides a command-line entry point to run the application.
+This describes how to build the frontend, package the application, and run it locally from the built package. This is useful for testing the final build process before publishing.
 
 1.  **Build the Frontend:**
-    *   Make sure you have Node.js and npm installed.
     *   Navigate to the `frontend` directory and build the static assets:
         ```bash
         cd frontend
-        npm install  # If you haven't already
+        # npm install # If you haven't already
         npm run build
         cd ..
         ```
 2.  **Build the Python Package:**
     *   Navigate to the `backend` directory.
-    *   Use Poetry to build the wheel file. This will trigger the `setup.py` script, which copies the frontend build into the package.
+    *   Use Poetry to build the wheel file. This includes the frontend build assets.
         ```bash
         cd backend
         poetry build
         ```
-    *   This creates a `.whl` file in the `backend/dist/` directory (e.g., `backend/dist/planaieditor-0.1.0-py3-none-any.whl`).
+    *   This creates a `.whl` file in the `backend/dist/` directory.
 
-3.  **Install the Package:**
-    *   You can install the built wheel file using pip (ideally in a virtual environment):
+3.  **Install the Local Package:**
+    *   Install the built wheel file using pip (ideally in a separate virtual environment):
         ```bash
         # Example: Install from the dist directory
         pip install backend/dist/planaieditor-*.whl
         ```
 
-4.  **Run the Application:**
-    *   Once installed, you can run the application using the command defined in `pyproject.toml`:
+4.  **Run the Locally Built Application:**
+    *   Run the installed application:
         ```bash
         planaieditor
         ```
-    *   This will start the backend server, serving the bundled frontend.
-    *   Navigate to `http://localhost:5001` (or the address shown in the console) in your web browser.
+    *   Navigate to `http://localhost:5001` in your web browser.
+
+## Technologies Used
+
+*   **Frontend:** Svelte 5, SvelteKit, svelte-flow, Monaco Editor, TypeScript
+*   **Backend:** Python 3.10+, Flask, Flask-SocketIO
+*   **Core AI Framework:** PlanAI
 
 ## Contributing
 
