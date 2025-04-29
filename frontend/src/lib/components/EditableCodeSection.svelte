@@ -44,9 +44,6 @@
 	// Effect to create the editor once the monaco instance and container are ready
 	$effect(() => {
 		if (monacoInstance.instance && editorContainer && !editor) {
-			console.log(
-				`Creating Monaco editor instance in container for: ${title || 'Untitled Section'}`
-			);
 			editor = monacoInstance.instance.editor.create(editorContainer!, {
 				value: code,
 				language: language,
