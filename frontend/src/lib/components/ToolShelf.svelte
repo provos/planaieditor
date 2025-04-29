@@ -121,6 +121,16 @@
 			unconnectedWorkersTooltip = null; // Clear tooltip if ready or no specific nodes are missing connections
 		}
 	});
+
+	// Function to handle Enter/Escape key press in the input
+	function handleGraphNameKeydown(event: KeyboardEvent) {
+		if (event.key === 'Enter') {
+			event.preventDefault(); // Prevent potential form submission
+			(event.target as HTMLElement)?.blur(); // Lose focus
+		} else if (event.key === 'Escape') {
+			(event.target as HTMLElement)?.blur(); // Lose focus
+		}
+	}
 </script>
 
 <div
@@ -453,6 +463,7 @@
 				placeholder="Unnamed Graph"
 				class="h-[34px] rounded-md border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
 				oninput={(e) => onGraphNameChange(e.currentTarget.value)}
+				onkeydown={handleGraphNameKeydown}
 			/>
 		</div>
 

@@ -70,6 +70,9 @@
 	// Import the graphName store
 	import { graphName } from '$lib/stores/graphNameStore.svelte';
 
+	// Import the GraphNameDialog component
+	import GraphNameDialog from '$lib/components/GraphNameDialog.svelte';
+
 	// Define the structure for the saved JSON file
 	interface SavedGraphState {
 		version: number;
@@ -124,6 +127,9 @@
 
 	// How often we tried to lay out
 	let layoutAttempts: number = 0;
+
+	let showGraphNameDialog = $state(false);
+	let pendingActionAfterName: 'save' | 'export' | null;
 
 	onMount(() => {
 		// Set up Monaco editor environment
@@ -210,7 +216,7 @@
 
 				// If the export was successful, download the Python code
 				if (data.success && data.mode === 'export' && data.python_code) {
-					downloadFile('planai-graph.py', data.python_code);
+					downloadFile(get(graphName) + '.py', data.python_code);
 				}
 			}
 		);
@@ -678,6 +684,7 @@ Analyze the following information and provide a response.`,
 			edges.set([]);
 			llmConfigs.set([]); // Clear user LLM configs
 			llmConfigsFromCode.set([]); // Clear code LLM configs
+			graphName.set('');
 			clearLLMConfigsFromCode();
 			console.log('Graph cleared.');
 			// Optionally reset status messages
@@ -690,6 +697,13 @@ Analyze the following information and provide a response.`,
 
 	// Function to handle the export button click
 	function handleExport(mode: 'export' | 'execute' = 'execute') {
+		// Check for name only if exporting the file (not just executing)
+		if (mode === 'export' && !get(graphName).trim()) {
+			pendingActionAfterName = 'export';
+			showGraphNameDialog = true;
+			return;
+		}
+
 		// Get current nodes and edges from the stores
 		let currentNodes: Node[] = [];
 		let currentEdges: Edge[] = [];
@@ -890,24 +904,19 @@ Analyze the following information and provide a response.`,
 
 	// --- Save/Load Graph Functions ---
 
-	// Trigger the hidden JSON file input
-	function triggerLoad() {
-		jsonFileInputRef?.click();
-	}
-
 	// Function to handle saving the graph state to a JSON file
 	function handleSave() {
+		// Show dialog if unnamed
+		if (!get(graphName).trim()) {
+			pendingActionAfterName = 'save';
+			showGraphNameDialog = true;
+			return;
+		}
+
 		const currentNodes = get(nodes);
 		const currentEdges = get(edges);
 		const currentUserLLMConfigs = get(llmConfigs);
 		const currentCodeLLMConfigs = get(llmConfigsFromCode);
-
-		// Prompt for name if unnamed
-		if (!get(graphName).trim()) {
-			const name = prompt('Please enter a name for your graph:', '');
-			if (!name) return; // User cancelled
-			graphName.set(name);
-		}
 
 		const graphState: SavedGraphState = {
 			version: 1,
@@ -1007,6 +1016,16 @@ Analyze the following information and provide a response.`,
 			graphName.set(''); // Reset graph name on error
 		}
 	}
+
+	// Trigger the hidden JSON file input
+	function triggerLoad() {
+		jsonFileInputRef?.click();
+	}
+
+	let currentGraphName = $state(get(graphName));
+	graphName.subscribe((value) => {
+		currentGraphName = value;
+	});
 </script>
 
 <div class="flex h-screen w-screen flex-col">
@@ -1019,7 +1038,7 @@ Analyze the following information and provide a response.`,
 			onSave={handleSave}
 			onLoad={triggerLoad}
 			onConfigureLLMs={() => (showLLMConfigModal = true)}
-			graphName={get(graphName)}
+			graphName={currentGraphName}
 			onGraphNameChange={(name) => graphName.set(name)}
 		/>
 
@@ -1114,6 +1133,29 @@ Analyze the following information and provide a response.`,
 
 		{#if showLLMConfigModal}
 			<LLMConfigModal bind:showModal={showLLMConfigModal} />
+		{/if}
+
+		{#if showGraphNameDialog}
+			<GraphNameDialog
+				open={showGraphNameDialog}
+				onClose={() => {
+					showGraphNameDialog = false;
+					pendingActionAfterName = null; // Clear action on cancel
+				}}
+				initialName={get(graphName)}
+				onSave={(name) => {
+					graphName.set(name);
+					showGraphNameDialog = false; // Close dialog first
+					const action = pendingActionAfterName;
+					pendingActionAfterName = null; // Clear action
+					// Trigger the pending action
+					if (action === 'save') {
+						handleSave();
+					} else if (action === 'export') {
+						handleExport('export');
+					}
+				}}
+			/>
 		{/if}
 	</div>
 </div>
