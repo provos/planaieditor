@@ -127,7 +127,7 @@ jobs:
     - name: Build and Inspect Package
       run: |
         cd backend
-        poetry config pypi-token.pypi $PYPI_TOKEN
+        # poetry config pypi-token.pypi $PYPI_TOKEN
         poetry build
         echo "--- Contents of generated wheel file: ---"
         unzip -l dist/*.whl || echo "Wheel file not found or unzip failed." # Add fallback message
