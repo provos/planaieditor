@@ -9,6 +9,11 @@ on:
     branches: [ main ]
   workflow_dispatch:
     # Removed inputs for simplicity - manual run will only build and inspect for now
+    inputs:
+      publish_target:
+        description: 'Set to "pypi" to publish to PyPI, or "inspect" to build and list wheel contents. Default is "none".'
+        required: false
+        default: 'none' # Default to NOT publishing
 
 jobs:
   test:
@@ -84,12 +89,12 @@ jobs:
           })
 
   publish:
-    name: Build and Inspect Package
+    name: Build and Publish/Inspect
     needs: [test, lint]
     runs-on: ubuntu-latest
     if: |
       (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) ||
-      github.event_name == 'workflow_dispatch'
+      (github.event_name == 'workflow_dispatch' && (github.event.inputs.publish_target == 'pypi' || github.event.inputs.publish_target == 'inspect'))
     steps:
     - uses: actions/checkout@v4
     - name: Set up Node.js
@@ -122,13 +127,20 @@ jobs:
         # Copy the frontend build output
         cp -rp "$FRONTEND_BUILD_DIR" "$BACKEND_TARGET_DIR"
         echo "Frontend assets copied."
-        echo "Listing target directory contents:"
-        ls -lR "$BACKEND_TARGET_DIR" || echo "Target directory not found or empty." # Add fallback message
-    - name: Build and Inspect Package
+    - name: Build and Publish/Inspect Package
+      env:
+        PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
       run: |
         cd backend
-        # poetry config pypi-token.pypi $PYPI_TOKEN
+        # Build first
         poetry build
-        echo "--- Contents of generated wheel file: ---"
-        unzip -l dist/*.whl || echo "Wheel file not found or unzip failed." # Add fallback message
-        # poetry publish # Keep commented out
+        # Then check what to do next
+        if [[ "${{ github.event.inputs.publish_target }}" == "inspect" ]]; then
+          echo "--- Inspecting wheel file contents: ---"
+          unzip -l dist/*.whl || echo "Wheel file not found or unzip failed."
+        elif [[ "${{ github.event.inputs.publish_target }}" == "pypi" || "${{ startsWith(github.ref, 'refs/tags/') }}" == "true" ]]; then
+          # Publish only if triggered by tag OR manually targeted to 'pypi'
+          echo "Publishing to PyPI..."
+          poetry config pypi-token.pypi $PYPI_TOKEN
+          poetry publish
+        fi
