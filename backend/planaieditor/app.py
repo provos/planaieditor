@@ -44,9 +44,7 @@ is_development = FLASK_ENV == "development"
 
 # Define the build directory *within the package* for production
 # This path is relative to app.py's location
-package_static_dir = os.path.join(
-    os.path.dirname(__file__), "static_frontend"
-)
+package_static_dir = os.path.join(os.path.dirname(__file__), "static_frontend")
 
 # Initialize Flask differently based on mode
 if is_development:
