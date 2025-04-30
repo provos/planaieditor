@@ -11,6 +11,7 @@
 	import type { BaseWorkerData } from './nodes/BaseWorkerNode.svelte';
 	import { Tabs, Tooltip } from 'bits-ui';
 	import { getNodeIconStyle } from '$lib/utils/defaults';
+	import SideDropdownMenu from './SideDropdownMenu.svelte';
 
 	let {
 		onExport,
@@ -20,6 +21,7 @@
 		onConfigureLLMs,
 		onSave,
 		onLoad,
+		onLoadJSON,
 		graphName = '',
 		onGraphNameChange = (name: string) => {}
 	}: {
@@ -30,6 +32,7 @@
 		onConfigureLLMs: () => void;
 		onSave: () => void;
 		onLoad: () => void;
+		onLoadJSON: (data: string) => void;
 		graphName: string;
 		onGraphNameChange: (name: string) => void;
 	} = $props();
@@ -129,6 +132,11 @@
 	class="mb-1 flex flex-wrap items-stretch gap-4 rounded-md p-0 md:gap-6"
 	data-testid="toolshelf-container"
 >
+	<!-- Examples Dropdown -->
+	<div class="flex items-center border-r border-gray-300/70 pr-2">
+		<SideDropdownMenu onLoadJSON={onLoadJSON} />
+	</div>
+
 	<!-- Draggable Nodes Section -->
 	<div class="flex min-w-[300px] flex-1 items-center gap-2 border-r border-gray-300/70 pr-4">
 		<div class="w-full md:w-auto">

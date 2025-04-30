@@ -1021,6 +1021,7 @@ Analyze the following information and provide a response.`,
 			onSave={handleSave}
 			onLoad={triggerLoad}
 			onConfigureLLMs={() => (showLLMConfigModal = true)}
+			onLoadJSON={loadGraphFromJson}
 			graphName={currentGraphName}
 			onGraphNameChange={(name) => graphName.set(name)}
 		/>
