@@ -9,8 +9,8 @@
 	import { useUpdateNodeInternals, useStore } from '@xyflow/svelte';
 	import { tick } from 'svelte';
 	import type { Action } from 'svelte/action';
-	import { onMount } from 'svelte';
 	import { addAvailableMethod } from '$lib/utils/nodeUtils';
+	import type { Unsubscriber } from 'svelte/store';
 
 	// Extend the base data interface
 	export interface LLMWorkerData extends BaseWorkerData {
@@ -48,11 +48,25 @@
 	// Create local state variables for reactivity
 	let availableTaskClasses = $state<string[]>([]);
 	let showLLMOutputTypeDropdown = $state(false);
-	let currentOutputType = $state(data.llm_output_type || '');
+	let currentLLMOutputType = $state(data.llm_output_type || '');
 	let nodeOutputTypes = $state<string[]>([]);
+	let nodeUnsubscribe: Unsubscriber | null = null;
 
-	onMount(() => {
-		const unsubNodes = nodes.subscribe((values) => {
+	// Ensures that we create a post_process if the llm output type does not match the node output types
+	$effect(() => {
+		if (!currentLLMOutputType) {
+			if (nodeUnsubscribe !== null) {
+				nodeUnsubscribe();
+				nodeUnsubscribe = null;
+			}
+			return;
+		}
+
+		if (nodeUnsubscribe !== null) {
+			return;
+		}
+
+		nodeUnsubscribe = nodes.subscribe((values) => {
 			// find the node with the same id as the current node
 			const node = values.find((node) => node.id === id);
 			if (node && (node.data as LLMWorkerData).output_types !== $state.snapshot(nodeOutputTypes)) {
@@ -67,7 +81,7 @@
 					needExtraMethod = true;
 				} else if (
 					nodeOutputTypes.length == 1 &&
-					nodeOutputTypes[0] != $state.snapshot(currentOutputType)
+					nodeOutputTypes[0] != $state.snapshot(currentLLMOutputType)
 				) {
 					needExtraMethod = true;
 				}
@@ -76,8 +90,6 @@
 				}
 			}
 		});
-
-		return unsubNodes;
 	});
 
 	// Local state for boolean flags
@@ -143,8 +155,8 @@
 	});
 
 	$effect(() => {
-		if (currentOutputType && !availableTaskClasses.includes(currentOutputType)) {
-			currentOutputType = '';
+		if (currentLLMOutputType && !availableTaskClasses.includes(currentLLMOutputType)) {
+			currentLLMOutputType = '';
 			data.llm_output_type = '';
 		}
 	});
@@ -164,7 +176,6 @@
 		configFromCode?: Record<string, any>;
 		configVar?: string;
 	}) {
-		console.log('changes', changes);
 		data.llmConfigName = changes.configName;
 		data.llmConfigFromCode = changes.configFromCode;
 		data.llmConfigVar = changes.configVar;
@@ -186,13 +197,13 @@
 
 	function selectLLMOutputType(typeName: string) {
 		data.llm_output_type = typeName;
-		currentOutputType = typeName;
+		currentLLMOutputType = typeName;
 		showLLMOutputTypeDropdown = false;
 	}
 
 	function deleteLLMOutputType() {
 		data.llm_output_type = '';
-		currentOutputType = '';
+		currentLLMOutputType = '';
 	}
 
 	async function handleCollapse() {
@@ -236,7 +247,7 @@
 <BaseWorkerNode
 	{id}
 	{data}
-	additionalOutputType={currentOutputType}
+	additionalOutputType={currentLLMOutputType}
 	defaultName="LLMTaskWorker"
 	minHeight={400}
 >
@@ -255,8 +266,8 @@
 
 		<div class="relative">
 			{#if availableTaskClasses.length > 0}
-				{#if currentOutputType}
-					{@const color = getColorForType(currentOutputType)}
+				{#if currentLLMOutputType}
+					{@const color = getColorForType(currentLLMOutputType)}
 					<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
 					<div
 						class="text-2xs group flex cursor-pointer items-center justify-between rounded px-1 py-0.5"
@@ -266,7 +277,7 @@
 						tabindex="0"
 						onkeydown={handleTriggerKeydown}
 					>
-						<span class="font-mono">{currentOutputType}</span>
+						<span class="font-mono">{currentLLMOutputType}</span>
 						<button
 							class="ml-1 flex h-3 w-3 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
 							onclick={(e) => {
@@ -304,7 +315,8 @@
 					{#each availableTaskClasses as className}
 						<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
 						<div
-							class="text-2xs cursor-pointer p-1 hover:bg-gray-100 {currentOutputType === className
+							class="text-2xs cursor-pointer p-1 hover:bg-gray-100 {currentLLMOutputType ===
+							className
 								? 'bg-gray-100'
 								: ''}"
 							onclick={() => selectLLMOutputType(className)}
