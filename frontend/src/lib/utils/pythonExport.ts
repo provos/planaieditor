@@ -81,7 +81,7 @@ export function convertGraphtoJSON(nodes: Node[], edges: Edge[], mode: 'export' 
         }
 
         // If it's an LLM worker node, handle LLM configuration
-        if ((node.type === 'llmtaskworker' || node.type === 'cachedllmtaskworker' || node.type === 'chattaskworker')) {
+        if ((node.type === 'llmtaskworker' || node.type === 'chattaskworker')) {
             // Priority 1: If user selected an LLM config in the UI, use that
             if (data?.llmConfigName) {
                 const configName = data.llmConfigName;
@@ -127,7 +127,6 @@ export function convertGraphtoJSON(nodes: Node[], edges: Edge[], mode: 'export' 
             delete processedData.llmConfigDescription;
 
             console.log("LLM Config Node", processedData)
-
         }
 
         // Consolidate known class variables into classVars for worker nodes
@@ -157,6 +156,11 @@ export function convertGraphtoJSON(nodes: Node[], edges: Edge[], mode: 'export' 
         if (node.type === 'subgraphworker' && data?.isFactoryCreated) {
             // Remove isFactoryCreated flag as it's frontend-specific
             delete processedData.isFactoryCreated;
+        }
+
+        // Handle cached nodes - this needs to be completely removed at some point
+        if (data.isCached) {
+            node.type = 'cached' + node.type;
         }
 
         return { ...node, data: processedData };

@@ -14,6 +14,7 @@
 	import { tick } from 'svelte';
 	import { formatErrorMessage } from '$lib/utils/utils';
 	import { onMount } from 'svelte';
+	import { getNodeIconStyle } from '$lib/utils/defaults';
 
 	// Base interface for worker node data
 	export interface BaseWorkerData {
@@ -91,9 +92,6 @@
 		'taskworker',
 		'llmtaskworker',
 		'chattaskworker',
-		'cachedtaskworker',
-		'cachedllmtaskworker',
-		'cachedchattaskworker'
 	];
 	const showCachedOption = workerType && allowedCacheTypes.includes(workerType);
 

@@ -399,9 +399,12 @@ export async function importPythonCode(
                 // Add other worker types if needed
             }
 
+            // strip cached from worker type
+            const workerType = worker.workerType.replace('cached', '');
+
             const newNode: Node = {
                 id,
-                type: worker.workerType, // Use the identified worker type
+                type: workerType, // Use the identified worker type
                 position: { x: startX + 400, y: nextY }, // Offset workers horizontally
                 draggable: true,
                 selectable: true,
