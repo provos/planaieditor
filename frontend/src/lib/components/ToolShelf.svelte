@@ -1,24 +1,16 @@
 <script lang="ts">
-	import Robot from 'phosphor-svelte/lib/Robot';
-	import Cube from 'phosphor-svelte/lib/Cube';
-	import Brain from 'phosphor-svelte/lib/Brain';
-	import ArrowsIn from 'phosphor-svelte/lib/ArrowsIn';
-	import Chat from 'phosphor-svelte/lib/Chat';
-	import FileMagnifyingGlass from 'phosphor-svelte/lib/FileMagnifyingGlass';
 	import Eraser from 'phosphor-svelte/lib/Eraser';
 	import UploadSimple from 'phosphor-svelte/lib/UploadSimple';
-	import Network from 'phosphor-svelte/lib/Network';
 	import PythonInterpreterSelector from '$lib/components/PythonInterpreterSelector.svelte';
 	import Export from 'phosphor-svelte/lib/Export';
 	import Play from 'phosphor-svelte/lib/Play';
 	import Gear from 'phosphor-svelte/lib/Gear';
-	import Keyboard from 'phosphor-svelte/lib/Keyboard';
-	import Table from 'phosphor-svelte/lib/Table';
 	import FloppyDisk from 'phosphor-svelte/lib/FloppyDisk';
 	import FolderOpen from 'phosphor-svelte/lib/FolderOpen';
 	import { useStore } from '@xyflow/svelte';
 	import type { BaseWorkerData } from './nodes/BaseWorkerNode.svelte';
 	import { Tabs, Tooltip } from 'bits-ui';
+	import { getNodeIconStyle } from '$lib/utils/defaults';
 
 	let {
 		onExport,
@@ -210,6 +202,7 @@
 							class="animate-in fade-in-50 flex flex-wrap gap-2 transition-all duration-200 ease-in-out md:flex-nowrap"
 						>
 							<!-- Task Node -->
+							{@const taskStyle = getNodeIconStyle('task')}
 							<Tooltip.Root delayDuration={400}>
 								<Tooltip.Trigger>
 									<div
@@ -220,7 +213,7 @@
 										ondragstart={(e) => onDragStart(e, 'task')}
 									>
 										<div class="flex items-center gap-1.5">
-											<Cube size={16} weight="fill" class="text-blue-500" />
+											<taskStyle.icon size={16} weight="fill" class={taskStyle.color} />
 											<div class="text-sm font-semibold">Task</div>
 										</div>
 									</div>
@@ -235,6 +228,7 @@
 							</Tooltip.Root>
 
 							<!-- Task Import Node -->
+							{@const taskImportStyle = getNodeIconStyle('taskimport')}
 							<Tooltip.Root delayDuration={400}>
 								<Tooltip.Trigger>
 									<div
@@ -245,7 +239,7 @@
 										ondragstart={(e) => onDragStart(e, 'taskimport')}
 									>
 										<div class="flex items-center gap-1.5">
-											<FileMagnifyingGlass size={16} weight="fill" class="text-cyan-500" />
+											<taskImportStyle.icon size={16} weight="fill" class={taskImportStyle.color} />
 											<div class="text-sm font-semibold">TaskImport</div>
 										</div>
 									</div>
@@ -264,6 +258,7 @@
 							class="animate-in fade-in-50 flex flex-wrap gap-2 transition-all duration-200 ease-in-out md:flex-nowrap"
 						>
 							<!-- DataInput Node -->
+							{@const dataInputStyle = getNodeIconStyle('datainput')}
 							<Tooltip.Root delayDuration={400}>
 								<Tooltip.Trigger>
 									<div
@@ -274,7 +269,7 @@
 										ondragstart={(e) => onDragStart(e, 'datainput')}
 									>
 										<div class="flex items-center gap-1.5">
-											<Keyboard size={16} weight="fill" class="text-gray-500" />
+											<dataInputStyle.icon size={16} weight="fill" class={dataInputStyle.color} />
 											<div class="text-sm font-semibold">DataInput</div>
 										</div>
 									</div>
@@ -289,6 +284,7 @@
 							</Tooltip.Root>
 
 							<!-- Data Output Node -->
+							{@const dataOutputStyle = getNodeIconStyle('dataoutput')}
 							<Tooltip.Root delayDuration={400}>
 								<Tooltip.Trigger>
 									<div
@@ -299,7 +295,7 @@
 										ondragstart={(e) => onDragStart(e, 'dataoutput')}
 									>
 										<div class="flex items-center gap-1.5">
-											<Table size={16} weight="fill" class="text-pink-500" />
+											<dataOutputStyle.icon size={16} weight="fill" class={dataOutputStyle.color} />
 											<div class="text-sm font-semibold">DataOutput</div>
 										</div>
 									</div>
@@ -319,6 +315,7 @@
 							class="animate-in fade-in-50 flex flex-wrap gap-2 transition-all duration-200 ease-in-out md:flex-nowrap"
 						>
 							<!-- TaskWorker Node -->
+							{@const taskWorkerStyle = getNodeIconStyle('taskworker')}
 							<Tooltip.Root delayDuration={400}>
 								<Tooltip.Trigger>
 									<div
@@ -329,7 +326,7 @@
 										ondragstart={(e) => onDragStart(e, 'taskworker')}
 									>
 										<div class="flex items-center gap-1.5">
-											<Robot size={16} weight="fill" class="text-purple-500" />
+											<taskWorkerStyle.icon size={16} weight="fill" class={taskWorkerStyle.color} />
 											<div class="text-sm font-semibold">TaskWorker</div>
 										</div>
 									</div>
@@ -344,6 +341,7 @@
 							</Tooltip.Root>
 
 							<!-- LLMTaskWorker Node -->
+							{@const llmTaskWorkerStyle = getNodeIconStyle('llmtaskworker')}
 							<Tooltip.Root delayDuration={400}>
 								<Tooltip.Trigger>
 									<div
@@ -354,7 +352,11 @@
 										ondragstart={(e) => onDragStart(e, 'llmtaskworker')}
 									>
 										<div class="flex items-center gap-1.5">
-											<Brain size={16} weight="fill" class="text-green-500" />
+											<llmTaskWorkerStyle.icon
+												size={16}
+												weight="fill"
+												class={llmTaskWorkerStyle.color}
+											/>
 											<div class="text-sm font-semibold">LLMTaskWorker</div>
 										</div>
 									</div>
@@ -369,6 +371,7 @@
 							</Tooltip.Root>
 
 							<!-- JoinedTaskWorker Node -->
+							{@const joinedTaskWorkerStyle = getNodeIconStyle('joinedtaskworker')}
 							<Tooltip.Root delayDuration={400}>
 								<Tooltip.Trigger>
 									<div
@@ -379,7 +382,11 @@
 										ondragstart={(e) => onDragStart(e, 'joinedtaskworker')}
 									>
 										<div class="flex items-center gap-1.5">
-											<ArrowsIn size={16} weight="fill" class="text-orange-500" />
+											<joinedTaskWorkerStyle.icon
+												size={16}
+												weight="fill"
+												class={joinedTaskWorkerStyle.color}
+											/>
 											<div class="text-sm font-semibold">JoinedTaskWorker</div>
 										</div>
 									</div>
@@ -394,6 +401,7 @@
 							</Tooltip.Root>
 
 							<!-- SubGraphWorker Node -->
+							{@const subGraphWorkerStyle = getNodeIconStyle('subgraphworker')}
 							<Tooltip.Root delayDuration={400}>
 								<Tooltip.Trigger>
 									<div
@@ -404,7 +412,11 @@
 										ondragstart={(e) => onDragStart(e, 'subgraphworker')}
 									>
 										<div class="flex items-center gap-1.5">
-											<Network size={16} weight="fill" class="text-teal-500" />
+											<subGraphWorkerStyle.icon
+												size={16}
+												weight="fill"
+												class={subGraphWorkerStyle.color}
+											/>
 											<div class="text-sm font-semibold">SubGraphWorker</div>
 										</div>
 									</div>
@@ -419,6 +431,7 @@
 							</Tooltip.Root>
 
 							<!-- ChatTaskWorker Node -->
+							{@const chatTaskWorkerStyle = getNodeIconStyle('chattaskworker')}
 							<Tooltip.Root delayDuration={400}>
 								<Tooltip.Trigger>
 									<div
@@ -429,7 +442,11 @@
 										ondragstart={(e) => onDragStart(e, 'chattaskworker')}
 									>
 										<div class="flex items-center gap-1.5">
-											<Chat size={16} weight="fill" class="text-red-500" />
+											<chatTaskWorkerStyle.icon
+												size={16}
+												weight="fill"
+												class={chatTaskWorkerStyle.color}
+											/>
 											<div class="text-sm font-semibold">ChatTaskWorker</div>
 										</div>
 									</div>

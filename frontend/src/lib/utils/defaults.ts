@@ -1,3 +1,14 @@
+import Robot from 'phosphor-svelte/lib/Robot';
+import Brain from 'phosphor-svelte/lib/Brain';
+import ArrowsIn from 'phosphor-svelte/lib/ArrowsIn';
+import Chat from 'phosphor-svelte/lib/Chat';
+import Network from 'phosphor-svelte/lib/Network';
+import Placeholder from 'phosphor-svelte/lib/Placeholder';
+import Keyboard from 'phosphor-svelte/lib/Keyboard';
+import Table from 'phosphor-svelte/lib/Table';
+import Cube from 'phosphor-svelte/lib/Cube';
+import FileMagnifyingGlass from 'phosphor-svelte/lib/FileMagnifyingGlass';
+import type { Component } from 'svelte';
 /**
  * Provides default code snippets for optional PlanAI TaskWorker methods.
  */
@@ -49,4 +60,26 @@ export function getDefaultMethodBody(methodName: string): string {
         default:
             return `# Default implementation for ${methodName}\npass`;
     }
+}
+
+export interface TaskWorkerStyle {
+    icon: Component;
+    color: string; // Tailwind CSS color class
+}
+
+const defaultTaskWorkerIcons: Record<string, TaskWorkerStyle> = {
+    taskworker: { icon: Robot, color: 'text-purple-500' },
+    llmtaskworker: { icon: Brain, color: 'text-green-500' },
+    joinedtaskworker: { icon: ArrowsIn, color: 'text-orange-500' },
+    subgraphworker: { icon: Network, color: 'text-teal-500' },
+    chattaskworker: { icon: Chat, color: 'text-red-500' },
+    datainput: { icon: Keyboard, color: 'text-gray-500' },
+    dataoutput: { icon: Table, color: 'text-pink-500' },
+    task: { icon: Cube, color: 'text-blue-500' },
+    taskimport: { icon: FileMagnifyingGlass, color: 'text-cyan-500' },
+    default: { icon: Placeholder, color: 'text-gray-400' } // Default style
+}
+
+export function getNodeIconStyle(nodeTypeName: string): TaskWorkerStyle {
+    return defaultTaskWorkerIcons[nodeTypeName.toLowerCase()] || defaultTaskWorkerIcons.default;
 }
