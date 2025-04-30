@@ -16,6 +16,7 @@ import subprocess
 import sys
 import tempfile
 import traceback
+from textwrap import indent
 from argparse import ArgumentParser
 from pathlib import Path
 from typing import Optional
@@ -831,6 +832,96 @@ def get_task_fields():
         debug_print=is_development,
     )
     status_code = 200 if result.get("success") else 400  # Or 500?
+    return jsonify(result), status_code
+
+
+@app.route("/api/validate-module-imports", methods=["POST"])
+def validate_module_imports():
+    """Validates Python import statements in the selected venv."""
+    if not request.is_json:
+        return jsonify({"success": False, "error": "Request must be JSON"}), 400
+
+    data = request.get_json()
+    import_code = indent(data.get("import_code"), "    ")
+
+    if import_code is None:  # Allow empty string, but not missing key
+        return (
+            jsonify({"success": False, "error": "Missing 'import_code' in request"}),
+            400,
+        )
+
+    # Handle empty input gracefully - technically valid Python
+    if not import_code.strip():
+        return jsonify({"success": True, "message": "No imports to validate."}), 200
+
+    python_executable = app.config.get("SELECTED_VENV_PATH")
+    if not python_executable:
+        return (
+            jsonify({"success": False, "error": "No Python interpreter selected."}),
+            400,
+        )
+    if not os.path.exists(python_executable):
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": f"Selected Python interpreter not found: {python_executable}",
+                }
+            ),
+            400,
+        )
+
+    # Create a validation script with proper JSON output markers
+    validation_script = f"""
+import sys
+import json
+import traceback
+
+try:
+    # --- User's import code ---
+{import_code}
+    # --- End of user's import code ---
+
+    # If imports succeed, output success JSON
+    success_output = {{"success": True, "message": "Imports validated successfully"}}
+    print("##SUCCESS_JSON_START##")
+    print(json.dumps(success_output))
+    print("##SUCCESS_JSON_END##")
+
+except Exception as e:
+    # Error case - format any validation errors as JSON
+    error_message = str(e)
+    error_traceback = traceback.format_exc()
+
+    # Create a structured error response
+    error_output = {{
+        "success": False,
+        "error": {{
+            # Use a specific message for import errors
+            "message": f"Import validation failed: {{error_message}}",
+            "nodeName": None, # No specific node context here
+            "fullTraceback": error_traceback
+        }}
+    }}
+
+    print("##ERROR_JSON_START##")
+    print(json.dumps(error_output))
+    print("##ERROR_JSON_END##")
+    sys.exit(1) # Indicate failure
+"""
+
+    # Execute the validation script in the selected Python environment
+    result = validate_code_in_venv("module_import_validation", validation_script)
+
+    # Process the result for the frontend
+    if result.get("success"):
+        status_code = 200
+    else:
+        # Extract the core error message if possible
+        error_details = result.get("error", {})
+        result["error"] = error_details.get("message", "Import validation failed.")
+        status_code = 400  # Bad request due to invalid code
+
     return jsonify(result), status_code
 
 
