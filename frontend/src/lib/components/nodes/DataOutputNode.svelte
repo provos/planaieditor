@@ -6,7 +6,7 @@
 	import { formatErrorMessage } from '$lib/utils/utils';
 	import { getColorForType } from '$lib/utils/colorUtils';
 	import TrashSimple from 'phosphor-svelte/lib/TrashSimple';
-
+	import HeaderIcon from '../HeaderIcon.svelte';
 	// Define the interface for the node's data
 	export interface DataOutputNodeData {
 		nodeId: string;
@@ -78,6 +78,7 @@
 	<div
 		class="flex-none border-b border-gray-200 bg-emerald-200 p-1 text-center text-xs font-medium"
 	>
+		<HeaderIcon workerType={'dataoutput'} />
 		<div class="flex items-center justify-between">
 			<div class="w-6"><!-- Spacer to balance the layout --></div>
 			<div class="flex-grow">{data.workerName}</div>

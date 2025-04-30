@@ -3,6 +3,7 @@
 	import { isValidPythonClassName } from '$lib/utils/validation';
 	import { getColorForType, calculateHandlePosition } from '$lib/utils/colorUtils';
 	import { taskClassNamesStore } from '$lib/stores/taskClassNamesStore';
+	import HeaderIcon from '../HeaderIcon.svelte';
 	import EditableCodeSection from '../EditableCodeSection.svelte';
 	import InputHandle from '../InputHandle.svelte';
 	import Trash from 'phosphor-svelte/lib/Trash';
@@ -94,6 +95,7 @@
 		'chattaskworker',
 	];
 	const showCachedOption = workerType && allowedCacheTypes.includes(workerType);
+	const nodeIconStyle = getNodeIconStyle(workerType || 'default');
 
 	// --- Effects for Reactivity ---
 	onMount(() => {
@@ -327,6 +329,7 @@
 
 	<!-- Header -->
 	<div class="flex-none border-b border-gray-200 bg-gray-50 p-1">
+		<HeaderIcon workerType={workerType || 'default'} />
 		{#if showCachedOption}
 			<div class="absolute right-1 top-1 z-10 flex items-center justify-between">
 				{#if localIsCached}

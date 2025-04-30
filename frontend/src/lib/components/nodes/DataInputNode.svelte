@@ -11,7 +11,7 @@
 	import { backendUrl } from '$lib/utils/backendUrl';
 	import Spinner from 'phosphor-svelte/lib/Spinner';
 	import { onMount } from 'svelte';
-
+	import HeaderIcon from '../HeaderIcon.svelte';
 	// Define the interface for the node's data
 	export interface DataInputNodeData {
 		className: string | null; // Can be null initially
@@ -77,7 +77,7 @@
 		if (!selectedClassName) {
 			return;
 		}
-		
+
 		data.jsonData = newCode;
 		errorMessage = null;
 		jsonIsValid = false;
@@ -160,6 +160,7 @@
 
 	<!-- Header with Task Type Selector -->
 	<div class="flex-none border-b bg-gray-50 bg-orange-100 p-1">
+		<HeaderIcon workerType={'datainput'} />
 		<select
 			bind:value={selectedClassName}
 			class="w-full cursor-pointer rounded px-1 py-0.5 text-center text-xs font-medium hover:bg-gray-100"
