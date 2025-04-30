@@ -49,6 +49,11 @@ planaieditor
 
 Then, open your web browser and navigate to `http://localhost:5001`.
 
+## Security Considerations
+
+> [!WARNING]
+> The PlanAI Editor backend executes Python code based on the graphs created or imported. It also exposes local HTTP (REST) and WebSocket APIs on `localhost:5001` (by default). While convenient for development and local use, be aware that other processes running on your machine could potentially interact with these APIs. Avoid running untrusted software simultaneously with the PlanAI Editor.
+
 ## Development
 
 This section is for developers who want to contribute to the PlanAI Editor or run it from the source code.
@@ -91,7 +96,7 @@ This mode runs the frontend and backend separately, allowing for hot-reloading w
       *   On Windows (PowerShell): `$env:FLASK_ENV = "development"`
     *   Run the backend using Poetry:
         ```bash
-        poetry run python app.py
+        poetry run python -m planaieditor.app
         ```
         *(Keep this terminal running)*
 
