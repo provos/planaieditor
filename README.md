@@ -49,6 +49,10 @@ planaieditor
 
 Then, open your web browser and navigate to `http://localhost:5001`.
 
+## Examples
+
+You can find some demo examples in [Examples](EXAMPLES.md). These examples are also available as part of the side menu in the UI.
+
 ## Security Considerations
 
 > [!WARNING]
