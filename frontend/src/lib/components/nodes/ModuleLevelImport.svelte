@@ -69,7 +69,7 @@
 </script>
 
 <div
-	class="modulelevelimport-node flex h-full flex-col rounded-md border border-gray-300 bg-white shadow-md"
+	class="modulelevelimport-node flex h-full flex-col rounded-md border border-gray-300 bg-white shadow-md overflow-auto"
 >
 	<!-- Node Resizer -->
 	<NodeResizer

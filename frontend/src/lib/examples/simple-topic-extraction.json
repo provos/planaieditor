@@ -1,0 +1,600 @@
+{
+  "version": 1,
+  "name": "TopicExtraction",
+  "nodes": [
+    {
+      "id": "task-1746044580434",
+      "type": "task",
+      "position": {
+        "x": 340,
+        "y": 708.25
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": false,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "className": "UrlInput",
+        "fields": [
+          {
+            "name": "url",
+            "type": "string",
+            "isList": false,
+            "required": true,
+            "description": "the web page to fetch"
+          }
+        ],
+        "nodeId": "task-1746044580434"
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 203,
+        "height": 90
+      }
+    },
+    {
+      "id": "taskworker-1746044600183",
+      "type": "taskworker",
+      "position": {
+        "x": 663,
+        "y": 504.5
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": false,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "workerName": "TaskWorker1",
+        "inputTypes": [
+          "UrlInput"
+        ],
+        "output_types": [
+          "PageContent"
+        ],
+        "methods": {
+          "consume_work": "# Process the input task and produce output\ncontent = WebBrowser.get_markdown_from_page(task.url)\nif content:\n    self.publish_work(PageContent(content=content), input_task=task)"
+        },
+        "nodeId": "taskworker-1746044600183",
+        "isCached": false
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 553,
+        "height": 291
+      },
+      "width": 553,
+      "height": 291
+    },
+    {
+      "id": "modulelevelimport-1746046949654",
+      "type": "modulelevelimport",
+      "position": {
+        "x": 1022,
+        "y": 12
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": false,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "code": "# Add your module level imports here \r\nfrom planai.integrations import WebBrowser",
+        "nodeId": "modulelevelimport-1746046949654"
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 564,
+        "height": 202
+      },
+      "width": 564,
+      "height": 202
+    },
+    {
+      "id": "task-1746048196735",
+      "type": "task",
+      "position": {
+        "x": 12,
+        "y": 12
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": false,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "className": "PageContent",
+        "fields": [
+          {
+            "name": "content",
+            "type": "string",
+            "isList": false,
+            "required": true,
+            "description": "Web page content in markdown"
+          }
+        ],
+        "nodeId": "task-1746048196735"
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 273,
+        "height": 90
+      }
+    },
+    {
+      "id": "datainput-1746048367129",
+      "type": "datainput",
+      "position": {
+        "x": 12,
+        "y": 485.25
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": false,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "className": "UrlInput",
+        "jsonData": "{\"url\": \"https://www.provos.org/\"}",
+        "nodeId": "datainput-1746048367129",
+        "isJsonValid": true
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 531,
+        "height": 123
+      }
+    },
+    {
+      "id": "llmtaskworker-1746048597002",
+      "type": "llmtaskworker",
+      "position": {
+        "x": 1336,
+        "y": 398.5
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": true,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "workerName": "LLMTaskWorker1",
+        "inputTypes": [
+          "PageContent"
+        ],
+        "output_types": [
+          "Topics"
+        ],
+        "prompt": "Based on the provided web page content, extract the relevant topics of the web page.\nEach topic should have a succinct title, relevant keywords and a short summary.",
+        "system_prompt": "You are a helpful task processing assistant.",
+        "extraValidation": "return None",
+        "formatPrompt": "return self.prompt",
+        "preProcess": "return task",
+        "postProcess": "return task",
+        "enabledFunctions": {
+          "extraValidation": false,
+          "formatPrompt": false,
+          "preProcess": false,
+          "postProcess": false
+        },
+        "nodeId": "llmtaskworker-1746048597002",
+        "llm_output_type": "",
+        "use_xml": false,
+        "debug_mode": false,
+        "llmConfigName": "O4 Mini",
+        "isCached": false
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 640,
+        "height": 503
+      },
+      "width": 640,
+      "height": 503
+    },
+    {
+      "id": "task-1746048609825",
+      "type": "task",
+      "position": {
+        "x": 673,
+        "y": 12
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": false,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "className": "Topic",
+        "fields": [
+          {
+            "name": "title",
+            "type": "string",
+            "isList": false,
+            "required": true,
+            "description": "the title of the topic"
+          },
+          {
+            "name": "keywords",
+            "type": "string",
+            "isList": true,
+            "required": true,
+            "description": "keywords related to the topic"
+          },
+          {
+            "name": "summary",
+            "type": "string",
+            "isList": false,
+            "required": true,
+            "description": "a short summary of the topic in markdown"
+          }
+        ],
+        "nodeId": "task-1746048609825"
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 329,
+        "height": 138
+      }
+    },
+    {
+      "id": "task-1746048674930",
+      "type": "task",
+      "position": {
+        "x": 305,
+        "y": 12
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": false,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "className": "Topics",
+        "fields": [
+          {
+            "name": "topics",
+            "type": "Topic",
+            "isList": true,
+            "required": true,
+            "description": "a list of topics extracted from the web page"
+          }
+        ],
+        "nodeId": "task-1746048674930"
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 348,
+        "height": 90
+      }
+    },
+    {
+      "id": "dataoutput-1746048802699",
+      "type": "dataoutput",
+      "position": {
+        "x": 2096,
+        "y": 234
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": false,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "workerName": "DataOutput1",
+        "nodeId": "dataoutput-1746048802699",
+        "receivedData": [
+          {
+            "topics": [
+              {
+                "title": "Deepseek and the Strawberry",
+                "keywords": [
+                  "AI",
+                  "Deepseek-R1-Qwen-32B",
+                  "Strawberry",
+                  "Letter Counting"
+                ],
+                "summary": "An exploration of how the AI model Deepseek-R1-Qwen-32B reasons through counting the occurrences of the letter “r” in the word “Strawberry.”"
+              },
+              {
+                "title": "Measuring Hosting Latency Across Different Platforms",
+                "keywords": [
+                  "Hacking",
+                  "Web Development",
+                  "Hosting",
+                  "Latency",
+                  "Benchmarking"
+                ],
+                "summary": "A guide to benchmarking and comparing hosting latency across various platforms to help developers optimize web performance."
+              },
+              {
+                "title": "Building a Generative AI Search Engine with PlanAI",
+                "keywords": [
+                  "AI",
+                  "Generative Search",
+                  "PlanAI",
+                  "Python",
+                  "Workflows"
+                ],
+                "summary": "Learn how to implement a Perplexity-style generative AI search engine using the PlanAI Python framework, complete with integration steps and code examples."
+              },
+              {
+                "title": "Build Your Own Music Links Page with Hugo",
+                "keywords": [
+                  "Web Development",
+                  "Hugo",
+                  "Static Site Generator",
+                  "Music Links",
+                  "Artists"
+                ],
+                "summary": "A tutorial on creating a custom links page for musicians and artists using the Hugo static site generator, from setup to deployment."
+              },
+              {
+                "title": "Introducing PlanAI: Streamlining Task Automation with AI",
+                "keywords": [
+                  "AI",
+                  "Automation",
+                  "PlanAI",
+                  "Graph Architecture",
+                  "LLM Integration"
+                ],
+                "summary": "An introduction to PlanAI, showcasing how graph-based architectures and seamless LLM integration can automate tasks such as textbook Q&A generation."
+              },
+              {
+                "title": "Activ8te: Am I AI?",
+                "keywords": [
+                  "EDM",
+                  "Music",
+                  "News",
+                  "AI Inspiration"
+                ],
+                "summary": "An overview of Activ8te’s new track “Am I AI?”, inspired by the questions and themes surrounding the creation of advanced large language models."
+              },
+              {
+                "title": "Design and Order a Custom T-Shirt in 15 Minutes with AI Tools",
+                "keywords": [
+                  "AI",
+                  "Design",
+                  "Marketing",
+                  "T-Shirt",
+                  "Rapid Prototyping"
+                ],
+                "summary": "A step-by-step guide to creating and ordering a unique t-shirt design in just 15 minutes using AI-powered design tools."
+              }
+            ]
+          }
+        ],
+        "inputTypes": [
+          "Topics"
+        ]
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 1018,
+        "height": 832
+      },
+      "width": 1018,
+      "height": 832
+    }
+  ],
+  "edges": [
+    {
+      "type": "smoothstep",
+      "style": "stroke-width:3;stroke:#1f77b4;",
+      "source": "task-1746044580434",
+      "sourceHandle": "output",
+      "target": "taskworker-1746044600183",
+      "targetHandle": "input",
+      "id": "xy-edge__task-1746044580434output-taskworker-1746044600183input",
+      "animated": true,
+      "sources": [
+        "task-1746044580434"
+      ],
+      "targets": [
+        "taskworker-1746044600183"
+      ],
+      "container": "root",
+      "selected": false,
+      "sections": [
+        {
+          "id": "xy-edge__task-1746044580434output-taskworker-1746044600183input_s0",
+          "startPoint": {
+            "x": 543,
+            "y": 753.25
+          },
+          "endPoint": {
+            "x": 663,
+            "y": 698.5
+          },
+          "bendPoints": [
+            {
+              "x": 543,
+              "y": 753.25
+            },
+            {
+              "x": 603,
+              "y": 747.775
+            }
+          ],
+          "incomingShape": "task-1746044580434",
+          "outgoingShape": "taskworker-1746044600183"
+        }
+      ]
+    },
+    {
+      "type": "smoothstep",
+      "style": "stroke-width:3;stroke:#1f77b4;",
+      "source": "datainput-1746048367129",
+      "sourceHandle": "output-UrlInput",
+      "target": "taskworker-1746044600183",
+      "targetHandle": "input",
+      "id": "xy-edge__datainput-1746048367129output-UrlInput-taskworker-1746044600183input",
+      "animated": true,
+      "sources": [
+        "datainput-1746048367129"
+      ],
+      "targets": [
+        "taskworker-1746044600183"
+      ],
+      "container": "root",
+      "selected": false,
+      "sections": [
+        {
+          "id": "xy-edge__datainput-1746048367129output-UrlInput-taskworker-1746044600183input_s0",
+          "startPoint": {
+            "x": 543,
+            "y": 546.75
+          },
+          "endPoint": {
+            "x": 663,
+            "y": 601.5
+          },
+          "bendPoints": [
+            {
+              "x": 543,
+              "y": 546.75
+            },
+            {
+              "x": 603,
+              "y": 552.225
+            }
+          ],
+          "incomingShape": "datainput-1746048367129",
+          "outgoingShape": "taskworker-1746044600183"
+        }
+      ]
+    },
+    {
+      "type": "smoothstep",
+      "style": "stroke-width:3;stroke:#ff7f0e;",
+      "source": "taskworker-1746044600183",
+      "sourceHandle": "output-PageContent",
+      "target": "llmtaskworker-1746048597002",
+      "targetHandle": "input",
+      "id": "xy-edge__taskworker-1746044600183output-PageContent-llmtaskworker-1746048597002input",
+      "animated": false,
+      "sources": [
+        "taskworker-1746044600183"
+      ],
+      "targets": [
+        "llmtaskworker-1746048597002"
+      ],
+      "container": "root",
+      "selected": false,
+      "sections": [
+        {
+          "id": "xy-edge__taskworker-1746044600183output-PageContent-llmtaskworker-1746048597002input_s0",
+          "startPoint": {
+            "x": 1216,
+            "y": 650
+          },
+          "endPoint": {
+            "x": 1336,
+            "y": 650
+          },
+          "bendPoints": [
+            {
+              "x": 1216,
+              "y": 650
+            },
+            {
+              "x": 1276,
+              "y": 650
+            }
+          ],
+          "incomingShape": "taskworker-1746044600183",
+          "outgoingShape": "llmtaskworker-1746048597002"
+        }
+      ]
+    },
+    {
+      "source": "llmtaskworker-1746048597002",
+      "sourceHandle": "output-Topics",
+      "target": "dataoutput-1746048802699",
+      "targetHandle": "input",
+      "id": "xy-edge__llmtaskworker-1746048597002output-Topics-dataoutput-1746048802699input",
+      "style": "stroke-width:3;stroke:#d62728;",
+      "animated": false,
+      "sources": [
+        "llmtaskworker-1746048597002"
+      ],
+      "targets": [
+        "dataoutput-1746048802699"
+      ],
+      "container": "root",
+      "selected": false,
+      "sections": [
+        {
+          "id": "xy-edge__llmtaskworker-1746048597002output-Topics-dataoutput-1746048802699input_s0",
+          "startPoint": {
+            "x": 1976,
+            "y": 650
+          },
+          "endPoint": {
+            "x": 2096,
+            "y": 650
+          },
+          "bendPoints": [
+            {
+              "x": 1976,
+              "y": 650
+            },
+            {
+              "x": 2036,
+              "y": 650
+            }
+          ],
+          "incomingShape": "llmtaskworker-1746048597002",
+          "outgoingShape": "dataoutput-1746048802699"
+        }
+      ]
+    }
+  ],
+  "llmConfigs": [
+    {
+      "provider": "openai",
+      "name": "O4 Mini",
+      "modelId": "o4-mini",
+      "id": "8839197d-121f-411a-be0a-192b8b87ee58",
+      "source": "user"
+    }
+  ],
+  "llmConfigsFromCode": []
+}

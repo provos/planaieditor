@@ -4,6 +4,7 @@
 	import CaretRight from 'phosphor-svelte/lib/CaretRight';
 	import List from 'phosphor-svelte/lib/List';
 	import simpleIOExample from '$lib/examples/simple-input-output.json';
+	import simpleTopicExtraction from '$lib/examples/simple-topic-extraction.json';
 
 	let { onLoadJSON }: { onLoadJSON: (data: any) => void } = $props();
 </script>
@@ -31,7 +32,7 @@
 					</div>
 				</DropdownMenu.SubTrigger>
 				<DropdownMenu.SubContent
-					class="z-50 w-48 rounded-md border border-gray-200 bg-white p-1 shadow-xl focus:outline-none"
+					class="z-50 w-64 rounded-md border border-gray-200 bg-white p-1 shadow-xl focus:outline-none"
 					sideOffset={2}
 					alignOffset={-5}
 				>
@@ -42,6 +43,14 @@
 						}}
 					>
 						Simple Input/Output
+					</DropdownMenu.Item>
+					<DropdownMenu.Item
+						class="relative flex h-8 cursor-default select-none items-center rounded-sm px-2 py-1.5 pl-8 text-sm outline-none hover:bg-gray-100 data-[disabled]:pointer-events-none data-[highlighted]:bg-gray-100 data-[disabled]:opacity-50"
+						onSelect={() => {
+							onLoadJSON(JSON.stringify(simpleTopicExtraction));
+						}}
+					>
+						Simple Page Topic Extraction
 					</DropdownMenu.Item>
 				</DropdownMenu.SubContent>
 			</DropdownMenu.Sub>
