@@ -53,7 +53,8 @@
 	let selectedTab = $state('tasks');
 
 	let unconnectedWorkersTooltip = $state<string | null>(null);
-
+	let moduleLevelImportTooltip = $state<string | null>(null);
+	let canAddModuleLevelImport = $state(true);
 	// Define the types of nodes that are expected to have an output connection
 	const workerNodeTypes = new Set([
 		'datainput',
@@ -64,6 +65,24 @@
 		'chattaskworker',
 		'datainput'
 	]);
+
+	$effect(() => {
+		const currentNodes = $nodes;
+		const hasModuleLevelImport =
+			currentNodes.filter((node) => node.type === 'modulelevelimport').length > 0;
+		// Be careful with triggering reactivity here in regards to the canAddModuleLevelImport state
+		if (!hasModuleLevelImport == $state.snapshot(canAddModuleLevelImport)) {
+			return;
+		}
+		if (hasModuleLevelImport) {
+			canAddModuleLevelImport = false;
+			moduleLevelImportTooltip =
+				'A Module Level Import node already exists. You can only have one Module Level Import node.';
+		} else {
+			canAddModuleLevelImport = true;
+			moduleLevelImportTooltip = null;
+		}
+	});
 
 	$effect(() => {
 		const currentNodes = $nodes;
@@ -134,7 +153,7 @@
 >
 	<!-- Examples Dropdown -->
 	<div class="flex items-center border-r border-gray-300/70 pr-2">
-		<SideDropdownMenu onLoadJSON={onLoadJSON} />
+		<SideDropdownMenu {onLoadJSON} />
 	</div>
 
 	<!-- Draggable Nodes Section -->
@@ -257,6 +276,38 @@
 									side="bottom"
 								>
 									Import existing Task classes from Python modules to use in your workflow.
+								</Tooltip.Content>
+							</Tooltip.Root>
+
+							<!-- Module Level Import Node -->
+							{@const moduleLevelImportStyle = getNodeIconStyle('modulelevelimport')}
+							<Tooltip.Root delayDuration={400}>
+								<Tooltip.Trigger>
+									<div
+										class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 p-2 shadow-sm transition-shadow hover:shadow-md {canAddModuleLevelImport ? 'bg-white cursor-grab' : 'cursor-not-allowed opacity-50'}"
+										role="button"
+										tabindex="0"
+										draggable={canAddModuleLevelImport}
+										ondragstart={(e) => onDragStart(e, 'modulelevelimport')}
+									>
+										<div class="flex items-center gap-1.5">
+											<moduleLevelImportStyle.icon
+												size={16}
+												weight="fill"
+												class={moduleLevelImportStyle.color}
+											/>
+											<div class="text-sm font-semibold">ModuleLevelImport</div>
+										</div>
+									</div>
+								</Tooltip.Trigger>
+								<Tooltip.Content
+									class="z-50 max-w-xs rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 shadow-md"
+									side="bottom"
+								>
+									Import existing Python modules to use in your workflow.
+									{#if moduleLevelImportTooltip}
+										<span class="text-red-700">{moduleLevelImportTooltip}</span>
+									{/if}
 								</Tooltip.Content>
 							</Tooltip.Root>
 						</Tabs.Content>

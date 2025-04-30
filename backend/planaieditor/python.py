@@ -667,6 +667,13 @@ def generate_python_module(
             import_statements.append(
                 f"from {module_path} import {', '.join(sorted_class_names)}"
             )
+    # Get the module level imports
+    module_level_import_nodes = [
+        n for n in nodes if n.get("type") == "modulelevelimport"
+    ]
+    for node in module_level_import_nodes:
+        import_statements.append(node.get("data", {}).get("code"))
+
     # 2. Task Definitions (from 'task' nodes)
     tasks_code = []
     task_nodes = [n for n in nodes if n.get("type") == "task"]

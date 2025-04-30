@@ -8,6 +8,7 @@ import Keyboard from 'phosphor-svelte/lib/Keyboard';
 import Table from 'phosphor-svelte/lib/Table';
 import Cube from 'phosphor-svelte/lib/Cube';
 import FileMagnifyingGlass from 'phosphor-svelte/lib/FileMagnifyingGlass';
+import Package from 'phosphor-svelte/lib/Package';
 import type { Component } from 'svelte';
 /**
  * Provides default code snippets for optional PlanAI TaskWorker methods.
@@ -77,6 +78,7 @@ const defaultTaskWorkerIcons: Record<string, TaskWorkerStyle> = {
     dataoutput: { icon: Table, color: 'text-pink-500' },
     task: { icon: Cube, color: 'text-blue-500' },
     taskimport: { icon: FileMagnifyingGlass, color: 'text-cyan-500' },
+    modulelevelimport: { icon: Package, color: 'text-emerald-500' },
     default: { icon: Placeholder, color: 'text-gray-400' } // Default style
 }
 

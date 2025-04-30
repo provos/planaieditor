@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { nodes, edges } from '$lib/stores/graphStore';
 	import { dev } from '$app/environment';
-	import { persisted } from 'svelte-persisted-store';
 	import { backendUrl } from '$lib/utils/backendUrl';
 	import { downloadFile } from '$lib/utils/utils';
 	import { SvelteFlow, Background, Controls, ControlButton, useSvelteFlow } from '@xyflow/svelte';
@@ -9,6 +8,7 @@
 	import type { Node, Edge, Connection } from '@xyflow/svelte';
 	import '@xyflow/svelte/dist/style.css';
 	import ToolShelf from '$lib/components/ToolShelf.svelte';
+	import ModuleLevelImport from '$lib/components/nodes/ModuleLevelImport.svelte';
 	import TaskNode from '$lib/components/nodes/TaskNode.svelte';
 	import TaskWorkerNode from '$lib/components/nodes/TaskWorkerNode.svelte';
 	import LLMTaskWorkerNode from '$lib/components/nodes/LLMTaskWorkerNode.svelte';
@@ -84,6 +84,7 @@
 
 	// Define node types and pass stores as props
 	const nodeTypes: any = {
+		modulelevelimport: ModuleLevelImport,
 		task: TaskNode,
 		taskimport: TaskImportNode,
 		taskworker: TaskWorkerNode,
@@ -380,6 +381,13 @@
 				nodeData = {
 					modulePath: '', // Initial empty module path
 					className: null,
+					nodeId: id
+				};
+				break;
+			}
+			case 'modulelevelimport': {
+				nodeData = {
+					code: '# Add your module level imports here',
 					nodeId: id
 				};
 				break;
