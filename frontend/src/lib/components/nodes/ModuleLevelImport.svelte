@@ -30,6 +30,11 @@
 			return;
 		}
 
+		if (isLoading) {
+			// Allow one validation at a time
+			return;
+		}
+
 		isLoading = true;
 		errorMessage = null;
 		isValid = null; // Reset validity while loading

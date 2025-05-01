@@ -94,6 +94,11 @@
 	}
 
 	async function validateJsonData() {
+		if (isLoading) {
+			// Allow one validation at a time
+			return;
+		}
+
 		isLoading = true;
 		try {
 			// find the Task Class Node
