@@ -914,13 +914,11 @@ except Exception as e:
     result = validate_code_in_venv("module_import_validation", validation_script)
 
     # Process the result for the frontend
-    if result.get("success"):
-        status_code = 200
-    else:
+    status_code = 200
+    if not result.get("success"):
         # Extract the core error message if possible
         error_details = result.get("error", {})
         result["error"] = error_details.get("message", "Import validation failed.")
-        status_code = 400  # Bad request due to invalid code
 
     return jsonify(result), status_code
 
