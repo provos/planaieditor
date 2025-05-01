@@ -366,28 +366,29 @@ export async function importPythonCode(
                 }
             }
 
+            // strip cached from worker type
+            const workerType = worker.workerType.startsWith('cached') ? worker.workerType.replace('cached', '') : worker.workerType;
+
             // Type-specific mappings
             switch (worker.workerType) {
                 case 'taskworker':
-                case 'cachedtaskworker':
                     nodeData.requiredMembers = ['consume_work'];
                     break;
                 case 'llmtaskworker':
-                case 'cachedllmtaskworker': // Treat similarly for basic import
                     nodeData.requiredMembers = ['prompt', 'system_prompt'];
-                    nodeData.prompt = worker.classVars.prompt || '# No prompt found';
+                    nodeData.prompt = worker.classVars?.prompt || '# No prompt found';
                     nodeData.system_prompt =
-                        worker.classVars.system_prompt || worker.classVars.system || '';
+                        worker.classVars?.system_prompt || worker.classVars?.system || '';
                     // Map boolean flags directly from classVars (parser still puts them there)
-                    nodeData.use_xml = worker.classVars.use_xml || false;
-                    nodeData.debug_mode = worker.classVars.debug_mode || false;
+                    nodeData.use_xml = worker.classVars?.use_xml || false;
+                    nodeData.debug_mode = worker.classVars?.debug_mode || false;
                     // Explicitly map llm_input_type from classVars
-                    nodeData.llm_input_type = worker.classVars.llm_input_type || '';
-                    nodeData.llm_output_type = worker.classVars.llm_output_type || '';
+                    nodeData.llm_input_type = worker.classVars?.llm_input_type || '';
+                    nodeData.llm_output_type = worker.classVars?.llm_output_type || '';
                     break;
                 case 'joinedtaskworker':
                     // Map the join_type from class variables
-                    nodeData.join_type = worker.classVars.join_type || ''; // Use extracted join_type or default to empty
+                    nodeData.join_type = worker.classVars?.join_type || ''; // Use extracted join_type or default to empty
                     nodeData.requiredMembers = ['consume_work_joined'];
                     break;
                 case 'subgraphworker':
@@ -402,9 +403,6 @@ export async function importPythonCode(
                     break;
                 // Add other worker types if needed
             }
-
-            // strip cached from worker type
-            const workerType = worker.workerType.replace('cached', '');
 
             const newNode: Node = {
                 id,
