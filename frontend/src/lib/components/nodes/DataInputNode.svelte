@@ -12,6 +12,8 @@
 	import Spinner from 'phosphor-svelte/lib/Spinner';
 	import { onMount } from 'svelte';
 	import HeaderIcon from '../HeaderIcon.svelte';
+	import { selectedInterpreterPath } from '$lib/stores/pythonInterpreterStore.svelte';
+
 	// Define the interface for the node's data
 	export interface DataInputNodeData {
 		className: string | null; // Can be null initially
@@ -55,6 +57,13 @@
 	// --- Effects ---
 	onMount(() => {
 		if (selectedClassName) {
+			validateJsonData();
+		}
+	});
+
+	// Validate the json data when the interpreter path changes
+	$effect(() => {
+		if (selectedInterpreterPath.value && selectedClassName) {
 			validateJsonData();
 		}
 	});
@@ -138,7 +147,7 @@
 </script>
 
 <div
-	class="datainput-node flex h-full flex-col rounded-md border border-gray-300 bg-white shadow-md overflow-auto"
+	class="datainput-node flex h-full flex-col overflow-auto rounded-md border border-gray-300 bg-white shadow-md"
 >
 	<!-- Node Resizer -->
 	<NodeResizer

@@ -6,6 +6,7 @@
 	import { debounce, formatErrorMessage } from '$lib/utils/utils';
 	import Spinner from 'phosphor-svelte/lib/Spinner';
 	import { onMount } from 'svelte';
+	import { selectedInterpreterPath } from '$lib/stores/pythonInterpreterStore.svelte';
 
 	export interface ModuleLevelImportData {
 		code: string;
@@ -66,10 +67,17 @@
 	onMount(() => {
 		validateImportCode(); // Validate initial code on mount
 	});
+
+	// Validate the code when the interpreter path changes
+	$effect(() => {
+		if (selectedInterpreterPath.value) {
+			validateImportCode();
+		}
+	});
 </script>
 
 <div
-	class="modulelevelimport-node flex h-full flex-col rounded-md border border-gray-300 bg-white shadow-md overflow-auto"
+	class="modulelevelimport-node flex h-full flex-col overflow-auto rounded-md border border-gray-300 bg-white shadow-md"
 >
 	<!-- Node Resizer -->
 	<NodeResizer
