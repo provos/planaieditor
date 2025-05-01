@@ -257,6 +257,7 @@ def compare_definitions(defs1: dict, defs2: dict) -> bool:
                 "debug_mode",
                 "prompt",
                 "system_prompt",
+                "code",
             ]
             for vname in vars_to_check:
                 val1 = vars1.get(vname)
