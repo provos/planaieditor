@@ -1536,13 +1536,14 @@ def get_definitions_from_file(
         print(f"Error: Could not format module imports: {e}")
         module_imports_str = "\n".join(module_imports)
 
-    all_worker_defs.append(
-        {
-            "className": "ModuleLevelImport",
-            "workerType": "modulelevelimport",
-            "code": module_imports_str,
-        }
-    )
+    if module_imports_str:
+        all_worker_defs.append(
+            {
+                "className": "ModuleLevelImport",
+                "workerType": "modulelevelimport",
+                "code": module_imports_str,
+            }
+        )
 
     print(f"Extracted imported tasks: {imported_tasks}")
 

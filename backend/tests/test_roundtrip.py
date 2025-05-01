@@ -411,7 +411,7 @@ class DataCollectorWorker(JoinedTaskWorker):
     for worker in worker_defs:
         print(f"  {worker['className']} ({worker['workerType']})")
 
-    assert len(worker_defs) == 3, "Expected 3 worker classes"
+    assert len(worker_defs) == 4, f"Expected 3 worker classes, got {len(worker_defs)}"
 
     # Step 2: Create graph data for regeneration
     task_nodes = []
@@ -1085,7 +1085,7 @@ def build_graph():
             print(f"    LLM Config: {worker['llmConfigFromCode']}")
 
     # Verify that we parsed the LLM configurations
-    assert len(worker_defs) == 2, "Expected 2 worker classes"
+    assert len(worker_defs) == 2, f"Expected 2 worker classes, got {len(worker_defs)}"
     openai_worker = next(
         (w for w in worker_defs if w["className"] == "OpenAIProcessor"), None
     )

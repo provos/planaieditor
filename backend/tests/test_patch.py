@@ -171,7 +171,7 @@ class MyLLMWorkerWithDedent(LLMTaskWorker):
     file_path = temp_python_file(code)
     definitions = get_definitions_from_file(str(file_path))
 
-    assert len(definitions["workers"]) == 1
+    assert len(definitions["workers"]) == 2
     worker = definitions["workers"][0]
     expected_prompt = (
         "This is the first line.\n"
@@ -205,7 +205,9 @@ class MyLLMWorkerWithDedent(LLMTaskWorker):
     file_path = temp_python_file(code)
     definitions = get_definitions_from_file(str(file_path))
 
-    assert len(definitions["workers"]) == 1
+    assert (
+        len(definitions["workers"]) == 2
+    )  # 1 for the LLM worker, 1 for the module level import
     worker = definitions["workers"][0]
     expected_prompt = (
         "This is the first line.\n"
@@ -661,9 +663,19 @@ class PlanFinalizer(TaskWorker):
     assert any(t["className"] == "LocalTask" for t in definitions["tasks"])
 
     # Ensure workers are still parsed correctly
-    assert len(definitions["workers"]) == 2
+    assert len(definitions["workers"]) == 3
     assert any(w["className"] == "QueryProcessor" for w in definitions["workers"])
     assert any(w["className"] == "PlanFinalizer" for w in definitions["workers"])
+    module_level_import = next(
+        (w for w in definitions["workers"] if w["workerType"] == "modulelevelimport"),
+        None,
+    )
+    assert module_level_import is not None, "ModuleLevelImport not found"
+
+    expected_code = "from external_module import ExternalTask\n"
+    assert (
+        module_level_import["code"] == expected_code
+    ), f"Expected code to be {expected_code}, got {module_level_import['code']}"
 
 
 def test_extract_factory_workers_and_edges(temp_python_file):
