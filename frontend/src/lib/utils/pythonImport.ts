@@ -51,17 +51,18 @@ export interface ImportedOtherMember {
 }
 
 export interface ImportedWorker {
-    className: string;
+    className?: string;
     workerType: string; // e.g., "taskworker", "llmtaskworker", "subgraphworker"
-    classVars: Record<string, any>; // Dictionary of known parsed class vars
+    classVars?: Record<string, any>; // Dictionary of known parsed class vars
     inputTypes?: string[]; // Optional: Parsed from consume_work type hint
-    methods: Record<string, string>; // Dictionary of known method sources
+    methods?: Record<string, string>; // Dictionary of known method sources
     otherMembersSource?: string; // Consolidated source code of other members
     variableName?: string; // Optional: Variable name assigned
     factoryFunction?: string; // Name of the factory function if applicable
     factoryInvocation?: string; // Combined invocation string
     llmConfigFromCode?: Record<string, any>; // LLM configuration parsed from code
     llmConfigVar?: string; // Variable name assigned to the LLM config if applicable
+    code?: string; // Code for the module level import
 }
 
 // Result type for the Python import operation
@@ -336,7 +337,7 @@ export async function importPythonCode(
                 nodeId: id,
                 // Initialize common fields, specific nodes might override
                 inputTypes: worker.inputTypes || [], // Use parsed inputTypes from backend if available
-                output_types: worker.classVars.output_types || [], // Map output_types
+                output_types: worker.classVars?.output_types || [], // Map output_types
                 // Store unparsed methods and members for potential display/editing later
                 methods: worker.methods || {}, // Ensure methods exists
                 otherMembersSource: worker.otherMembersSource || undefined, // Store consolidated source
@@ -395,6 +396,9 @@ export async function importPythonCode(
                     nodeData.isFactoryCreated = !!worker.factoryFunction;
                     nodeData.factoryFunction = worker.factoryFunction;
                     nodeData.factoryInvocation = worker.factoryInvocation;
+                    break;
+                case 'modulelevelimport':
+                    nodeData.code = worker.code;
                     break;
                 // Add other worker types if needed
             }

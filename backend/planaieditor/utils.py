@@ -1,6 +1,10 @@
+import os
 import re
+from pathlib import Path
 from textwrap import dedent
 from typing import Any, Dict, List, Optional, Tuple
+
+CODE_SNIPPETS_DIR = os.path.join(os.path.dirname(__file__), "codesnippets")
 
 
 def is_valid_python_class_name(name: str) -> bool:
@@ -122,3 +126,11 @@ def parse_traceback(traceback_str: str) -> Optional[Dict[str, Any]]:
             "fullTraceback": None,
         },
     }
+
+
+def return_code_snippet(name: str) -> str:
+    """
+    Returns a code snippet from the codesnippets directory.
+    """
+    with Path(CODE_SNIPPETS_DIR, f"{name}.py").open("r", encoding="utf-8") as f:
+        return f.read() + "\n\n"

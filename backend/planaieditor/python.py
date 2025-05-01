@@ -1,16 +1,16 @@
-# Updated function to generate PlanAI Python code from graph data
 import json
-import os
 import re
-from pathlib import Path
 from reprlib import repr as smart_repr
 from textwrap import dedent, indent
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import black
-from planaieditor.utils import is_valid_python_class_name, split_method_signature_body
-
-CODE_SNIPPETS_DIR = os.path.join(os.path.dirname(__file__), "codesnippets")
+import isort
+from planaieditor.utils import (
+    is_valid_python_class_name,
+    return_code_snippet,
+    split_method_signature_body,
+)
 
 VALID_LLM_PROVIDERS = [
     "ollama",
@@ -42,14 +42,6 @@ def custom_format(template: str, **kwargs) -> str:
 
     pattern = r"# \{(\w+)\}"
     return re.sub(pattern, replace_match, template)
-
-
-def return_code_snippet(name):
-    """
-    Returns a code snippet from the codesnippets directory.
-    """
-    with Path(CODE_SNIPPETS_DIR, f"{name}.py").open("r", encoding="utf-8") as f:
-        return f.read() + "\n\n"
 
 
 def create_worker_to_instance_mapping(
@@ -810,7 +802,9 @@ def generate_python_module(
 
     # Format the generated code using black
     try:
-        formatted_code = black.format_str(final_code, mode=black.FileMode())
+        isort_config = isort.Config(profile="black")
+        sorted_code = isort.code(final_code, config=isort_config)
+        formatted_code = black.format_str(sorted_code, mode=black.FileMode())
         dprint(f"Successfully generated and formatted code for module: {module_name}")
         dprint("--- Generated Code ---")
         dprint(formatted_code)

@@ -3,6 +3,10 @@ import re
 from textwrap import dedent
 from typing import Any, Dict, List, Optional, Set, Tuple
 
+import black
+import isort
+from planaieditor.utils import return_code_snippet
+
 # Define the base class name we are looking for
 TASK_BASE_CLASS = "Task"
 
@@ -26,17 +30,6 @@ WORKER_TYPE_MAP = {
     "TaskWorker": "taskworker",
     "ChatTaskWorker": "chattaskworker",
 }
-
-# Keep the list of all known PlanAI classes for potential future use
-# PLANAI_CLASSES = [
-#     "Task",
-#     "TaskWorker",
-#     "LLMTaskWorker",
-#     "CachedTaskWorker",
-#     "CachedLLMTaskWorker",
-#     "JoinedTaskWorker",
-#     "MergedTaskWorker",
-# ]
 
 # --- Allow List for Imported Tasks ---
 ALLOWED_TASK_IMPORTS: Dict[str, List[str]] = {
@@ -86,6 +79,16 @@ def get_ast_from_file(filename: str) -> ast.Module:
     with open(filename, "r") as f:
         code = f.read()
     return ast.parse(code)
+
+
+def get_import_statements(parsed_ast: ast.Module) -> List[ast.Import]:
+    """Extracts all import statements from an AST module."""
+    return [node for node in parsed_ast.body if isinstance(node, ast.Import)]
+
+
+def get_import_from_statements(parsed_ast: ast.Module) -> List[ast.ImportFrom]:
+    """Extracts all import statements from an AST module."""
+    return [node for node in parsed_ast.body if isinstance(node, ast.ImportFrom)]
 
 
 def get_class_definitions(parsed_ast: ast.Module) -> List[ast.ClassDef]:
@@ -1166,6 +1169,101 @@ def parse_graph_run_entry_points(
     return entry_edges
 
 
+def filter_out_default_imports(module_imports: List[ast.stmt]) -> List[ast.stmt]:
+    # filter out default imports
+    export_code_snippet = return_code_snippet("export_clean")
+    export_code_ast = ast.parse(export_code_snippet)
+    export_code_imports = get_import_statements(export_code_ast)
+    export_code_import_from_statements = get_import_from_statements(export_code_ast)
+
+    # Create sets for efficient lookup of default imports
+    default_import_names = set()
+    for imp in export_code_imports:
+        for alias in imp.names:
+            default_import_names.add(alias.name)
+
+    default_import_from_tuples = set()
+    for imp_from in export_code_import_from_statements:
+        module_name = imp_from.module or ""  # Handle relative imports if needed later
+        for alias in imp_from.names:
+            default_import_from_tuples.add((module_name, alias.name))
+
+    filtered_imports = []
+    for import_node in module_imports:
+        if isinstance(import_node, ast.Import):
+            non_default_aliases = []
+            for alias in import_node.names:
+                if alias.name not in default_import_names:
+                    non_default_aliases.append(alias)
+            # If any names remain after filtering, add a new Import node with only those names
+            if non_default_aliases:
+                filtered_imports.append(ast.Import(names=non_default_aliases))
+        elif isinstance(import_node, ast.ImportFrom):
+            non_default_names = []
+            module_name = import_node.module or ""
+            for alias in import_node.names:
+                # Check if the specific import (module, name) is in the defaults
+                if (module_name, alias.name) not in default_import_from_tuples:
+                    non_default_names.append(alias)
+            # If any names remain after filtering, add a new ImportFrom node
+            if non_default_names:
+                filtered_imports.append(
+                    ast.ImportFrom(
+                        module=import_node.module,  # Keep original module name
+                        names=non_default_names,
+                        level=import_node.level,  # Keep original level
+                    )
+                )
+
+    return filtered_imports
+
+
+def get_imported_tasks_and_module_imports(
+    parsed_ast: ast.Module,
+) -> Tuple[List[Dict[str, str]], List[str]]:
+    """Extracts all imported task names and module imports from an AST module."""
+    imported_tasks = []
+    module_imports = []
+
+    for node in get_import_from_statements(parsed_ast):
+        module_path = node.module
+        if module_path and module_path in ALLOWED_TASK_IMPORTS:
+            allowed_classes = ALLOWED_TASK_IMPORTS[module_path]
+            for alias in node.names:
+                original_name = alias.name
+                imported_as = alias.asname or original_name
+                if original_name in allowed_classes:
+                    # Found an allowed imported Task
+                    imported_tasks.append(
+                        {
+                            "modulePath": module_path,
+                            "className": imported_as,  # Use the name it's imported as
+                        }
+                    )
+                else:
+                    # reconstruct ast.ImportFrom node
+                    module_imports.append(
+                        ast.ImportFrom(
+                            module=module_path, names=[ast.alias(name=imported_as)]
+                        )
+                    )
+        else:
+            module_imports.append(node)
+
+    # By convention, we expect all PlanAI imports to be "from planai import <name>"
+    for node in get_import_statements(parsed_ast):
+        for name in node.names:
+            if name.name not in ALLOWED_TASK_IMPORTS:
+                module_imports.append(node)
+
+    # filter out default imports
+    module_imports = filter_out_default_imports(module_imports)
+    # convert module_imports to string
+    module_import_strings = [ast.unparse(node) for node in module_imports]
+
+    return imported_tasks, module_import_strings
+
+
 def get_definitions_from_file(
     filename: Optional[str] = None, code_string: Optional[str] = None
 ) -> Dict[str, List[Dict[str, Any]]]:
@@ -1420,32 +1518,30 @@ def get_definitions_from_file(
         print("Warning: Could not find a graph builder function.")
 
     # --- Extract Imported Tasks (Based on Allow List) ---
-    imported_tasks = []
-    imported_task_names: Set[str] = set()  # Keep track of names found via import
-
-    for node in parsed_ast.body:
-        if isinstance(node, ast.ImportFrom):
-            module_path = node.module
-            if module_path and module_path in ALLOWED_TASK_IMPORTS:
-                allowed_classes = ALLOWED_TASK_IMPORTS[module_path]
-                for alias in node.names:
-                    original_name = alias.name
-                    imported_as = alias.asname or original_name
-                    if original_name in allowed_classes:
-                        # Found an allowed imported Task
-                        imported_tasks.append(
-                            {
-                                "modulePath": module_path,
-                                "className": imported_as,  # Use the name it's imported as
-                                # 'fields' are not extracted here, frontend will fetch them
-                            }
-                        )
-                        imported_task_names.add(imported_as)
-        # TODO: Add support for 'import module' and then using 'module.TaskName' if needed
+    imported_tasks, module_imports = get_imported_tasks_and_module_imports(parsed_ast)
 
     # Add implicit imports based on worker types
     imported_tasks = add_implicit_imports(
         imported_tasks, {w["workerType"] for w in all_worker_defs}
+    )
+
+    # create the custom modulelevelimport worker node
+    # clean up the imports with black
+    try:
+        module_imports_str = "\n".join(module_imports)
+        isort_config = isort.Config(profile="black")
+        module_imports_str = isort.code(module_imports_str, config=isort_config)
+        module_imports_str = black.format_str(module_imports_str, mode=black.Mode())
+    except Exception as e:
+        print(f"Error: Could not format module imports: {e}")
+        module_imports_str = "\n".join(module_imports)
+
+    all_worker_defs.append(
+        {
+            "className": "ModuleLevelImport",
+            "workerType": "modulelevelimport",
+            "code": module_imports_str,
+        }
     )
 
     print(f"Extracted imported tasks: {imported_tasks}")
