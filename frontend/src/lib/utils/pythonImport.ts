@@ -327,7 +327,9 @@ export async function importPythonCode(
             }
 
             const id = `imported-${worker.workerType}-${worker.className}-${Date.now()}`;
-            classNameToNodeId[worker.className] = id; // Store mapping
+            if (worker.className) {
+                classNameToNodeId[worker.className] = id; // Store mapping
+            }
 
             // Map backend data to frontend node data structure
             const nodeData: any = {
@@ -370,7 +372,7 @@ export async function importPythonCode(
             const workerType = worker.workerType.startsWith('cached') ? worker.workerType.replace('cached', '') : worker.workerType;
 
             // Type-specific mappings
-            switch (worker.workerType) {
+            switch (workerType) {
                 case 'taskworker':
                     nodeData.requiredMembers = ['consume_work'];
                     break;
