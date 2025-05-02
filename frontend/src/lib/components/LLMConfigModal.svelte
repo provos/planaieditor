@@ -72,7 +72,7 @@
 	$effect(() => {
 		const provider = formState.provider;
 		if (provider) {
-			fetchModelsForProvider(provider);
+			fetchModelsForProvider(provider); // async function does not trigger reactivity
 		} else {
 			availableModels = []; // Clear models if provider is cleared
 		}

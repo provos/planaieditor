@@ -15,10 +15,6 @@
 
 	let name = $state(initialName);
 
-	$effect(() => {
-		name = initialName;
-	});
-
 	function handleSubmit() {
 		if (name.trim()) {
 			onSave(name.trim());

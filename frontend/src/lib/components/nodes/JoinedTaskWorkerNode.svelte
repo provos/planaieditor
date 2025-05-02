@@ -6,7 +6,7 @@
 	import { get } from 'svelte/store'; // To get store value
 	import { useStore, useUpdateNodeInternals } from '@xyflow/svelte';
 	import type { Node, Edge } from '@xyflow/svelte';
-	import { tick } from 'svelte';
+	import { tick, onMount } from 'svelte';
 
 	// Extend the base data interface
 	interface JoinedWorkerData extends BaseWorkerData {
@@ -48,7 +48,7 @@
 	let allJoinTypeOptions = $derived(['InitialTaskWorker', ...availableWorkerClasses]);
 
 	// Get available worker names from the store
-	$effect(() => {
+	onMount(() => {
 		const unsub = allClassNames.subscribe((nameMap) => {
 			const workers: string[] = [];
 			const currentNodes = get(nodes); // Get current nodes directly from the nodes store

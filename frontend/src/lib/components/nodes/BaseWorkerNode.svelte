@@ -89,11 +89,7 @@
 			workerType = node.type;
 		}
 	})();
-	const allowedCacheTypes = [
-		'taskworker',
-		'llmtaskworker',
-		'chattaskworker',
-	];
+	const allowedCacheTypes = ['taskworker', 'llmtaskworker', 'chattaskworker'];
 	const showCachedOption = workerType && allowedCacheTypes.includes(workerType);
 	const nodeIconStyle = getNodeIconStyle(workerType || 'default');
 
@@ -128,10 +124,7 @@
 
 	// Effect to sync localIsCached back to data.isCached
 	$effect(() => {
-		// Only update if the value actually changed to avoid loops if data is also reactive
-		if (data.isCached !== localIsCached) {
-			data.isCached = localIsCached;
-		}
+		data.isCached = localIsCached;
 	});
 
 	// --- Worker Name Editing Logic ---

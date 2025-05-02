@@ -18,13 +18,15 @@
 
 	const store = useStore();
 
-	$effect(() => {
-		if (manuallySelectedInputType && inferredInputTypes.length === 0 && isEditable) {
-			inferredInputTypes = [manuallySelectedInputType];
-			data.inputTypes = [manuallySelectedInputType];
-			onUpdate([manuallySelectedInputType]);
-		}
-	});
+	if (isEditable) {
+		$effect(() => {
+			if (manuallySelectedInputType && inferredInputTypes.length === 0) {
+				inferredInputTypes = [manuallySelectedInputType];
+				data.inputTypes = [manuallySelectedInputType];
+				onUpdate([manuallySelectedInputType]);
+			}
+		});
+	}
 
 	// --- Effects for Reactivity ---
 	onMount(() => {

@@ -64,6 +64,7 @@
 			// Listen for content changes *after* editor is created
 			editor.onDidChangeModelContent(() => {
 				currentCode = editor?.getValue() ?? '';
+				onUpdate(currentCode);
 				updateEditorHeight();
 			});
 
@@ -85,11 +86,6 @@
 				})
 			);
 		}
-	});
-
-	// Effect to update the code when the currentCode state changes
-	$effect(() => {
-		onUpdate(currentCode);
 	});
 
 	// Function to update editor height based on content

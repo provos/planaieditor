@@ -62,7 +62,6 @@
 	// Validate the json data when the interpreter path changes
 	$effect(() => {
 		if (selectedInterpreterPath.value) {
-			console.log('validating json data: ', $state.snapshot(selectedInterpreterPath.value));
 			untrack(() => validateJsonData());
 		}
 	});
