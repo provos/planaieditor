@@ -51,7 +51,6 @@
 			const data = await response.json();
 
 			if (data.success && data.path) {
-				// selectedPath = data.path; // Update store instead
 				selectedInterpreterPath.value = data.path;
 			}
 		} catch (err) {
@@ -73,13 +72,11 @@
 			const data = await response.json();
 
 			if (data.success) {
-				// selectedPath = path; // Update store instead
 				selectedInterpreterPath.value = path;
 				error = null;
 				isOpen = false; // Close the dropdown after selection
 			} else {
 				error = data.error || 'Failed to set Python interpreter';
-				// selectedPath = null; // Update store instead
 				selectedInterpreterPath.value = null;
 			}
 		} catch (err) {
