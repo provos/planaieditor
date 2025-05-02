@@ -22,13 +22,13 @@ WORKER_BASE_CLASSES = [
 ]
 # Map to frontend types
 WORKER_TYPE_MAP = {
-    "CachedLLMTaskWorker": "cachedllmtaskworker",
-    "LLMTaskWorker": "llmtaskworker",
-    "CachedTaskWorker": "cachedtaskworker",
-    "JoinedTaskWorker": "joinedtaskworker",
-    "SubGraphWorker": "subgraphworker",  # Map SubGraphWorker
-    "TaskWorker": "taskworker",
-    "ChatTaskWorker": "chattaskworker",
+    "CachedLLMTaskWorker": ("llmtaskworker", True),
+    "LLMTaskWorker": ("llmtaskworker", False),
+    "CachedTaskWorker": ("taskworker", True),
+    "JoinedTaskWorker": ("joinedtaskworker", False),
+    "SubGraphWorker": ("subgraphworker", False),  # Map SubGraphWorker
+    "TaskWorker": ("taskworker", False),
+    "ChatTaskWorker": ("chattaskworker", False),
 }
 
 # --- Allow List for Imported Tasks ---
@@ -354,11 +354,12 @@ def extract_task_fields(
 
 def get_worker_definitions(
     class_definitions: List[ast.ClassDef],
-) -> List[Tuple[ast.ClassDef, str]]:
+) -> List[Tuple[ast.ClassDef, str, bool]]:
     """
     Identifies class definitions inheriting from known Worker base classes.
-    Returns a list of tuples: (ClassDef, worker_type_string).
+    Returns a list of tuples: (ClassDef, worker_type_string, is_cached).
     The worker_type_string corresponds to the *most specific* base class found.
+    The is_cached boolean indicates if the worker is a cached worker.
     """
     all_classes_map = {cls.name: cls for cls in class_definitions}
     worker_definitions = []
@@ -369,13 +370,13 @@ def get_worker_definitions(
         # Check against known worker bases in order of specificity
         for base in WORKER_BASE_CLASSES:
             if base in resolved_bases:
-                found_worker_type = WORKER_TYPE_MAP.get(
-                    base, "taskworker"
+                found_worker_type, is_cached = WORKER_TYPE_MAP.get(
+                    base, ("taskworker", False)
                 )  # Default fallback
                 break  # Found the most specific type
 
         if found_worker_type:
-            worker_definitions.append((class_def, found_worker_type))
+            worker_definitions.append((class_def, found_worker_type, is_cached))
 
     return worker_definitions
 
@@ -1348,8 +1349,9 @@ def get_definitions_from_file(
     # --- Extract Workers ---
     worker_definitions_with_type = get_worker_definitions(class_definitions)
     worker_results = []
-    for class_def, worker_type in worker_definitions_with_type:
+    for class_def, worker_type, is_cached in worker_definitions_with_type:
         details = extract_worker_details(class_def, worker_type, source_code)
+        details["isCached"] = is_cached
         # Add worker details including its assigned variable name if found later
         worker_results.append(details)
 

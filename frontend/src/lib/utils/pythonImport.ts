@@ -63,6 +63,7 @@ export interface ImportedWorker {
     llmConfigFromCode?: Record<string, any>; // LLM configuration parsed from code
     llmConfigVar?: string; // Variable name assigned to the LLM config if applicable
     code?: string; // Code for the module level import
+    isCached: boolean;
 }
 
 // Result type for the Python import operation
@@ -333,7 +334,7 @@ export async function importPythonCode(
 
             // Map backend data to frontend node data structure
             const nodeData: any = {
-                isCached: worker.workerType.startsWith('cached'), // Set flag based on type
+                isCached: worker.isCached || false,
                 variableName: worker.variableName, // Use variableName if it exists
                 workerName: worker.className, // Use className as workerName
                 nodeId: id,
@@ -368,15 +369,14 @@ export async function importPythonCode(
                 }
             }
 
-            // strip cached from worker type
-            const workerType = worker.workerType.startsWith('cached') ? worker.workerType.replace('cached', '') : worker.workerType;
-
             // Type-specific mappings
-            switch (workerType) {
+            switch (worker.workerType) {
                 case 'taskworker':
                     nodeData.requiredMembers = ['consume_work'];
+                    nodeData.isCached = worker.isCached;
                     break;
                 case 'llmtaskworker':
+                    nodeData.isCached = worker.isCached;
                     nodeData.requiredMembers = ['prompt', 'system_prompt'];
                     nodeData.prompt = worker.classVars?.prompt || '# No prompt found';
                     nodeData.system_prompt =
@@ -408,7 +408,7 @@ export async function importPythonCode(
 
             const newNode: Node = {
                 id,
-                type: workerType, // Use the identified worker type
+                type: worker.workerType, // Use the identified worker type
                 position: { x: startX + 400, y: nextY }, // Offset workers horizontally
                 draggable: true,
                 selectable: true,

@@ -462,8 +462,9 @@ class DataCollectorWorker(JoinedTaskWorker):
 
         if name == "AdvancedLLMWorker":
             assert (
-                regen_worker["workerType"] == "cachedllmtaskworker"
-            ), f"Expected AdvancedLLMWorker to be CachedLLMTaskWorker, got {regen_worker['workerType']}"
+                regen_worker["workerType"] == "llmtaskworker"
+            ), f"Expected AdvancedLLMWorker to be LLMTaskWorker, got {regen_worker['workerType']}"
+            assert regen_worker["isCached"], "Expected AdvancedLLMWorker to be cached"
 
         # Compare classVars (basic check for key presence and simple values)
         orig_vars = orig_worker.get("classVars", {})

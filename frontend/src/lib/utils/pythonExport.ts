@@ -158,11 +158,6 @@ export function convertGraphtoJSON(nodes: Node[], edges: Edge[], mode: 'export' 
             delete processedData.isFactoryCreated;
         }
 
-        // Handle cached nodes - this needs to be completely removed at some point
-        if (data.isCached) {
-            node.type = 'cached' + node.type;
-        }
-
         return { ...node, data: processedData };
     });
 

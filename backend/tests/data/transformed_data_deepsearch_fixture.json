@@ -463,7 +463,7 @@
     },
     {
       "id": "imported-cachedllmtaskworker-PlanWorker-1745361767761",
-      "type": "cachedllmtaskworker",
+      "type": "llmtaskworker",
       "position": {
         "x": 402,
         "y": 927.25
@@ -544,7 +544,7 @@
     },
     {
       "id": "imported-cachedllmtaskworker-SearchCreator-1745361767761",
-      "type": "cachedllmtaskworker",
+      "type": "llmtaskworker",
       "position": {
         "x": 1542,
         "y": 641.5
@@ -667,7 +667,7 @@
     },
     {
       "id": "imported-cachedllmtaskworker-SearchSummarizer-1745361767761",
-      "type": "cachedllmtaskworker",
+      "type": "llmtaskworker",
       "position": {
         "x": 3653,
         "y": 571
@@ -791,7 +791,7 @@
     },
     {
       "id": "imported-cachedllmtaskworker-FinalNarrativeWorker-1745361767761",
-      "type": "cachedllmtaskworker",
+      "type": "llmtaskworker",
       "position": {
         "x": 5862,
         "y": 514

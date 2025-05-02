@@ -328,17 +328,20 @@ def create_worker_class(node: Dict[str, Any]) -> Optional[str]:
     if not is_valid_python_class_name(worker_name):
         raise ValueError(f"Invalid worker class name: {worker_name}")
 
-    base_class = "TaskWorker"  # Default
-    if node_type == "llmtaskworker":
-        base_class = "LLMTaskWorker"
-    elif node_type == "joinedtaskworker":
-        base_class = "JoinedTaskWorker"
-    elif node_type == "cachedtaskworker":
-        base_class = "CachedTaskWorker"
-    elif node_type == "cachedllmtaskworker":
-        base_class = "CachedLLMTaskWorker"
-    elif node_type == "chattaskworker":
-        base_class = "ChatTaskWorker"
+    match node_type:
+        case "taskworker":
+            base_class = "TaskWorker"
+        case "llmtaskworker":
+            base_class = "LLMTaskWorker"
+        case "joinedtaskworker":
+            base_class = "JoinedTaskWorker"
+        case "chattaskworker":
+            base_class = "ChatTaskWorker"
+        case _:
+            raise ValueError(f"Invalid worker type: {node_type}")
+
+    if data.get("isCached") and node_type in ["llmtaskworker", "taskworker"]:
+        base_class = "Cached" + base_class
 
     code.append(f"# Worker class: {worker_name}")
     code.append(f"\nclass {worker_name}({base_class}):")
