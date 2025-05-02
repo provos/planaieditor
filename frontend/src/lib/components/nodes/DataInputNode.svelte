@@ -3,14 +3,12 @@
 	import { taskClassNamesStore } from '$lib/stores/taskClassNamesStore';
 	import { getColorForType } from '$lib/utils/colorUtils';
 	import EditableCodeSection from '../EditableCodeSection.svelte';
-	import { onDestroy } from 'svelte';
-	import { tick } from 'svelte';
+	import { onDestroy, onMount, untrack, tick } from 'svelte';
 	import { useUpdateNodeInternals } from '@xyflow/svelte';
 	import { formatErrorMessage, debounce } from '$lib/utils/utils';
 	import type { NodeData as TaskNodeData } from './TaskNode.svelte';
 	import { backendUrl } from '$lib/utils/backendUrl';
 	import Spinner from 'phosphor-svelte/lib/Spinner';
-	import { onMount } from 'svelte';
 	import HeaderIcon from '../HeaderIcon.svelte';
 	import { selectedInterpreterPath } from '$lib/stores/pythonInterpreterStore.svelte';
 
@@ -63,8 +61,9 @@
 
 	// Validate the json data when the interpreter path changes
 	$effect(() => {
-		if (selectedInterpreterPath.value && selectedClassName) {
-			validateJsonData();
+		if (selectedInterpreterPath.value) {
+			console.log('validating json data: ', $state.snapshot(selectedInterpreterPath.value));
+			untrack(() => validateJsonData());
 		}
 	});
 
@@ -94,7 +93,7 @@
 	}
 
 	async function validateJsonData() {
-		if (isLoading) {
+		if (isLoading || !selectedClassName) {
 			// Allow one validation at a time
 			return;
 		}

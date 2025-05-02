@@ -5,7 +5,7 @@
 	import { backendUrl } from '$lib/utils/backendUrl';
 	import { debounce, formatErrorMessage } from '$lib/utils/utils';
 	import Spinner from 'phosphor-svelte/lib/Spinner';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { selectedInterpreterPath } from '$lib/stores/pythonInterpreterStore.svelte';
 
 	export interface ModuleLevelImportData {
@@ -65,7 +65,6 @@
 		data.code = code;
 		isValid = null; // Mark as unchecked when code changes
 		errorMessage = null;
-		isLoading = true; // Show loading indicator immediately for responsiveness
 		debouncedValidate();
 	};
 
@@ -76,7 +75,7 @@
 	// Validate the code when the interpreter path changes
 	$effect(() => {
 		if (selectedInterpreterPath.value) {
-			validateImportCode();
+			untrack(() => validateImportCode());
 		}
 	});
 </script>
