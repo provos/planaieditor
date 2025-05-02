@@ -608,31 +608,24 @@ Analyze the following information and provide a response.`,
 
 			// Define optional methods per worker type
 			const OPTIONAL_METHODS: Record<string, string[]> = {
-				taskworker: ['pre_consume_work', 'post_consume_work'],
-				cachedtaskworker: ['pre_consume_work', 'post_consume_work', 'extra_cache_key'],
 				llmtaskworker: [
-					'pre_consume_work',
-					'post_consume_work',
 					'extra_validation',
 					'format_prompt',
 					'pre_process',
 					'post_process'
-				],
-				cachedllmtaskworker: [
-					'pre_consume_work',
-					'post_consume_work',
-					'extra_validation',
-					'format_prompt',
-					'pre_process',
-					'post_process',
-					'extra_cache_key'
 				]
-				// Add other worker types if they have optional methods
 			};
 
 			const nodeType = contextMenuNode.type || '';
+			const isCached = (contextMenuNode.data as BaseWorkerData)?.isCached || false;
 			const availableOptionalMethods = OPTIONAL_METHODS[nodeType] || [];
 			const existingMethods = new Set(Object.keys(contextMenuNode.data?.methods || {}));
+
+			if (isCached) {
+				availableOptionalMethods.push('extra_cache_key');
+				availableOptionalMethods.push('pre_consume_work');
+				availableOptionalMethods.push('post_consume_work');
+			}
 
 			const addMethodItems = availableOptionalMethods
 				.filter((methodName) => !existingMethods.has(methodName))
