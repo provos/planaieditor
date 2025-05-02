@@ -123,9 +123,11 @@
 	});
 
 	// Effect to sync localIsCached back to data.isCached
-	$effect(() => {
-		data.isCached = localIsCached;
-	});
+	if (isEditable) {
+		$effect(() => {
+			data.isCached = localIsCached;
+		});
+	}
 
 	// --- Worker Name Editing Logic ---
 	function startEditingName() {
