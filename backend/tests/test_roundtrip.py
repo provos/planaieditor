@@ -411,7 +411,7 @@ class DataCollectorWorker(JoinedTaskWorker):
     for worker in worker_defs:
         print(f"  {worker['className']} ({worker['workerType']})")
 
-    assert len(worker_defs) == 4, f"Expected 3 worker classes, got {len(worker_defs)}"
+    assert len(worker_defs) == 3, f"Expected 3 worker classes, got {len(worker_defs)}"
 
     # Step 2: Create graph data for regeneration
     task_nodes = []

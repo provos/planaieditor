@@ -400,9 +400,6 @@ export async function importPythonCode(
                     nodeData.factoryFunction = worker.factoryFunction;
                     nodeData.factoryInvocation = worker.factoryInvocation;
                     break;
-                case 'modulelevelimport':
-                    nodeData.code = worker.code;
-                    break;
                 // Add other worker types if needed
             }
 
@@ -422,6 +419,28 @@ export async function importPythonCode(
             newNodes.push(newNode);
             nextY += 180; // Basic vertical spacing (adjust as needed)
         });
+
+        // --- Create Module Level Import Node --- //
+        if (result.module_imports) {
+            const nodeData = {
+                code: result.module_imports,
+            };
+            const moduleLevelImportNode: Node = {
+                id: `imported-module-level-${Date.now()}`,
+                type: 'modulelevelimport',
+                position: { x: startX + 400, y: nextY },
+                draggable: true,
+                selectable: true,
+                deletable: true,
+                selected: false,
+                dragging: false,
+                zIndex: 0,
+                data: nodeData,
+                origin: [0, 0],
+            };
+            newNodes.push(moduleLevelImportNode);
+            nextY += 180; // Basic vertical spacing (adjust as needed)
+        }
 
         // --- Create Edges --- //
         const newEdges: Edge[] = [];

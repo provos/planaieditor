@@ -171,7 +171,7 @@ class MyLLMWorkerWithDedent(LLMTaskWorker):
     file_path = temp_python_file(code)
     definitions = get_definitions_from_file(str(file_path))
 
-    assert len(definitions["workers"]) == 2
+    assert len(definitions["workers"]) == 1
     worker = definitions["workers"][0]
     expected_prompt = (
         "This is the first line.\n"
@@ -205,9 +205,7 @@ class MyLLMWorkerWithDedent(LLMTaskWorker):
     file_path = temp_python_file(code)
     definitions = get_definitions_from_file(str(file_path))
 
-    assert (
-        len(definitions["workers"]) == 2
-    )  # 1 for the LLM worker, 1 for the module level import
+    assert len(definitions["workers"]) == 1  # 1 for the LLM worker
     worker = definitions["workers"][0]
     expected_prompt = (
         "This is the first line.\n"
@@ -663,19 +661,16 @@ class PlanFinalizer(TaskWorker):
     assert any(t["className"] == "LocalTask" for t in definitions["tasks"])
 
     # Ensure workers are still parsed correctly
-    assert len(definitions["workers"]) == 3
+    assert len(definitions["workers"]) == 2
     assert any(w["className"] == "QueryProcessor" for w in definitions["workers"])
     assert any(w["className"] == "PlanFinalizer" for w in definitions["workers"])
-    module_level_import = next(
-        (w for w in definitions["workers"] if w["workerType"] == "modulelevelimport"),
-        None,
-    )
-    assert module_level_import is not None, "ModuleLevelImport not found"
 
+    assert "module_imports" in definitions
+    module_imports = definitions["module_imports"]
     expected_code = "from external_module import ExternalTask\n"
     assert (
-        module_level_import["code"] == expected_code
-    ), f"Expected code to be {expected_code}, got {module_level_import['code']}"
+        module_imports == expected_code
+    ), f"Expected code to be {expected_code}, got {module_imports}"
 
 
 def test_extract_factory_workers_and_edges(temp_python_file):
@@ -812,6 +807,13 @@ def build_graph_with_factory():
         simple_planner["factoryInvocation"]
         == "llm='my_llm', num_variations=0, name='SimplePlanningWorker'"
     )
+
+    # check modulelevelimport node
+    assert "module_imports" in definitions
+    module_imports = definitions["module_imports"]
+    print(f"Extracted ModuleImports: {module_imports}")
+
+    assert not module_imports, f"Expected no module imports, got {module_imports}"
 
     # Check edges - now definitely use class names, not variable names
     edges = definitions["edges"]

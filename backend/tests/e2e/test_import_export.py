@@ -434,6 +434,9 @@ def test_import_export_roundtrip(page: Page, test_fixture_path: Path, request):
     expected_task_count = len(original_defs.get("tasks", [])) + len(
         original_defs.get("imported_tasks", [])
     )
+    if original_defs.get("module_imports"):
+        expected_task_count += 1
+
     expected_worker_count = len(original_defs.get("workers", []))
     expected_node_count = expected_task_count + expected_worker_count
     print(

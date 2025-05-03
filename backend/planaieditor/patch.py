@@ -1221,10 +1221,14 @@ def filter_out_default_imports(module_imports: List[ast.stmt]) -> List[ast.stmt]
 
 def get_imported_tasks_and_module_imports(
     parsed_ast: ast.Module,
+    worker_defs: List[Dict[str, Any]],
 ) -> Tuple[List[Dict[str, str]], List[str]]:
     """Extracts all imported task names and module imports from an AST module."""
     imported_tasks = []
     module_imports = []
+
+    # get all the use factory names as these imports will be automatically added
+    factory_names = set([w["factoryFunction"] for w in worker_defs])
 
     for node in get_import_from_statements(parsed_ast):
         module_path = node.module
@@ -1233,6 +1237,9 @@ def get_imported_tasks_and_module_imports(
             for alias in node.names:
                 original_name = alias.name
                 imported_as = alias.asname or original_name
+                if original_name in factory_names:
+                    # these will be added automatically
+                    continue
                 if original_name in allowed_classes:
                     # Found an allowed imported Task
                     imported_tasks.append(
@@ -1520,14 +1527,16 @@ def get_definitions_from_file(
         print("Warning: Could not find a graph builder function.")
 
     # --- Extract Imported Tasks (Based on Allow List) ---
-    imported_tasks, module_imports = get_imported_tasks_and_module_imports(parsed_ast)
+    imported_tasks, module_imports = get_imported_tasks_and_module_imports(
+        parsed_ast, [w for w in all_worker_defs if w["workerType"] == "subgraphworker"]
+    )
 
     # Add implicit imports based on worker types
     imported_tasks = add_implicit_imports(
         imported_tasks, {w["workerType"] for w in all_worker_defs}
     )
 
-    # create the custom modulelevelimport worker node
+    # create the custom modulelevelimport data structure
     # clean up the imports with black
     try:
         module_imports_str = "\n".join(module_imports)
@@ -1538,23 +1547,13 @@ def get_definitions_from_file(
         print(f"Error: Could not format module imports: {e}")
         module_imports_str = "\n".join(module_imports)
 
-    if module_imports_str:
-        all_worker_defs.append(
-            {
-                "className": "ModuleLevelImport",
-                "workerType": "modulelevelimport",
-                "code": module_imports_str,
-            }
-        )
-
-    print(f"Extracted imported tasks: {imported_tasks}")
-
     return {
         "tasks": task_results,
         "workers": all_worker_defs,
         "edges": edges,
         "entryEdges": entry_edges,
         "imported_tasks": imported_tasks,
+        "module_imports": module_imports_str,
     }
 
 
