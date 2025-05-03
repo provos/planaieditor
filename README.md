@@ -157,7 +157,7 @@ This describes how to build the frontend, package the application, and run it lo
 
 ## Contributing
 
-Contributions are welcome! Please feel free to open issues or submit pull requests. (Optional: Add contribution guidelines if you have them).
+We welcome contributions to PlanAI! Please see our [Contributing Guide](CONTRIBUTING.md) for more details on how to get started.
 
 ## License
 
