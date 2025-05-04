@@ -1,9 +1,8 @@
 <script lang="ts">
-	import { Handle, Position, NodeResizer } from '@xyflow/svelte';
+	import { NodeResizer } from '@xyflow/svelte';
 	import { isValidPythonClassName, isValidPythonIdentifier } from '$lib/utils/validation';
 	import { allClassNames } from '$lib/stores/classNameStore';
 	import { taskClassNamesStore } from '$lib/stores/taskClassNamesStore';
-	import { getColorForType } from '$lib/utils/colorUtils';
 	import Plus from 'phosphor-svelte/lib/Plus';
 	import Trash from 'phosphor-svelte/lib/Trash';
 	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
@@ -331,20 +330,12 @@
 		lineClass="resize-line-custom"
 	/>
 
-	<!-- Node handles -->
-	<Handle
-		type="source"
-		position={Position.Right}
-		id="output"
-		style={`background-color: ${getColorForType(data.className)};`}
-	/>
-
 	<!-- Header with editable class name -->
 	<div class="flex-none border-b border-gray-200 bg-gray-50 p-1">
 		{#if children}
 			<!-- Render children snippet if provided -->
 			<div
-				class="w-full cursor-pointer rounded px-1 py-0.5 text-center text-xs font-medium bg-blue-200"
+				class="w-full cursor-pointer rounded bg-blue-200 px-1 py-0.5 text-center text-xs font-medium"
 			>
 				{data.className || 'Unnamed Task'}
 			</div>

@@ -888,11 +888,7 @@ Analyze the following information and provide a response.`,
 		const targetNodeData = targetNode.data as BaseWorkerData;
 		// Get source className based on node type
 		let sourceClassName = null;
-		if (
-			sourceNode.type === 'task' ||
-			sourceNode.type === 'datainput' ||
-			sourceNode.type === 'taskimport'
-		) {
+		if (sourceNode.type === 'datainput') {
 			sourceClassName = (sourceNode.data as unknown as NodeData).className;
 		} else if (connection.sourceHandle) {
 			sourceClassName = connection.sourceHandle.split('-')[1];
@@ -1051,6 +1047,18 @@ Analyze the following information and provide a response.`,
 			}
 
 			loadStatus = { type: 'success', message: 'Graph loaded successfully.' };
+
+			// Recompute all edge styles
+			edges.update((eds) => {
+				return eds.map((edge) => {
+					const sourceNode = get(nodes).find((node) => node.id === edge.source);
+					if (!sourceNode) {
+						console.error('sourceNode not found');
+						return edge;
+					}
+					return { ...edge, style: getEdgeStyleProps(sourceNode, edge).style };
+				});
+			});
 
 			// Use setTimeout to allow Svelte to render nodes first before layout
 			setTimeout(runElkLayout, 100);
