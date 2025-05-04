@@ -358,7 +358,7 @@
 					bind:value={tempWorkerName}
 					onblur={updateWorkerName}
 					onkeydown={handleNameKeydown}
-					class="w-full rounded border border-gray-200 bg-white px-1.5 py-0.5 text-xs font-medium {nameError
+					class="w-full rounded border border-gray-200 bg-white px-1.5 py-0.5 text-xs z-10 font-medium {nameError
 						? 'border-red-500'
 						: ''}"
 					autofocus
@@ -371,7 +371,7 @@
 			<!-- Worker Name Display -->
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<div
-				class="w-full cursor-pointer rounded px-1 py-0.5 text-center text-xs font-medium hover:bg-gray-100"
+				class="w-full cursor-pointer rounded px-1 py-0.5 text-center text-xs font-medium z-10 hover:bg-gray-100"
 				onclick={startEditingName}
 				role="button"
 				tabindex="0"
