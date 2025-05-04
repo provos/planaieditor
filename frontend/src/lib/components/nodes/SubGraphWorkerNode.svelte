@@ -81,11 +81,13 @@
 		await tick();
 		updateNodeInternals(id);
 	}
+
+	// XXX - changes in dataCopy are not reflected back into data
 </script>
 
 <BaseWorkerNode
 	{id}
-	data={dataCopy}
+	bind:data={dataCopy}
 	defaultName={data.workerName || 'SubGraphWorker'}
 	minWidth={200}
 	minHeight={150}

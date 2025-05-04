@@ -15,7 +15,6 @@
 	import { tick } from 'svelte';
 	import { formatErrorMessage } from '$lib/utils/utils';
 	import { onMount } from 'svelte';
-	import { getNodeIconStyle } from '$lib/utils/defaults';
 
 	// Base interface for worker node data
 	export interface BaseWorkerData {
@@ -35,7 +34,7 @@
 
 	let {
 		id,
-		data,
+		data = $bindable<BaseWorkerData>(),
 		children,
 		additionalOutputType,
 		additionalClassStyle,
@@ -91,7 +90,6 @@
 	})();
 	const allowedCacheTypes = ['taskworker', 'llmtaskworker', 'chattaskworker'];
 	const showCachedOption = workerType && allowedCacheTypes.includes(workerType);
-	const nodeIconStyle = getNodeIconStyle(workerType || 'default');
 
 	// --- Effects for Reactivity ---
 	onMount(() => {
