@@ -15,6 +15,8 @@ export interface LLMConfig extends LLMConfigBasic {
     remoteHostname?: string; // Optional: For remote_ollama
     remoteUsername?: string; // Optional: For remote_ollama
     max_tokens?: number; // Optional: Max tokens override
+    json_mode?: boolean; // Optional: Enable JSON mode if supported
+    structured_outputs?: boolean; // Optional: Enable structured outputs if supported
     // Add other non-sensitive llm_from_config params here if needed (e.g., use_cache boolean?)
 }
 

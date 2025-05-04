@@ -10,8 +10,7 @@
 		CaretDown,
 		Check
 	} from 'phosphor-svelte';
-	import { Combobox } from 'bits-ui';
-	import { Label, RadioGroup } from 'bits-ui';
+	import { Combobox, Label, RadioGroup } from 'bits-ui';
 	import {
 		llmConfigs,
 		addLLMConfig,
@@ -85,7 +84,6 @@
 		modelLoading = true;
 		modelError = null;
 		availableModels = []; // Clear previous models
-		formState.modelId = undefined; // Reset selected model
 		console.log(`Fetching models for provider: ${provider}`);
 		try {
 			const response = await fetch(`${backendUrl}/api/llm/list-models?provider=${provider}`);
@@ -105,6 +103,10 @@
 			console.error('Network error fetching models:', err);
 			modelError = `Network error: ${err.message}`; // Show network errors too
 		}
+		if (formState.modelId && !availableModels.includes(formState.modelId)) {
+			formState.modelId = undefined; // Reset selected model
+		}
+
 		modelLoading = false;
 	}
 
@@ -115,10 +117,7 @@
 		// Deep copy the config to avoid mutating the store directly
 		console.log(`Starting edit for config: ${JSON.stringify(config)}`);
 		formState = JSON.parse(JSON.stringify(config));
-		// Trigger model fetch if provider exists
-		if (formState.provider) {
-			fetchModelsForProvider(formState.provider);
-		}
+		// Model fetch will be triggered by the $effect
 	}
 
 	// Start adding a new config
@@ -211,7 +210,6 @@
 		return parts.join(', ');
 	}
 
-	// --- RadioGroup Helpers for Optional Booleans ---
 	type RadioOption = 'true' | 'false' | 'unset';
 
 	function getRadioValue(value: boolean | undefined): RadioOption {
@@ -430,6 +428,7 @@
 										oninput={(e) => (providerSearchValue = e.currentTarget.value)}
 										class="block w-full rounded-md border-gray-300 pr-8 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
 										placeholder="Search for a provider ..."
+										defaultValue={formState.provider}
 									/>
 									<Combobox.Trigger class="absolute right-2 top-1/2 -translate-y-1/2">
 										<CaretDown size={16} class="text-gray-500" />
@@ -488,6 +487,7 @@
 										class="block w-full rounded-md border-gray-300 pr-8 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
 										placeholder="Search for a model ..."
 										disabled={!formState.provider || modelLoading || !!modelError}
+										defaultValue={formState.modelId}
 									/>
 									<Combobox.Trigger
 										class="absolute right-2 top-1/2 -translate-y-1/2"
@@ -597,7 +597,9 @@
 
 						<!-- JSON Mode -->
 						<div class="col-span-1 md:col-span-2">
-							<label for="config-json_mode" 	class="mb-1 block text-sm font-medium text-gray-700">JSON Mode</label>
+							<label for="config-json_mode" class="mb-1 block text-sm font-medium text-gray-700"
+								>JSON Mode</label
+							>
 							<RadioGroup.Root
 								id="config-json_mode"
 								bind:value={getJsonModeRadioValue, setJsonModeRadioValue}
@@ -631,7 +633,10 @@
 
 						<!-- Structured Outputs -->
 						<div class="col-span-1 md:col-span-2">
-							<label for="config-structured_outputs" class="mb-1 block text-sm font-medium text-gray-700">Structured Outputs</label>
+							<label
+								for="config-structured_outputs"
+								class="mb-1 block text-sm font-medium text-gray-700">Structured Outputs</label
+							>
 							<RadioGroup.Root
 								id="config-structured_outputs"
 								bind:value={getStructuredOutputsRadioValue, setStructuredOutputsRadioValue}
