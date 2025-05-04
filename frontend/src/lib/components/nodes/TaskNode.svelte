@@ -30,14 +30,18 @@
 		error?: string;
 	}
 
-	let { id, data, children } = $props<{
+	let {
+		id,
+		data,
+		children // indicates that we won't allow editing of the node
+	} = $props<{
 		id: string;
 		data: NodeData;
 		children?: Snippet;
 	}>();
 
 	// Ensure data.fields is initialized
-	if (!data.fields) {
+	if (!children && !data.fields) {
 		data.fields = [];
 	}
 

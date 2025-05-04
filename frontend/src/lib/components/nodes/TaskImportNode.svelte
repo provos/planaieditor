@@ -39,6 +39,11 @@
 	let localSelectedClassName = $state<string | null>(data.className); // Local reactive state
 	let availableClasses = $state<string[]>(data.availableClasses || []); // Local state for classes
 	let hasFetchedFields = $state(false); // Track if fields have been fetched for the current class
+
+	if (!data.fields) {
+		data.fields = [];
+	}
+
 	let dataCopy = $state(data);
 
 	// Placeholder functions for backend interaction
@@ -60,6 +65,7 @@
 			if (response.ok && result.success) {
 				// Check response.ok too
 				availableClasses = result.classes; // Update local state
+				data.availableClasses = result.classes; // Update data prop
 				data.modulePath = internalModulePath; // Update data prop
 				dataCopy = {
 					...dataCopy,
@@ -70,6 +76,7 @@
 			} else {
 				error = result.error || `HTTP error ${response.status}`;
 				availableClasses = []; // Clear local state on error
+				data.availableClasses = []; // Clear data prop on error
 			}
 		} catch (err: any) {
 			error = err.message || 'Failed to fetch task classes.';
@@ -144,7 +151,7 @@
 
 	let isEdgeConnected = $state(false);
 
-	// Effect 1: Fetch fields when component mounts AND interpreter is selected AND class is selected
+	// Fetch fields when component mounts AND interpreter is selected AND class is selected
 	onMount(() => {
 		if (selectedInterpreterPath.value && data.className && !hasFetchedFields) {
 			fetchTaskFields(data.className);
@@ -159,11 +166,7 @@
 		};
 	});
 
-	$effect(() => {
-		data.availableClasses = availableClasses;
-	});
-
-	// Effect 2: Sync local changes UP to prop & potentially trigger fetch
+	// Sync local changes UP to prop & potentially trigger fetch
 	$effect(() => {
 		if (data.className !== localSelectedClassName) {
 			data.className = localSelectedClassName;
@@ -184,7 +187,7 @@
 		}
 	});
 
-	// Effect 3: Trigger fetch when interpreter becomes available AND class is already selected
+	// Trigger fetch when interpreter becomes available AND class is already selected
 	$effect(() => {
 		const currentPath = selectedInterpreterPath.value;
 		if (currentPath && localSelectedClassName && !hasFetchedFields) {
