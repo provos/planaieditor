@@ -11,6 +11,7 @@
 		Check
 	} from 'phosphor-svelte';
 	import { Combobox } from 'bits-ui';
+	import { Label, RadioGroup } from 'bits-ui';
 	import {
 		llmConfigs,
 		addLLMConfig,
@@ -66,6 +67,8 @@
 		editingConfigId = null;
 		providerSearchValue = '';
 		modelSearchValue = '';
+		formState.json_mode = undefined;
+		formState.structured_outputs = undefined;
 	}
 
 	// Fetch models when provider changes
@@ -110,6 +113,7 @@
 		resetForm();
 		editingConfigId = config.id;
 		// Deep copy the config to avoid mutating the store directly
+		console.log(`Starting edit for config: ${JSON.stringify(config)}`);
 		formState = JSON.parse(JSON.stringify(config));
 		// Trigger model fetch if provider exists
 		if (formState.provider) {
@@ -200,9 +204,44 @@
 		if (configData.baseUrl) parts.push(`Base URL: ${configData.baseUrl.value}`); // Used by OpenAI
 		if (configData.remote_hostname) parts.push(`Remote Host: ${configData.remote_hostname.value}`);
 		if (configData.remote_username) parts.push(`Remote User: ${configData.remote_username.value}`);
+		if (configData.json_mode) parts.push(`JSON Mode: ${configData.json_mode.value}`);
+		if (configData.structured_outputs)
+			parts.push(`Structured Outputs: ${configData.structured_outputs.value}`);
 
 		return parts.join(', ');
 	}
+
+	// --- RadioGroup Helpers for Optional Booleans ---
+	type RadioOption = 'true' | 'false' | 'unset';
+
+	function getRadioValue(value: boolean | undefined): RadioOption {
+		if (value === true) return 'true';
+		if (value === false) return 'false';
+		return 'unset';
+	}
+
+	function setRadioValue(newValue: RadioOption): boolean | undefined {
+		if (newValue === 'true') return true;
+		if (newValue === 'false') return false;
+		return undefined;
+	}
+
+	function getJsonModeRadioValue() {
+		return getRadioValue(formState.json_mode);
+	}
+
+	function setJsonModeRadioValue(newValue: RadioOption) {
+		formState.json_mode = setRadioValue(newValue);
+	}
+
+	function getStructuredOutputsRadioValue() {
+		return getRadioValue(formState.structured_outputs);
+	}
+
+	function setStructuredOutputsRadioValue(newValue: RadioOption) {
+		formState.structured_outputs = setRadioValue(newValue);
+	}
+	// --- End RadioGroup Helpers ---
 </script>
 
 {#if showModal}
@@ -555,6 +594,74 @@
 								/>
 							</div>
 						{/if}
+
+						<!-- JSON Mode -->
+						<div class="col-span-1 md:col-span-2">
+							<label for="config-json_mode" 	class="mb-1 block text-sm font-medium text-gray-700">JSON Mode</label>
+							<RadioGroup.Root
+								id="config-json_mode"
+								bind:value={getJsonModeRadioValue, setJsonModeRadioValue}
+								class="mt-2 flex space-x-4"
+								aria-label="JSON Mode"
+							>
+								{#each [{ value: 'unset', label: 'Default', id: 'json-unset' }, { value: 'true', label: 'True', id: 'json-true' }, { value: 'false', label: 'False', id: 'json-false' }] as item}
+									<div class="flex items-center">
+										<RadioGroup.Item
+											id={item.id}
+											value={item.value}
+											class="peer size-4 rounded-full border border-gray-300 text-indigo-600 focus:ring-indigo-500 data-[state=checked]:border-indigo-500 data-[state=checked]:bg-indigo-100"
+										>
+											{#snippet children({ checked })}
+												{#if checked}
+													<div class="flex items-center justify-center">
+														<div class="size-1.5 rounded-full bg-indigo-600"></div>
+													</div>
+												{/if}
+											{/snippet}
+										</RadioGroup.Item>
+										<Label.Root
+											for={item.id}
+											class="ml-2 block text-sm text-gray-700 peer-data-[state=checked]:font-medium"
+											>{item.label}</Label.Root
+										>
+									</div>
+								{/each}
+							</RadioGroup.Root>
+						</div>
+
+						<!-- Structured Outputs -->
+						<div class="col-span-1 md:col-span-2">
+							<label for="config-structured_outputs" class="mb-1 block text-sm font-medium text-gray-700">Structured Outputs</label>
+							<RadioGroup.Root
+								id="config-structured_outputs"
+								bind:value={getStructuredOutputsRadioValue, setStructuredOutputsRadioValue}
+								class="mt-2 flex space-x-4"
+								aria-label="Structured Outputs"
+							>
+								{#each [{ value: 'unset', label: 'Default', id: 'structured-unset' }, { value: 'true', label: 'True', id: 'structured-true' }, { value: 'false', label: 'False', id: 'structured-false' }] as item}
+									<div class="flex items-center">
+										<RadioGroup.Item
+											id={item.id}
+											value={item.value}
+											class="peer size-4 rounded-full border border-gray-300 text-indigo-600 focus:ring-indigo-500 data-[state=checked]:border-indigo-500 data-[state=checked]:bg-indigo-100"
+										>
+											{#snippet children({ checked })}
+												{#if checked}
+													<div class="flex items-center justify-center">
+														<div class="size-1.5 rounded-full bg-indigo-600"></div>
+													</div>
+												{/if}
+											{/snippet}
+										</RadioGroup.Item>
+										<Label.Root
+											for={item.id}
+											class="ml-2 block text-sm text-gray-700 peer-data-[state=checked]:font-medium"
+											>{item.label}</Label.Root
+										>
+									</div>
+								{/each}
+							</RadioGroup.Root>
+						</div>
 					</div>
 					<!-- Form Actions -->
 					<div class="mt-5 flex justify-end gap-3">
