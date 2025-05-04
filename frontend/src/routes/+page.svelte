@@ -3,7 +3,14 @@
 	import { dev } from '$app/environment';
 	import { backendUrl } from '$lib/utils/backendUrl';
 	import { downloadFile } from '$lib/utils/utils';
-	import { SvelteFlow, Background, Controls, ControlButton, useSvelteFlow } from '@xyflow/svelte';
+	import {
+		SvelteFlow,
+		Background,
+		Controls,
+		ControlButton,
+		useSvelteFlow,
+		useUpdateNodeInternals
+	} from '@xyflow/svelte';
 	import { getEdgeStyleProps } from '$lib/utils/edgeUtils';
 	import type { Node, Edge, Connection } from '@xyflow/svelte';
 	import '@xyflow/svelte/dist/style.css';
@@ -38,6 +45,8 @@
 	import Scissors from 'phosphor-svelte/lib/Scissors';
 	import Code from 'phosphor-svelte/lib/Code';
 	import ArrowsClockwise from 'phosphor-svelte/lib/ArrowsClockwise'; // Icon for layout
+	import Plus from 'phosphor-svelte/lib/Plus';
+	import Minus from 'phosphor-svelte/lib/Minus';
 	import { io } from 'socket.io-client';
 	import { onMount } from 'svelte';
 	import { selectedInterpreterPath } from '$lib/stores/pythonInterpreterStore.svelte';
@@ -98,6 +107,8 @@
 
 	// Use SvelteFlow hook
 	const { screenToFlowPosition, getNodes, fitView } = useSvelteFlow();
+
+	const updateNodeInternals = useUpdateNodeInternals();
 
 	// Socket.IO connection state
 	let exportStatus = $state<ExportStatus>({
@@ -397,6 +408,7 @@
 				const uniqueName = generateUniqueName(baseName, existingNames);
 				nodeData = {
 					workerName: uniqueName, // Assign the unique name
+					entryPoint: false,
 					inputTypes: [],
 					output_types: [],
 					methods: {
@@ -411,6 +423,7 @@
 				const uniqueName = generateUniqueName(baseName, existingNames);
 				nodeData = {
 					workerName: uniqueName, // Assign the unique name
+					entryPoint: false,
 					inputTypes: [],
 					output_types: [],
 					prompt: `# Process the task using an LLM
@@ -435,6 +448,7 @@ Analyze the following information and provide a response.`,
 				const uniqueName = generateUniqueName(baseName, existingNames);
 				nodeData = {
 					workerName: uniqueName, // Assign the unique name
+					entryPoint: false,
 					inputTypes: [],
 					output_types: [],
 					joinMethod: 'merge',
@@ -447,6 +461,7 @@ Analyze the following information and provide a response.`,
 				const uniqueName = generateUniqueName(baseName, existingNames);
 				nodeData = {
 					workerName: uniqueName, // Assign the unique name
+					entryPoint: false,
 					inputTypes: [],
 					output_types: [],
 					nodeId: id
@@ -458,6 +473,7 @@ Analyze the following information and provide a response.`,
 				const uniqueName = generateUniqueName(baseName, existingNames);
 				nodeData = {
 					workerName: uniqueName, // Assign the unique name
+					entryPoint: false,
 					inputTypes: ['ChatTask'],
 					output_types: ['ChatMessage'],
 					nodeId: id
@@ -580,40 +596,76 @@ Analyze the following information and provide a response.`,
 				}
 			];
 
-			if (!contextMenuNode.data?.otherMembersSource) {
-				baseNodeItems.unshift({
-					label: 'Add Other Members',
-					iconComponent: Code,
-					action: () => {
-						nodes.update((currentNodes) => {
-							return currentNodes.map((node) => {
-								if (node.id === contextMenuNode!.id) {
-									console.log('adding other members');
-									return {
-										...node,
-										data: {
-											...node.data,
-											otherMembersSource: '# add member variables or custom functions here'
-										}
-									};
-								}
-								return node;
+			if (
+				contextMenuNode.type === 'taskworker' ||
+				contextMenuNode.type === 'llmtaskworker' ||
+				contextMenuNode.type === 'joinedtaskworker' ||
+				contextMenuNode.type === 'subgraphworker' ||
+				contextMenuNode.type === 'chattaskworker'
+			) {
+				const inputEdges = get(edges).filter((edge) => edge.target === contextMenuNode.id);
+				const inputNodes = inputEdges.map((edge) => edge.source);
+				const hasDataInput = inputNodes.some(
+					(node) => get(nodes).find((n) => n.id === node)?.type === 'datainput'
+				);
+				if (!hasDataInput) {
+					baseNodeItems.unshift({
+						label: contextMenuNode.data?.entryPoint
+							? 'Remove Graph Entry Point'
+							: 'Make Graph Entry Point',
+						iconComponent: contextMenuNode.data?.entryPoint ? Minus : Plus,
+						action: () => {
+							nodes.update((currentNodes) => {
+								return currentNodes.map((node) => {
+									if (node.id === contextMenuNode!.id) {
+										return {
+											...node,
+											data: {
+												...node.data,
+												entryPoint: !node.data?.entryPoint
+											}
+										};
+									}
+									return node;
+								});
 							});
-						});
-						closeContextMenu();
-					},
-					danger: false
-				});
+							updateNodeInternals(contextMenuNode!.id);
+							closeContextMenu();
+						},
+						danger: false
+					});
+				}
+
+				if (!contextMenuNode.data?.otherMembersSource) {
+					baseNodeItems.unshift({
+						label: 'Add Other Members',
+						iconComponent: Code,
+						action: () => {
+							nodes.update((currentNodes) => {
+								return currentNodes.map((node) => {
+									if (node.id === contextMenuNode!.id) {
+										console.log('adding other members');
+										return {
+											...node,
+											data: {
+												...node.data,
+												otherMembersSource: '# add member variables or custom functions here'
+											}
+										};
+									}
+									return node;
+								});
+							});
+							closeContextMenu();
+						},
+						danger: false
+					});
+				}
 			}
 
 			// Define optional methods per worker type
 			const OPTIONAL_METHODS: Record<string, string[]> = {
-				llmtaskworker: [
-					'extra_validation',
-					'format_prompt',
-					'pre_process',
-					'post_process'
-				]
+				llmtaskworker: ['extra_validation', 'format_prompt', 'pre_process', 'post_process']
 			};
 
 			const nodeType = contextMenuNode.type || '';
@@ -870,6 +922,22 @@ Analyze the following information and provide a response.`,
 		if (!sourceNode) {
 			console.error('sourceNode not found');
 			return;
+		}
+
+		// if the source node is a datainput, make the target node an entry point
+		if (sourceNode.type == 'datainput') {
+			const targetNode = get(nodes).find((node) => node.id === newEdge.target);
+			if (targetNode && !(targetNode.data as BaseWorkerData).entryPoint) {
+				nodes.update((nds) => {
+					return nds.map((node) => {
+						if (node.id === targetNode.id) {
+							return { ...node, data: { ...node.data, entryPoint: true } };
+						}
+						return node;
+					});
+				});
+				updateNodeInternals(targetNode.id);
+			}
 		}
 
 		// Use the utility function to get edge style properties

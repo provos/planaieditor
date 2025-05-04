@@ -295,13 +295,13 @@ def test_fixture_edge_generation_full():
     user_chat_to_chat_adapter = (
         "graph.set_dependency(chat_worker, chat_adapter)" in python_code
     )
-    chat_task_to_user_chat = "graph.set_entry(chat_worker)" in python_code
+    user_chat_entry_point = "graph.set_entry(chat_worker)" in python_code
 
     print("\nAnalyzing generated code for UserChat -> ChatAdapter edge:")
     print("✓ Edge found" if user_chat_to_chat_adapter else "✗ Edge missing")
 
-    print("\nAnalyzing generated code for ChatTask -> UserChat edge:")
-    print("✓ Edge found" if chat_task_to_user_chat else "✗ Edge missing")
+    print("\nAnalyzing generated code for UserChat entry point:")
+    print("✓ Entry point found" if user_chat_entry_point else "✗ Entry point missing")
 
     # Output a relevant portion of the generated code for debugging
     if python_code:
@@ -327,7 +327,7 @@ def test_fixture_edge_generation_full():
             print(f"  Calculated instance name: {instance}")
 
     # Forcefully fail the test to see output
-    if not user_chat_to_chat_adapter or not chat_task_to_user_chat:
+    if not user_chat_to_chat_adapter or not user_chat_entry_point:
         print("\nTest failed: Missing expected edges in generated code")
         assert False, "Missing expected edges"
 
@@ -347,6 +347,7 @@ def test_create_all_graph_dependencies_simple():
                     "nodeId": "taskworker-1745444179489",
                     "className": "TaskWorker1",
                     "classVars": {"output_types": ["Task1"]},
+                    "entryPoint": True,
                 },
             },
             {
@@ -387,7 +388,6 @@ def test_create_all_graph_dependencies_simple():
             },
         ],
         "edges": [
-            {"source": "Task1", "target": "TaskWorker1"},
             {"source": "datainput-Task1", "target": "TaskWorker1"},
             {"source": "TaskWorker1", "target": "DataOutput1"},
         ],
@@ -492,36 +492,17 @@ def test_roundtrip_fixture_conversion():
 
         # Normalize edges for comparison
         original_edges_worker = set()
-        original_edges_entry = set()
-        task_nodes = {
-            n["data"]["className"]
-            for n in fixture_data["nodes"]
-            if n["type"] in ["task", "taskimport"]
-        }
-
         for edge in fixture_data["edges"]:
-            if edge["source"] in task_nodes:
-                original_edges_entry.add((edge["source"], edge["target"]))
-            else:
-                original_edges_worker.add((edge["source"], edge["target"]))
+            original_edges_worker.add((edge["source"], edge["target"]))
 
         parsed_edges_worker = set()
         for edge in parsed_data["edges"]:
             parsed_edges_worker.add((edge["source"], edge["target"]))
 
-        parsed_edges_entry = set()
-        for edge in parsed_data["entryEdges"]:
-            parsed_edges_entry.add((edge["sourceTask"], edge["targetWorker"]))
-
         # Check worker-to-worker edges
         assert (
             parsed_edges_worker == original_edges_worker
         ), f"Worker-to-worker edge mismatch.\nExpected: {original_edges_worker}\nGot: {parsed_edges_worker}"
-
-        # Check entry (task-to-worker) edges
-        assert (
-            parsed_edges_entry == original_edges_entry
-        ), f"Entry edge mismatch.\nExpected: {original_edges_entry}\nGot: {parsed_edges_entry}"
 
         # Print a summary
         print("\nRound-trip conversion report:")
@@ -529,8 +510,6 @@ def test_roundtrip_fixture_conversion():
         print(f"Parsed workers: {len(parsed_workers)}")
         print(f"Original worker edges: {len(original_edges_worker)}")
         print(f"Parsed worker edges: {len(parsed_edges_worker)}")
-        print(f"Original entry edges: {len(original_edges_entry)}")
-        print(f"Parsed entry edges: {len(parsed_edges_entry)}")
 
     finally:
         # Clean up the temporary file

@@ -52,6 +52,7 @@
       "zIndex": 0,
       "data": {
         "workerName": "TaskWorker1",
+        "entryPoint": true,
         "inputTypes": [
           "Task1"
         ],
@@ -138,49 +139,6 @@
     }
   ],
   "edges": [
-    {
-      "type": "smoothstep",
-      "style": "stroke-width:3;stroke:#1f77b4;",
-      "source": "task-1745602895552",
-      "sourceHandle": "output",
-      "target": "taskworker-1745602920112",
-      "targetHandle": "input",
-      "id": "xy-edge__task-1745602895552output-taskworker-1745602920112input",
-      "animated": true,
-      "selected": false,
-      "sources": [
-        "task-1745602895552"
-      ],
-      "targets": [
-        "taskworker-1745602920112"
-      ],
-      "container": "root",
-      "sections": [
-        {
-          "id": "xy-edge__task-1745602895552output-taskworker-1745602920112input_s0",
-          "startPoint": {
-            "x": 543,
-            "y": 412.25
-          },
-          "endPoint": {
-            "x": 663,
-            "y": 408
-          },
-          "bendPoints": [
-            {
-              "x": 543,
-              "y": 412.25
-            },
-            {
-              "x": 603,
-              "y": 411.825
-            }
-          ],
-          "incomingShape": "task-1745602895552",
-          "outgoingShape": "taskworker-1745602920112"
-        }
-      ]
-    },
     {
       "type": "smoothstep",
       "style": "stroke-width:3;stroke:#1f77b4;",

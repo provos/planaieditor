@@ -28,6 +28,7 @@
 		methods?: Record<string, string>;
 		otherMembersSource?: string;
 		classVars?: Record<string, any>;
+		entryPoint?: boolean;
 		// Derived components can extend this
 		[key: string]: any;
 	}

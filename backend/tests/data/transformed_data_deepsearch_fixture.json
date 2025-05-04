@@ -885,6 +885,7 @@
       "zIndex": 0,
       "data": {
         "isCached": false,
+        "entryPoint": "UserChat",
         "variableName": "chat_worker",
         "nodeId": "imported-chattaskworker-UserChat-1745361767762",
         "inputTypes": [
@@ -1095,14 +1096,6 @@
     {
       "source": "ChatAdapter",
       "target": "ResponsePublisher"
-    },
-    {
-      "source": "Request",
-      "target": "PlanWorker"
-    },
-    {
-      "source": "ChatTask",
-      "target": "UserChat"
     }
   ]
 }

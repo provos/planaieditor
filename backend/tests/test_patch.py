@@ -544,14 +544,11 @@ def build_graph_with_entry():
     file_path = temp_python_file(code)
     definitions = get_definitions_from_file(str(file_path))
 
-    assert "entryEdges" in definitions
-    entry_edges = definitions["entryEdges"]
-    print(f"Extracted Entry Edges: {entry_edges}")
-
-    assert len(entry_edges) == 1
-    expected_entry = {"sourceTask": "EntryTask", "targetWorker": "EntryWorker"}
-    assert entry_edges[0]["sourceTask"] == expected_entry["sourceTask"]
-    assert entry_edges[0]["targetWorker"] == expected_entry["targetWorker"]
+    entry_worker = next(
+        (w for w in definitions["workers"] if w["className"] == "EntryWorker"), None
+    )
+    assert entry_worker is not None
+    assert entry_worker["entryPoint"]
 
 
 def test_extract_entry_point_indirect(temp_python_file):
@@ -591,14 +588,11 @@ def build_graph_with_entry():
     file_path = temp_python_file(code)
     definitions = get_definitions_from_file(str(file_path))
 
-    assert "entryEdges" in definitions
-    entry_edges = definitions["entryEdges"]
-    print(f"Extracted Entry Edges: {entry_edges}")
-
-    assert len(entry_edges) == 1
-    expected_entry = {"sourceTask": "EntryTask", "targetWorker": "EntryWorker"}
-    assert entry_edges[0]["sourceTask"] == expected_entry["sourceTask"]
-    assert entry_edges[0]["targetWorker"] == expected_entry["targetWorker"]
+    entry_worker = next(
+        (w for w in definitions["workers"] if w["className"] == "EntryWorker"), None
+    )
+    assert entry_worker is not None
+    assert entry_worker["entryPoint"]
 
 
 def test_extract_imported_tasks(temp_python_file):
@@ -771,6 +765,7 @@ def build_graph_with_factory():
     assert searcher is not None, "Factory-created SearchFetchWorker not found"
     # Verify variable names are still tracked
     assert input_preprocessor.get("variableName") == "preprocessor"
+    assert input_preprocessor.get("entryPoint")
     assert plan_processor.get("variableName") == "processor"
     assert planner.get("variableName") == "planner"
     assert simple_planner.get("variableName") == "simple_planner"
@@ -851,12 +846,6 @@ def build_graph_with_factory():
             and e.get("targetInputType") == expected.get("targetInputType")
             for e in edges
         ), f"Expected edge {expected} not found in {edges}"
-
-    # Check entry point - should use class name
-    entry_edges = definitions["entryEdges"]
-    assert len(entry_edges) == 1
-    assert entry_edges[0]["sourceTask"] == "PlanRequest"
-    assert entry_edges[0]["targetWorker"] == "InputPreprocessor"
 
 
 def test_extract_llm_configuration(temp_python_file):

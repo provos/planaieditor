@@ -15,8 +15,21 @@
 	}>();
 
 	let inferredInputTypes = $derived<string[]>(data.inputTypes);
+	let entryPoint = $derived(data.entryPoint || false);
 
 	const store = useStore();
+
+	let handleColor = $derived(getColorForType(inferredInputTypes[0]));
+
+	let handleStyle = $derived.by(() => {
+		if (entryPoint) {
+			// Triangle style for entry point - larger
+			return `width: 0; height: 0; border-top: 16px solid transparent; border-bottom: 16px solid transparent; border-left: 20px solid ${handleColor}; background-color: transparent; border-radius: 0; left: -10px; border-right: none;`;
+		} else {
+			// Default square style
+			return `background-color: ${handleColor};`;
+		}
+	});
 
 	if (isEditable) {
 		$effect(() => {
@@ -83,9 +96,13 @@
 
 		// make sourceClassNames unique
 		const uniqueSourceClassNames = [...new Set(sourceClassNames)];
+		if (uniqueSourceClassNames.length === 0 && manuallySelectedInputType) {
+			uniqueSourceClassNames.push(manuallySelectedInputType);
+		}
 
 		// Update only if there are changes in the inferred input types
-		if (uniqueSourceClassNames.length !== inferredInputTypes.length ||
+		if (
+			uniqueSourceClassNames.length !== inferredInputTypes.length ||
 			uniqueSourceClassNames.some((type, index) => type !== inferredInputTypes[index])
 		) {
 			inferredInputTypes = uniqueSourceClassNames;
@@ -95,9 +112,4 @@
 	}
 </script>
 
-<Handle
-	type="target"
-	position={Position.Left}
-	id="input"
-	style={`background-color: ${getColorForType(inferredInputTypes[0])};`}
-/>
+<Handle type="target" position={Position.Left} id="input" style={handleStyle} />

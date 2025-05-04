@@ -151,7 +151,8 @@ def create_all_graph_dependencies(
                 f"    graph.set_dependency({source_inst_name}, {target_inst_name})"
             )
         elif source_class_name in task_names and target_inst_name:
-            code.append(f"    graph.set_entry({target_inst_name})")
+            # obsolete
+            print(f"Warning: Obsolete edge {source_class_name} -> {target_class_name}")
         elif source_inst_name and target_type == "dataoutput":
             node = output_nodes_by_class_name.get(target_class_name, {})
             node_id = node.get("id")
@@ -178,6 +179,16 @@ def create_all_graph_dependencies(
             print(
                 f"Warning: Could not find worker instances for edge {source_class_name} -> {target_class_name}"
             )
+
+    # Create the entry point setting code strings
+    for worker in worker_nodes:
+        data = worker.get("data", {})
+        is_entry_point = data.get("entryPoint", False)
+        class_name = data.get("className")
+        if is_entry_point and class_name:
+            target_inst_name = worker_instance_by_class_name.get(class_name)
+            if target_inst_name:
+                code.append(f"    graph.set_entry({target_inst_name})")
 
     return "\n".join(code)
 

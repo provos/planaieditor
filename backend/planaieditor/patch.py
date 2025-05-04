@@ -1051,14 +1051,13 @@ def parse_edge_statement(
     return edges
 
 
-def parse_set_entry_statement(
-    stmt: ast.stmt,
-    worker_assignments: Dict[str, str],
-    worker_details_map: Dict[str, Dict[str, Any]],
-) -> Optional[Dict[str, str]]:
+def parse_set_entry_statement(stmt: ast.stmt) -> Optional[str]:
     """Parses a graph.set_entry(worker) statement.
 
     Target worker will be the worker's className.
+
+    Returns:
+        - Optional[str]: entry worker class name
     """
     if isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call):
         call_node = stmt.value
@@ -1073,31 +1072,21 @@ def parse_set_entry_statement(
         ):
 
             entry_worker_var = call_node.args[0].id
-            entry_worker_class = worker_assignments.get(entry_worker_var)
-            if entry_worker_class:
-                worker_details = worker_details_map.get(entry_worker_class)
-                # Use the already determined input type for this worker
-                if worker_details and worker_details.get("inputTypes"):
-                    input_type = worker_details["inputTypes"][0]
-                    return {
-                        "sourceTask": input_type,
-                        "targetWorker": entry_worker_class,
-                    }
+            return entry_worker_var
+
     return None
 
 
 def parse_graph_run_entry_points(
     stmt: ast.stmt,
-    worker_assignments: Dict[str, str],
     func_node: ast.FunctionDef,  # Pass the function node for scope lookup
-) -> List[Dict[str, str]]:
+) -> Optional[List[str]]:
     """Parses a graph.run(initial_tasks=[...]) call to extract entry points.
 
     Target worker will be the worker's className.
     """
-    entry_edges = []
     if not (isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call)):
-        return entry_edges
+        return None
 
     call_node = stmt.value
     # Check for graph.run(...)
@@ -1108,7 +1097,7 @@ def parse_graph_run_entry_points(
         # Assume graph variable name is 'graph' for now
         and call_node.func.value.id == "graph"
     ):
-        return entry_edges
+        return None
 
     # Find the initial_tasks keyword argument
     initial_tasks_arg_value = None
@@ -1118,7 +1107,7 @@ def parse_graph_run_entry_points(
             break
 
     if not initial_tasks_arg_value:
-        return entry_edges
+        return None
 
     initial_tasks_list_node = None
     if isinstance(initial_tasks_arg_value, ast.List):
@@ -1134,40 +1123,30 @@ def parse_graph_run_entry_points(
             print(
                 f"Warning: Could not resolve variable '{var_name}' for initial_tasks to a List node."
             )
-            return entry_edges  # Couldn't resolve or not a list
+            return None  # Couldn't resolve or not a list
     else:
         # Not a list literal or a variable name we can resolve
-        return entry_edges
+        return None
 
     if not initial_tasks_list_node:
-        return entry_edges
+        return None
 
     # --- Now parse the initial_tasks_list_node (ast.List) ---
+    entry_worker_vars = []
+
     for element in initial_tasks_list_node.elts:
         if not (isinstance(element, ast.Tuple) and len(element.elts) == 2):
             continue
 
         worker_node = element.elts[0]
-        task_call_node = element.elts[1]
 
         worker_var_name = None
         if isinstance(worker_node, ast.Name):
             worker_var_name = worker_node.id
 
-        task_class_name = None
-        if isinstance(task_call_node, ast.Call) and isinstance(
-            task_call_node.func, ast.Name
-        ):
-            task_class_name = task_call_node.func.id
-
-        if worker_var_name and task_class_name:
-            worker_class_name = worker_assignments.get(worker_var_name)
-            if worker_class_name:
-                entry_edges.append(
-                    {"sourceTask": task_class_name, "targetWorker": worker_class_name}
-                )
-
-    return entry_edges
+        if worker_var_name:
+            entry_worker_vars.append(worker_var_name)
+    return entry_worker_vars
 
 
 def filter_out_default_imports(module_imports: List[ast.stmt]) -> List[ast.stmt]:
@@ -1364,7 +1343,6 @@ def get_definitions_from_file(
 
     # --- Extract Edges & Process Assignments --- #
     edges = []
-    entry_edges = []  # Initialize list for entry point edges
     graph_func_node = find_graph_builder_function(parsed_ast)
 
     # Combined list of all worker definitions including factory-created ones
@@ -1494,35 +1472,23 @@ def get_definitions_from_file(
                 parse_edge_statement(stmt, var_to_class_map, worker_details_map)
             )
 
-            # --- Combine entry point detection ---
             # Check for graph.set_entry(...)
-            entry_edge_set = parse_set_entry_statement(
-                stmt, var_to_class_map, worker_details_map
-            )
-            if entry_edge_set:
-                entry_edges.append(entry_edge_set)
+            entry_worker_var = parse_set_entry_statement(stmt)
+            if entry_worker_var:
+                assert entry_worker_var
+                entry_worker_class = var_to_class_map[entry_worker_var]
+                worker_details_map[entry_worker_class]["entryPoint"] = True
 
             # Check for graph.run(initial_tasks=...)
             # Pass the graph_func_node for scope analysis
-            entry_edges_run = parse_graph_run_entry_points(
-                stmt, var_to_class_map, graph_func_node
-            )
-            entry_edges.extend(entry_edges_run)
-            # --- End combine entry point detection ---
-
-        # Remove duplicates just in case both methods found the same entry point
-        unique_entry_edges = []
-        seen_entry_edges = set()
-        for edge in entry_edges:
-            # Create a tuple representation for checking uniqueness
-            edge_tuple = (edge.get("sourceTask"), edge.get("targetWorker"))
-            if edge_tuple not in seen_entry_edges:
-                unique_entry_edges.append(edge)
-                seen_entry_edges.add(edge_tuple)
-        entry_edges = unique_entry_edges
+            entry_worker_vars = parse_graph_run_entry_points(stmt, graph_func_node)
+            if entry_worker_vars:
+                for entry_worker_var in entry_worker_vars:
+                    assert entry_worker_var
+                    entry_worker_class = var_to_class_map[entry_worker_var]
+                    worker_details_map[entry_worker_class]["entryPoint"] = True
 
         print(f"Extracted edges: {edges}")
-        print(f"Extracted entry edges: {entry_edges}")
     else:
         print("Warning: Could not find a graph builder function.")
 
@@ -1551,7 +1517,6 @@ def get_definitions_from_file(
         "tasks": task_results,
         "workers": all_worker_defs,
         "edges": edges,
-        "entryEdges": entry_edges,
         "imported_tasks": imported_tasks,
         "module_imports": module_imports_str,
     }

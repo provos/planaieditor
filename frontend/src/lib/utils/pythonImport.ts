@@ -64,6 +64,7 @@ export interface ImportedWorker {
     llmConfigVar?: string; // Variable name assigned to the LLM config if applicable
     code?: string; // Code for the module level import
     isCached: boolean;
+    entryPoint?: boolean;
 }
 
 // Result type for the Python import operation
@@ -72,7 +73,6 @@ export interface ImportResult {
     message: string;
     nodes?: Node[];
     edges?: Edge[];
-    entryEdges?: Array<{ sourceTask: string, targetWorker: string }>;
 }
 
 // --- Type for Edges from Backend --- //
@@ -97,7 +97,6 @@ export interface ImportedEdge {
     message: string;
     nodes?: Node[];
     edges?: Edge[];
-    entryEdges?: Array<{ sourceTask: string, targetWorker: string }>;
     importedTasks?: ImportedTaskReference[]; // Add the new field
 }
 
@@ -230,7 +229,6 @@ export async function importPythonCode(
         const importedTasks: ImportedTask[] = result.tasks || [];
         const importedWorkers: ImportedWorker[] = result.workers || [];
         const importedEdges: ImportedEdge[] = result.edges || [];
-        const importedEntryEdges: Array<{ sourceTask: string, targetWorker: string }> = result.entryEdges || [];
         const importedTaskReferences: ImportedTaskReference[] = result.imported_tasks || []; // Get imported task references
 
         if (importedTasks.length === 0 && importedWorkers.length === 0 && importedTaskReferences.length === 0) {
@@ -335,6 +333,7 @@ export async function importPythonCode(
             // Map backend data to frontend node data structure
             const nodeData: any = {
                 isCached: worker.isCached || false,
+                entryPoint: worker.entryPoint || false,
                 variableName: worker.variableName, // Use variableName if it exists
                 workerName: worker.className, // Use className as workerName
                 nodeId: id,
@@ -464,24 +463,6 @@ export async function importPythonCode(
                 newEdges.push(svelteEdge);
             } else {
                 console.warn(`Could not create edge for ${edge.source} -> ${edge.target}: Node ID not found.`);
-            }
-        });
-
-        // --- Create Entry Point Edges --- //
-        importedEntryEdges.forEach((entryEdge) => {
-            const sourceNodeId = classNameToNodeId[entryEdge.sourceTask];   // Source is the Task node
-            const targetNodeId = classNameToNodeId[entryEdge.targetWorker]; // Target is the Worker node
-
-            if (sourceNodeId && targetNodeId) {
-                const edgeId = `imported-entry-edge-${sourceNodeId}-${targetNodeId}`;
-                newEdges.push({
-                    id: edgeId,
-                    source: sourceNodeId,
-                    target: targetNodeId,
-                    animated: true
-                });
-            } else {
-                console.warn(`Could not create entry edge for ${entryEdge.sourceTask} -> ${entryEdge.targetWorker}: Node ID not found.`);
             }
         });
 
