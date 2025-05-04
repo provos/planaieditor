@@ -902,7 +902,9 @@ def build_graph():
         provider="openai",
         model_name="gpt-4",
         max_tokens=1024,
-        host="https://api.openai.com"
+        host="https://api.openai.com",
+        json_mode=True,
+        structured_output=True
     )
 
     # Create LLM with variables
@@ -992,6 +994,14 @@ def build_graph():
     assert (
         llm_config1["host"]["value"] == "https://api.openai.com"
         and llm_config1["host"]["is_literal"]
+    )
+    assert (
+        llm_config1["json_mode"]["value"] is True
+        and llm_config1["json_mode"]["is_literal"]
+    )
+    assert (
+        llm_config1["structured_output"]["value"] is True
+        and llm_config1["structured_output"]["is_literal"]
     )
     assert worker1["llmConfigVar"] == "llm1"
 
