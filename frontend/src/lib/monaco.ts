@@ -45,6 +45,18 @@ export async function setupMonacoEnvironment(): Promise<typeof Monaco | null> {
             }
         }
     };
+
+    // Initialize the services
+    console.log('Initializing VSCode services...');
+    const { initServices } = await import('monaco-languageclient/vscode/services');
+    await initServices({});
+
+    monaco.languages.register({
+        id: 'python',
+        extensions: ['.py'],
+        aliases: ['Python', 'python'],
+        mimetypes: ['text/x-python'],
+    });
     console.log('Monaco Environment setup complete.');
     return monaco; // Return the dynamically imported monaco object
 }
