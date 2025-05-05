@@ -6,6 +6,8 @@
 	import type * as Monaco from 'monaco-editor/esm/vs/editor/editor.api';
 	import { tick } from 'svelte';
 	import { monacoInstance } from '$lib/stores/monacoStore.svelte'; // Import the shared instance
+	import { socketStore } from '$lib/stores/socketStore.svelte';
+	import { SocketIOReader, SocketIOWriter } from '$lib/lsp/lsp-utils'; // Import custom reader/writer
 
 	let {
 		title = '',
@@ -16,7 +18,7 @@
 		onReset = undefined,
 		showReset = false,
 		onCollapseToggle,
-		maxHeight = 400,
+		maxHeight = 400
 	} = $props<{
 		title?: string;
 		code: string;
@@ -35,10 +37,51 @@
 	let contentHeight = $state(0); // Track content height
 	let currentCode = $state(code);
 	let resizeObserver: ResizeObserver | undefined;
+	let languageClient: any | undefined = $state();
+	let reader: SocketIOReader | undefined = $state();
+	let writer: SocketIOWriter | undefined = $state();
+	// State to hold dynamically imported MonacoLanguageClient constructor
+	let MonacoLanguageClientConstructor = $state<any | undefined>();
 
-	onDestroy(() => {
+	onDestroy(async () => {
+		console.log('[LSP EditableCodeSection] Destroying component...');
+		// Stop the language client first
+		try {
+			await languageClient?.stop();
+			console.log('[LSP EditableCodeSection] Language client stopped.');
+		} catch (e) {
+			console.error('[LSP EditableCodeSection] Error stopping language client:', e);
+		}
+
+		// Dispose reader/writer
+		try {
+			reader?.dispose();
+			console.log('[LSP EditableCodeSection] LSP Reader disposed.');
+		} catch (e) {
+			console.warn('[LSP EditableCodeSection] Error disposing reader:', e);
+		}
+		try {
+			writer?.dispose();
+			console.log('[LSP EditableCodeSection] LSP Writer disposed.');
+		} catch (e) {
+			console.warn('[LSP EditableCodeSection] Error disposing writer:', e);
+		}
+
+		// Dispose editor and models
 		editor?.dispose();
+		console.log('[LSP EditableCodeSection] Monaco editor disposed.');
+		// Get models *before* disposing the instance if possible, though often handled by editor dispose
+		// monacoInstance.instance?.editor.getModels().forEach((model) => model.dispose());
+
 		resizeObserver?.disconnect(); // Disconnect observer on destroy
+		console.log('[LSP EditableCodeSection] Resize observer disconnected.');
+
+		// Clear references
+		languageClient = undefined;
+		reader = undefined;
+		writer = undefined;
+		editor = undefined;
+		editorContainer = undefined;
 	});
 
 	// Effect to create the editor once the monaco instance and container are ready
@@ -85,6 +128,182 @@
 					}
 				})
 			);
+		}
+	});
+
+	// Effect to setup LSP connection when ready
+	$effect(() => {
+		const monaco = monacoInstance.instance;
+		const socket = socketStore.socket;
+
+		// Conditions to check before setting up LSP
+		if (
+			language === 'python' && // Only for Python
+			socketStore.isConnected &&
+			socket && // Socket must be connected and available
+			monaco && // Monaco must be loaded
+			editor && // Editor must be created
+			editorContainer && // Container must be available
+			!languageClient // LSP client shouldn't already exist for this editor
+		) {
+			console.log(`[LSP EditableCodeSection ${title}] Conditions met, setting up LSP...`);
+
+			// Run the import and setup logic in an async IIFE
+			void (async () => {
+				let ClientConstructor = MonacoLanguageClientConstructor;
+
+				// Dynamically import the MonacoLanguageClient if not already loaded
+				if (!ClientConstructor) {
+					console.log(
+						`[LSP EditableCodeSection ${title}] Dynamically importing MonacoLanguageClient...`
+					);
+					try {
+						const clientModule = await import('monaco-languageclient');
+						MonacoLanguageClientConstructor = clientModule.MonacoLanguageClient;
+						ClientConstructor = MonacoLanguageClientConstructor; // Update local var
+						console.log(
+							`[LSP EditableCodeSection ${title}] MonacoLanguageClient imported successfully.`
+						);
+					} catch (err) {
+						console.error(
+							`[LSP EditableCodeSection ${title}] Failed to dynamically import MonacoLanguageClient:`,
+							err
+						);
+						return; // Stop if import failed
+					}
+				}
+
+				// --- Proceed only if services are initialized, Client Constructor is loaded and state is still valid ---
+				if (
+					ClientConstructor &&
+					socketStore.isConnected &&
+					editor // Ensure editor still exists
+				) {
+					console.log(
+						`[LSP EditableCodeSection ${title}] MonacoLanguageClient constructor available and state valid, proceeding with setup.`
+					);
+
+					// Dispose existing reader/writer if any (safety net)
+					reader?.dispose();
+					writer?.dispose();
+
+					// Create custom SocketIO reader/writer
+					// Ensure socket is still valid before using
+					if (!socketStore.socket) {
+						console.error(`[LSP EditableCodeSection ${title}] Socket became null during setup.`);
+						return;
+					}
+					reader = new SocketIOReader(socketStore.socket);
+					writer = new SocketIOWriter(socketStore.socket);
+					const transports: MessageTransports = { reader, writer };
+
+					// Function to create the language client
+					function createLanguageClient(
+						transports: MessageTransports,
+						monacoInstanceRef: typeof Monaco
+					): MonacoLanguageClientType {
+						const clientOptions: LanguageClientOptions = {
+							documentSelector: [language],
+							errorHandler: {
+								error: () => ({ action: ErrorAction.Continue }),
+								closed: () => ({ action: CloseAction.DoNotRestart })
+							},
+							workspaceFolder: {
+								uri: monacoInstanceRef.Uri.parse('/workspace'),
+								name: 'workspace',
+								index: 0
+							},
+							initializationOptions: {}
+						};
+
+						// Use the dynamically imported constructor
+						// Assert ClientConstructor is defined because of the check above
+						return new ClientConstructor!({
+							name: `Python Language Client for ${title}`,
+							clientOptions: clientOptions,
+							messageTransports: transports
+						});
+					}
+
+					// Create and start the client
+					try {
+						// Ensure monaco instance is still valid
+						if (!monacoInstance.instance) {
+							console.error(
+								`[LSP EditableCodeSection ${title}] Monaco instance became null during setup.`
+							);
+							return;
+						}
+						languageClient = createLanguageClient(transports, monaco);
+						console.log(`[LSP EditableCodeSection ${title}] Language client created.`);
+
+						const startPromise = languageClient.start();
+						startPromise
+							.then(() => {
+								console.log(
+									`[LSP EditableCodeSection ${title}] Language client started successfully.`
+								);
+							})
+							.catch((error) => {
+								console.error(
+									`[LSP EditableCodeSection ${title}] Failed to start language client:`,
+									error
+								);
+								// Clean up partially created client on start failure
+								languageClient = undefined;
+								reader?.dispose();
+								writer?.dispose();
+								reader = undefined;
+								writer = undefined;
+							});
+
+						// Handle reader closure (likely due to socket disconnect)
+						reader.onClose(() => {
+							console.warn(
+								`[LSP EditableCodeSection ${title}] LSP Reader closed. Stopping client.`
+							);
+							languageClient
+								?.stop()
+								.catch((e) =>
+									console.error(
+										`[LSP EditableCodeSection ${title}] Error stopping client on reader close:`,
+										e
+									)
+								);
+							// Clear references as the connection is gone
+							languageClient = undefined;
+							reader = undefined; // Writer might still be technically open, but useless
+							writer = undefined;
+						});
+					} catch (error) {
+						console.error(
+							`[LSP EditableCodeSection ${title}] Error creating language client:`,
+							error
+						);
+						// Ensure cleanup if creation fails
+						reader?.dispose();
+						writer?.dispose();
+						reader = undefined;
+						writer = undefined;
+						languageClient = undefined;
+					}
+				} else {
+					console.log(
+						`[LSP EditableCodeSection ${title}] MonacoLanguageClient constructor not loaded or state changed, skipping setup.`
+					);
+				}
+			})(); // Immediately invoke the async IIFE
+		} else if (languageClient && (!socketStore.isConnected || language !== 'python')) {
+			// If connection drops or language changes away from Python, stop the existing client
+			console.log(
+				`[LSP EditableCodeSection ${title}] Conditions no longer met (connected: ${socketStore.isConnected}, lang: ${language}). Stopping LSP client.`
+			);
+			languageClient.stop().catch((e) => console.error('Error stopping client:', e));
+			reader?.dispose(); // Dispose reader/writer too
+			writer?.dispose();
+			languageClient = undefined;
+			reader = undefined;
+			writer = undefined;
 		}
 	});
 
@@ -190,7 +409,9 @@
 		{/if}
 	</div>
 
-	<div class="min-w-[60ch] {collapsed ? 'hidden h-0' : 'flex-grow'} transition-height duration-200 p-1">
+	<div
+		class="min-w-[60ch] {collapsed ? 'hidden h-0' : 'flex-grow'} transition-height p-1 duration-200"
+	>
 		<div
 			bind:this={editorContainer}
 			class="min-h-[3rem] w-full rounded border border-gray-300"
