@@ -19,6 +19,8 @@ lsp_processes: Dict[str, subprocess.Popen] = {}
 lsp_stdout_readers: Dict[str, threading.Thread] = {}
 # Structure: {sid: threading.Thread} - For reading LSP stderr
 lsp_stderr_readers: Dict[str, threading.Thread] = {}
+# Structure: {sid: threading.Lock} - For synchronizing writes to LSP stdin
+lsp_write_locks: Dict[str, threading.Lock] = {}
 # Structure: {sid: queue.Queue} - For sending messages *to* the LSP process thread-safely (Alternative to direct proc.stdin.write)
 # lsp_write_queues: Dict[str, queue.Queue] = {}
 
@@ -168,6 +170,9 @@ def start_lsp_process(sid: str, python_executable: str, socketio_emit: Callable)
             )
             lsp_processes[sid] = proc
 
+            # Create a dedicated lock for this process's stdin
+            lsp_write_locks[sid] = threading.Lock()
+
             # Start reader threads
             stdout_thread = threading.Thread(
                 target=_read_lsp_messages,
@@ -204,6 +209,7 @@ def _cleanup_lsp_resources(sid: str):
     lsp_processes.pop(sid, None)
     lsp_stdout_readers.pop(sid, None)
     lsp_stderr_readers.pop(sid, None)
+    lsp_write_locks.pop(sid, None)
     # lsp_write_queues.pop(sid, None)
 
 
@@ -269,8 +275,10 @@ def send_lsp_message(sid: str, message: dict):
         f"[{sid}] Preparing to send LSP message: {message.get('method', message.get('id', ''))}"
     )
     proc = None
+    write_lock = None
     with _lsp_dict_lock:
         proc = lsp_processes.get(sid)
+        write_lock = lsp_write_locks.get(sid)
 
     if proc and proc.stdin and not proc.stdin.closed:
         formatted_message = _format_lsp_message(message)
@@ -278,9 +286,17 @@ def send_lsp_message(sid: str, message: dict):
             log.error(f"[{sid}] Failed to format message, not sending: {message}")
             return
         try:
-            proc.stdin.write(formatted_message)
-            proc.stdin.flush()
-            log.debug(f"[{sid}] Message sent to LSP process.")
+            # Acquire the lock before writing to stdin
+            if write_lock:
+                write_lock.acquire()
+            try:
+                proc.stdin.write(formatted_message)
+                proc.stdin.flush()
+                log.debug(f"[{sid}] Message sent to LSP process.")
+            finally:
+                # Release the lock in the finally block to ensure it's always released
+                if write_lock:
+                    write_lock.release()
         except BrokenPipeError:
             log.error(
                 f"[{sid}] LSP process stdin pipe broke while writing. Process likely died."
