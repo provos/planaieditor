@@ -72,9 +72,6 @@
 	// Import the ELKjs layout function
 	import { layoutGraph } from '$lib/utils/pythonImport';
 
-	// Import the Monaco setup utility
-	import { setupMonacoEnvironment } from '$lib/monaco';
-
 	// Import the graphName store
 	import { graphName } from '$lib/stores/graphNameStore.svelte';
 
@@ -137,9 +134,6 @@
 	let pendingActionAfterName: 'save' | 'export' | null;
 
 	onMount(() => {
-		// Set up Monaco editor environment
-		setupMonacoEnvironment();
-
 		if (dev) {
 			// Define the convertGraphToJSON function so it can be used in the backend tests
 			(window as any).convertGraphToJSON = convertGraphtoJSON;
@@ -150,6 +144,7 @@
 
 		socketStore.socket.on('connect', async () => {
 			console.log('Connected to backend:', socketStore.socket?.id);
+			socketStore.socket.emit('start_lsp');
 			socketStore.isConnected = true;
 
 			loadStatus = { type: 'idle', message: '' };
@@ -289,6 +284,7 @@
 
 		return () => {
 			// Disconnect the socket when the component is destroyed
+			socketStore.socket?.emit('stop_lsp');
 			socketStore.socket?.disconnect();
 		};
 	});
