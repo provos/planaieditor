@@ -6,8 +6,6 @@
 	import type * as Monaco from 'monaco-editor/esm/vs/editor/editor.api';
 	import { tick } from 'svelte';
 	import { monacoInstance } from '$lib/stores/monacoStore.svelte'; // Import the shared instance
-	import { socketStore } from '$lib/stores/socketStore.svelte';
-	import { LspManager } from '$lib/lsp/lspManager'; // Import the new manager
 
 	let {
 		title = '',
@@ -37,22 +35,16 @@
 	let contentHeight = $state(0); // Track content height
 	let currentCode = $state(code);
 	let resizeObserver: ResizeObserver | undefined;
-	let lspManager: LspManager | undefined = $state(); // Add state for the manager
 
 	onDestroy(async () => {
-		console.log('[LSP EditableCodeSection] Destroying component...');
-
-		// Stop the LSP manager if it exists
-		await lspManager?.stop();
-		console.log(`[LSP EditableCodeSection ${title}] LSP Manager stopped.`);
-		lspManager = undefined; // Clear the reference
+		console.log('[EditableCodeSection] Destroying component...');
 
 		// Dispose editor and models
 		editor?.dispose();
-		console.log('[LSP EditableCodeSection] Monaco editor disposed.');
+		console.log('[EditableCodeSection] Monaco editor disposed.');
 
 		resizeObserver?.disconnect(); // Disconnect observer on destroy
-		console.log('[LSP EditableCodeSection] Resize observer disconnected.');
+		console.log('[EditableCodeSection] Resize observer disconnected.');
 
 		// Clear other references
 		editor = undefined;
@@ -103,47 +95,6 @@
 					}
 				})
 			);
-		}
-	});
-
-	// Effect to manage LSP connection using LspManager
-	$effect(() => {
-		const monaco = monacoInstance.instance;
-		const socket = socketStore.socket;
-
-		// Conditions to START the LSP Manager
-		if (
-			language === 'python' &&
-			socketStore.isConnected &&
-			socket &&
-			monaco &&
-			editor && // Editor must be created
-			!lspManager // LSP manager shouldn't already exist for this editor
-		) {
-			console.log(
-				`[LSP EditableCodeSection ${title}] Conditions met, creating and starting LSP Manager...`
-			);
-			lspManager = new LspManager(socket, monaco);
-			lspManager
-				.start()
-				.then(() => {
-					console.log(`[LSP EditableCodeSection ${title}] LSP Manager started successfully.`);
-				})
-				.catch((error) => {
-					console.error(`[LSP EditableCodeSection ${title}] Failed to start LSP Manager:`, error);
-					// Ensure manager instance is cleared if start fails
-					lspManager = undefined;
-				});
-		}
-		// Conditions to STOP the LSP Manager
-		else if (lspManager && (language !== 'python' || !socketStore.isConnected)) {
-			console.log(
-				`[LSP EditableCodeSection ${title}] Conditions no longer met (connected: ${socketStore.isConnected}, lang: ${language}). Stopping LSP manager.`
-			);
-			// Use void to explicitly ignore the promise returned by stop
-			void lspManager.stop().then(() => {
-				lspManager = undefined; // Clear reference after stopping
-			});
 		}
 	});
 

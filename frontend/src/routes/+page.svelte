@@ -32,6 +32,7 @@
 	import { allClassNames } from '$lib/stores/classNameStore';
 	import { taskClassNamesStore } from '$lib/stores/taskClassNamesStore';
 	import { socketStore } from '$lib/stores/socketStore.svelte';
+	import { startLspManager, stopLspManager } from '$lib/stores/monacoStore.svelte';
 	import {
 		llmConfigs,
 		llmConfigsFromCode,
@@ -129,9 +130,24 @@
 
 	// How often we tried to lay out
 	let layoutAttempts: number = 0;
+	let lspManagerAttempts: number = 0;
 
 	let showGraphNameDialog = $state(false);
 	let pendingActionAfterName: 'save' | 'export' | null;
+
+	function attemptLspConnection() {
+		startLspManager().then((success) => {
+			if (!success) {
+				console.error('Failed to start LSP Manager');
+				lspManagerAttempts++;
+				if (lspManagerAttempts < 3) {
+					setTimeout(attemptLspConnection, 1000);
+				}
+			} else {
+				lspManagerAttempts = 0;
+			}
+		});
+	}
 
 	onMount(() => {
 		if (dev) {
@@ -146,6 +162,9 @@
 			console.log('Connected to backend:', socketStore.socket?.id);
 			socketStore.socket.emit('start_lsp');
 			socketStore.isConnected = true;
+
+			// Start the LSP Manager now that socket is connected
+			attemptLspConnection();
 
 			loadStatus = { type: 'idle', message: '' };
 			exportStatus = { type: 'idle', message: '' };
@@ -177,8 +196,12 @@
 			}
 		});
 
-		socketStore.socket.on('disconnect', () => {
+		socketStore.socket.on('disconnect', async () => {
 			console.log('Disconnected from backend');
+
+			// Stop the LSP Manager before marking as disconnected
+			await stopLspManager();
+
 			socketStore.isConnected = false;
 			exportStatus = { type: 'idle', message: '' }; // Reset status on disconnect
 		});
@@ -283,6 +306,11 @@
 		});
 
 		return () => {
+			// Ensure the LSP Manager is stopped when component unmounts
+			stopLspManager().catch((err) => {
+				console.error('Error stopping LSP Manager during cleanup:', err);
+			});
+
 			// Disconnect the socket when the component is destroyed
 			socketStore.socket?.emit('stop_lsp');
 			socketStore.socket?.disconnect();
