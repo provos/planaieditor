@@ -3,7 +3,7 @@ import type { Socket } from 'socket.io-client';
 import { SocketIOReader, SocketIOWriter } from './lsp-utils';
 import type { MonacoLanguageClient } from 'monaco-languageclient';
 import type { MessageTransports, LanguageClientOptions } from 'vscode-languageclient/browser.js';
-// import { ErrorAction as VscodeErrorAction, CloseAction as VscodeCloseAction } from 'vscode-languageclient/lib/common/client';
+
 
 // Dynamically imported MonacoLanguageClient constructor type
 type MonacoLanguageClientConstructorType = {
@@ -21,6 +21,8 @@ export class LspManager {
     private MonacoLanguageClientConstructor: MonacoLanguageClientConstructorType | undefined;
     private isStarted = false;
     private startPromise: Promise<void> | undefined;
+    private continue: number = -1;
+    private doNotRestart: number = -1;
 
     constructor(
         private socket: Socket,
@@ -32,6 +34,11 @@ export class LspManager {
             console.log(`[LSP Manager] Start already in progress or completed.`);
             return this.startPromise;
         }
+
+        // Need to dynamically import because of SSR
+        const { ErrorAction, CloseAction } = await import('vscode-languageclient/lib/common/client');
+        this.continue = ErrorAction.Continue;
+        this.doNotRestart = CloseAction.DoNotRestart;
 
         console.log(`[LSP Manager] Starting LSP connection...`);
         this.startPromise = this._initializeAndStart();
@@ -121,8 +128,8 @@ export class LspManager {
         const clientOptions: LanguageClientOptions = {
             documentSelector: ['python'], // Hardcoded to python
             errorHandler: {
-                error: () => ({ action: VscodeErrorAction.Continue }),
-                closed: () => ({ action: VscodeCloseAction.DoNotRestart })
+                error: () => ({ action: this.continue }),
+                closed: () => ({ action: this.doNotRestart })
             },
             workspaceFolder: {
                 uri: this.monacoInstanceRef.Uri.parse('/workspace'),
