@@ -4,7 +4,13 @@ import cssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker';
 import htmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker';
 import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
 import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
-import type * as Monaco from 'monaco-editor/esm/vs/editor/editor.api'; // Add type import
+import type * as Monaco from 'monaco-editor/esm/vs/editor/editor.api';
+
+import 'monaco-editor/esm/vs/language/typescript/monaco.contribution';
+import 'monaco-editor/esm/vs/language/css/monaco.contribution';
+import 'monaco-editor/esm/vs/language/json/monaco.contribution';
+import 'monaco-editor/esm/vs/language/html/monaco.contribution';
+
 
 /**
  * Dynamically imports Monaco and sets up the Monaco environment with web workers.
@@ -49,7 +55,22 @@ export async function setupMonacoEnvironment(): Promise<typeof Monaco | null> {
     // Initialize the services
     console.log('Initializing VSCode services...');
     const { initServices } = await import('monaco-languageclient/vscode/services');
-    await initServices({});
+
+    const getTextmateServiceOverride = await import('@codingame/monaco-vscode-textmate-service-override');
+    const getThemeServiceOverride = await import('@codingame/monaco-vscode-theme-service-override');
+    const getLanguagesServiceOverride = await import('@codingame/monaco-vscode-languages-service-override');
+    await import('@codingame/monaco-vscode-theme-defaults-default-extension');
+    await import('@codingame/monaco-vscode-json-default-extension');
+    await import('@codingame/monaco-vscode-python-default-extension');
+
+    await initServices({
+        loadThemes: true,
+        serviceOverrides: {
+            ...getTextmateServiceOverride.default(),
+            ...getThemeServiceOverride.default(),
+            ...getLanguagesServiceOverride.default(),
+        },
+    });
 
     monaco.languages.register({
         id: 'python',
