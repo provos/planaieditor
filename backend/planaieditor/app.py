@@ -37,7 +37,7 @@ from planaieditor.utils import parse_traceback
 from planaieditor.venv import discover_python_environments
 
 # Import LSP handling functions
-from planaieditor import lsp_handler
+from planaieditor.lsp_handler import lsp_handler_instance as lsp_handler
 
 # Determine mode and configure paths/CORS
 FLASK_ENV = os.environ.get("FLASK_ENV", "production")  # Default to production
