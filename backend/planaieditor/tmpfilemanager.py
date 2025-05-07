@@ -88,30 +88,35 @@ class TempFileManager:
                         pass
                 return None
 
+    def _delete_temp_file_internal(self, original_uri: str) -> None:
+        """Internal helper to delete a temp file; assumes lock is already held."""
+        temp_path_str = self.inmemory_to_temp_path.pop(original_uri, None)
+        if temp_path_str:
+            self.temp_path_to_inmemory_uri.pop(
+                str(Path(temp_path_str).resolve()),
+                None,  # Ensure normalized path is used for pop
+            )
+            try:
+                os.remove(temp_path_str)
+                temp_file_log.info(
+                    f"Deleted temporary file {temp_path_str} for URI {original_uri}"
+                )
+            except OSError as e:
+                temp_file_log.error(
+                    f"Error deleting temporary file {temp_path_str}: {e}",
+                    exc_info=True,
+                )
+
     def delete_temp_file(self, original_uri: str) -> None:
         with self.temp_file_lock:
-            temp_path_str = self.inmemory_to_temp_path.pop(original_uri, None)
-            if temp_path_str:
-                self.temp_path_to_inmemory_uri.pop(
-                    temp_path_str, None
-                )  # Use normalized path if stored that way
-                try:
-                    os.remove(temp_path_str)
-                    temp_file_log.info(
-                        f"Deleted temporary file {temp_path_str} for URI {original_uri}"
-                    )
-                except OSError as e:
-                    temp_file_log.error(
-                        f"Error deleting temporary file {temp_path_str}: {e}",
-                        exc_info=True,
-                    )
+            self._delete_temp_file_internal(original_uri)
 
     def cleanup_all_temp_files(self):
         with self.temp_file_lock:
             temp_file_log.info("Cleaning up all temporary files...")
             uris_to_delete = list(self.inmemory_to_temp_path.keys())
             for uri in uris_to_delete:
-                self.delete_temp_file(uri)
+                self._delete_temp_file_internal(uri)  # Call the internal method
             if not self.inmemory_to_temp_path and not self.temp_path_to_inmemory_uri:
                 temp_file_log.info(
                     "All temporary files and mappings cleaned up successfully."
@@ -261,17 +266,32 @@ class TempFileManager:
             doc_id = params.get("textDocument", {})
             uri = doc_id.get("uri")
             if uri and uri.startswith("inmemory://"):
-                # The URI in the message to the server should be the *translated* file URI.
-                # So, we translate first, then delete the mapping based on the original URI.
                 temp_file_log.info(
-                    f"didClose: {uri} temp file will be deleted after its URI is translated for the server."
+                    f"didClose: Handling URI {uri}. Translating to file URI for server, then deleting temp file."
                 )
-                # Deletion happens after translation, using original_uri.
-                # The recursive translator will convert `uri` to its `file://` equivalent.
-                # We need to ensure self.delete_temp_file is called with original_uri *after*
-                # the message is fully processed and sent, or if this is the last reference.
-                # For now, let's delete it immediately. The server will get the file:// URI.
+
+                # Directly get the file path and convert it to a file URI
+                temp_file_path_str = self._get_temp_file_path(uri)
+                translated_uri_for_server = None
+                if temp_file_path_str:
+                    translated_uri_for_server = Path(temp_file_path_str).as_uri()
+
+                # Now delete the temporary file and its mappings
                 self.delete_temp_file(uri)
+
+                # Return the translated file URI.
+                # If for some reason it wasn't found (e.g., file never existed),
+                # this would return None, or the original uri if we fall back.
+                # The test expects translated_uri_for_server to be valid.
+                if translated_uri_for_server:
+                    return translated_uri_for_server
+                else:
+                    # Fallback or error: If the URI was inmemory but no temp file was found.
+                    # This case might indicate a logic error elsewhere if the test setup implies a file should exist.
+                    temp_file_log.warning(
+                        f"didClose: No temp file path found for {uri}, returning original URI to server."
+                    )
+                    return uri  # Return original URI if no translation found
 
         return self._translate_uri_recursive(processed_message, "to_server")
 
