@@ -5,6 +5,7 @@ import select
 import subprocess
 import threading
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import IO, Callable, Optional
 
@@ -28,7 +29,44 @@ class LSPHandler:
         self.lsp_write_lock: Optional[threading.Lock] = threading.Lock()
         self.lsp_process: Optional[subprocess.Popen] = None
         self.lsp_stderr_reader: Optional[threading.Thread] = None
+        self.lsp_log_dir: Path = Path("lsp_logs")
+        self.current_lsp_log_file: Optional[Path] = None
+        self.lsp_log_lock: threading.Lock = threading.Lock()
+
+        log.info(f"LSP log directory set to: {self.lsp_log_dir.resolve()}")
+        self.lsp_log_dir.mkdir(parents=True, exist_ok=True)
+
         log.info("LSPHandler instance created.")
+
+    def _rotate_lsp_log_file(self):
+        """Generates a new log file name and sets it as the current log file."""
+        self.lsp_log_dir.mkdir(parents=True, exist_ok=True)  # Ensure dir exists
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        new_log_file_name = f"lsp_messages_{timestamp}.jsonl"
+        self.current_lsp_log_file = self.lsp_log_dir / new_log_file_name
+        log.info(f"LSP message logging will be written to: {self.current_lsp_log_file}")
+
+    def _log_to_jsonl_file(self, data: dict, log_type: str):
+        """Appends a JSON log entry to the current LSP log file."""
+        if not self.current_lsp_log_file:
+            return
+
+        log_entry = {
+            "timestamp": time.time(),
+            "type": log_type,
+            "payload": data,
+        }
+
+        try:
+            with self.lsp_log_lock:
+                with open(self.current_lsp_log_file, "a", encoding="utf-8") as f:
+                    f.write(json.dumps(log_entry) + "\n")
+        except Exception as e:
+            # Log to the main logger, not recursively to itself
+            log.error(
+                f"Failed to write to LSP JSONL log file {self.current_lsp_log_file}: {e}",
+                exc_info=True,
+            )
 
     def _format_lsp_message(self, data: dict) -> bytes:
         """Formats a dictionary into a JSON-RPC message with LSP headers."""
@@ -172,6 +210,8 @@ class LSPHandler:
             log.warning("LSP process already running. Stopping it first.")
             self.stop_lsp_process()
 
+        self._rotate_lsp_log_file()  # Rotate log file before starting new process
+
         jedi_path = Path(python_executable).parent / "jedi-language-server"
         log.info(f"Starting LSP process using: {jedi_path}")
         try:
@@ -274,7 +314,6 @@ class LSPHandler:
         log.info(
             f"Preparing to send LSP message (SID: {sid}): Method: {message.get('method')}, ID: {message.get('id')}"
         )
-        # log.info(f"LSP message details: {json.dumps(message, indent=2)}") # Can be verbose
 
         if (
             not self.lsp_process
@@ -292,6 +331,9 @@ class LSPHandler:
                 f"Failed to format message (SID: {sid}), not sending: {message.get('method')}"
             )
             return
+
+        # Log the request
+        self._log_to_jsonl_file(message, "request")
 
         try:
             with self.lsp_write_lock:
@@ -323,10 +365,20 @@ class LSPHandler:
                         log.info(
                             f"LSP response received for ID {response.get('id')} (SID: {sid})"
                         )
+                        # Log the response
+                        self._log_to_jsonl_file(response, "response")
                         socketio_emit("lsp_response", response, room=sid)
                     else:
                         log.warning(
                             f"No response or error reading response for message with id: {message.get('id')} (SID: {sid})"
+                        )
+                        # Optionally log the absence of a response or timeout event here
+                        self._log_to_jsonl_file(
+                            {
+                                "id": message.get("id"),
+                                "error": "No response or timeout",
+                            },
+                            "response_error",
                         )
                 else:
                     log.debug(
