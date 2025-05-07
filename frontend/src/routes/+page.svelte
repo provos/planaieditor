@@ -160,7 +160,6 @@
 
 		socketStore.socket.on('connect', async () => {
 			console.log('Connected to backend:', socketStore.socket?.id);
-			socketStore.socket.emit('start_lsp');
 			socketStore.isConnected = true;
 
 			// Start the LSP Manager now that socket is connected

@@ -72,6 +72,9 @@ export async function startLspManager(): Promise<boolean> {
         await stopLspManager();
     }
 
+    // We need to synchronize the start_lsp request with the LSP Manager
+    socketStore.socket.emit('start_lsp');
+
     console.log('[LSP Manager] Creating new LSP Manager instance');
     lspManagerInstance = new LspManager(socketStore.socket, monacoInstance.instance);
 
