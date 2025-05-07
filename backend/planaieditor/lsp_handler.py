@@ -234,13 +234,6 @@ class LSPHandler:
                 original_payload
             )
 
-            lsp_handler_log.debug(
-                f"Translated LSP Message for client: ID={translated_payload.get('id')}, Method={translated_payload.get('method')}"
-            )
-            if json.dumps(original_payload) != json.dumps(translated_payload):
-                lsp_handler_log.info(
-                    "Server->Client Translation Occurred. Original URI(s) might have been temp file URIs."
-                )
             return translated_payload
 
         except json.JSONDecodeError as e:
@@ -418,12 +411,6 @@ class LSPHandler:
 
     def send_lsp_message(self, sid: str, message: dict, socketio_emit: Callable):
         """Sends a message to the LSP process and handles the response or notification."""
-        lsp_handler_log.info(
-            f"Preparing to send raw LSP message (SID: {sid}): Method={message.get('method')}, ID={message.get('id')}"
-        )
-        lsp_handler_log.debug(
-            f"Raw LSP message to send (SID: {sid}, pre-translation): {json.dumps(message, indent=2)}"
-        )
 
         # Translate URIs in the message to be sent
         try:
@@ -439,9 +426,6 @@ class LSPHandler:
             lsp_handler_log.error("Sending original message due to translation error.")
             translated_message_for_server = message  # Fallback
 
-        lsp_handler_log.info(
-            f"Translated LSP message for server (SID: {sid}): Method={translated_message_for_server.get('method')}, ID={translated_message_for_server.get('id')}"
-        )
         if json.dumps(message) != json.dumps(translated_message_for_server):
             lsp_handler_log.info(
                 f"Client->Server URI Translation Occurred (SID: {sid})."
@@ -473,6 +457,10 @@ class LSPHandler:
                         f"LSP process became inactive or stdin closed before writing (SID: {sid})."
                     )
                     return
+                lsp_handler_log.info(
+                    f"Preparing to send raw LSP message (SID: {sid}): Method={message.get('method')}, ID={message.get('id')}"
+                )
+
                 self.lsp_process.stdin.write(formatted_message_bytes)
                 self.lsp_process.stdin.flush()
                 lsp_handler_log.debug(
