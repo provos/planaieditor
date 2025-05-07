@@ -16,9 +16,9 @@ import subprocess
 import sys
 import tempfile
 import traceback
-from textwrap import indent
 from argparse import ArgumentParser
 from pathlib import Path
+from textwrap import indent
 from typing import Optional
 
 from flask import Flask, jsonify, request, send_from_directory
@@ -472,10 +472,6 @@ def handle_disconnect():
     if hasattr(app, "debug_sessions") and sid in app.debug_sessions:
         del app.debug_sessions[sid]
 
-    # Clean up any associated LSP process
-    print(f"Cleaning up LSP process for disconnected client: {sid}")
-    lsp_handler.stop_lsp_process(sid)
-
 
 @socketio.on("register_for_debug_events")
 def handle_register_for_debug(data):
@@ -509,22 +505,13 @@ def handle_start_lsp():
     # Use the currently selected Python executable or fallback to the system one
     python_executable = app.config.get("SELECTED_VENV_PATH", sys.executable)
 
-    # Define the emit function to be passed to the handler
-    # This uses the correct context for emitting back to the specific client
-    def emit_to_client(event, data, room):
-        socketio.emit(event, data, room=room)
-
-    success = lsp_handler.start_lsp_process(sid, python_executable, emit_to_client)
+    # XXX - we need to restart the LSP process if the venv changes
+    success = lsp_handler.start_lsp_process(python_executable)
 
     if success:
         print(f"[{sid}] LSP process started successfully.")
-        # Optionally emit a confirmation back, though the reader thread will send init messages
-        emit("lsp_ready", room=sid)  # Let client know backend is ready
     else:
         print(f"[{sid}] Failed to start LSP process.")
-        emit(
-            "lsp_error", {"error": "Failed to start language server process."}, room=sid
-        )
 
 
 @socketio.on("lsp_message")
@@ -536,8 +523,12 @@ def handle_lsp_message(message):
         print(f"[{sid}] Received invalid LSP message (not a dict): {message}")
         return
 
-    # Forward the message to the handler
-    lsp_handler.send_lsp_message(sid, message)
+    # Define the emit function to be passed to the handler
+    def emit_to_client(event, data, room):
+        socketio.emit(event, data, room=room)
+
+    # Forward the message to the handler with the emit function
+    lsp_handler.send_lsp_message(sid, message, emit_to_client)
 
 
 @socketio.on("stop_lsp")
@@ -545,7 +536,7 @@ def handle_stop_lsp():
     """Handles request from client to explicitly stop the LSP server process."""
     sid = request.sid
     print(f"[{sid}] Received stop_lsp request.")
-    lsp_handler.stop_lsp_process(sid)
+    lsp_handler.stop_lsp_process()
     emit("lsp_stopped", room=sid)  # Confirm stop
 
 
