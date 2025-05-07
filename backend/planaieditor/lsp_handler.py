@@ -27,7 +27,7 @@ class LSPHandler:
     CONTENT_LENGTH_RE = re.compile(rb"^Content-Length: *(\d+)\r\n", re.IGNORECASE)
 
     def __init__(self, write_log: bool = False, log_dir: Path = Path("lsp_logs")):
-        self.lsp_write_lock: Optional[threading.Lock] = threading.Lock()
+        self.lsp_msg_lock: Optional[threading.Lock] = threading.Lock()
         self.lsp_process: Optional[subprocess.Popen] = None
         self.lsp_stderr_reader: Optional[threading.Thread] = None
         self.lsp_log_dir: Path = log_dir
@@ -306,7 +306,7 @@ class LSPHandler:
         """Starts the jedi-language-server subprocess."""
         # all of this happens under the write lock, so that all attempted send_lsp_message calls
         # will wait until the new server is started
-        with self.lsp_write_lock:
+        with self.lsp_msg_lock:
             if self.lsp_process:
                 lsp_handler_log.warning(
                     "LSP process already running. Stopping it first."
@@ -463,7 +463,7 @@ class LSPHandler:
             return
 
         try:
-            with self.lsp_write_lock:
+            with self.lsp_msg_lock:
                 if (
                     not self.lsp_process
                     or not self.lsp_process.stdin
@@ -479,40 +479,42 @@ class LSPHandler:
                     f"LSP message sent (SID: {sid}): {translated_message_for_server.get('method')}"
                 )
 
-            expects_response = "id" in message  # Check original message for 'id'
-            if expects_response:
-                if not self.lsp_process or not self.lsp_process.stdout:
-                    lsp_handler_log.warning(
-                        f"LSP process or stdout not available for response (SID: {sid})."
-                    )
-                    return
+                # we seralize response reading on the same lock
+                expects_response = "id" in message  # Check original message for 'id'
+                if expects_response:
+                    if not self.lsp_process or not self.lsp_process.stdout:
+                        lsp_handler_log.warning(
+                            f"LSP process or stdout not available for response (SID: {sid})."
+                        )
+                        return
 
-                response = self._read_one_lsp_message(
-                    self.lsp_process.stdout, timeout=10.0
-                )
-                if response:  # response is already translated by _read_one_lsp_message
-                    lsp_handler_log.info(
-                        f"LSP response received for ID {response.get('id')} (SID: {sid})"
+                    response = self._read_one_lsp_message(
+                        self.lsp_process.stdout, timeout=10.0
                     )
-                    self._log_to_jsonl_file(
-                        response, "response_from_server"
-                    )  # Log translated response
-                    socketio_emit("lsp_response", response, room=sid)
+                    # response is already translated by _read_one_lsp_message
+                    if response:
+                        lsp_handler_log.info(
+                            f"LSP response received for ID {response.get('id')} (SID: {sid})"
+                        )
+                        self._log_to_jsonl_file(
+                            response, "response_from_server"
+                        )  # Log translated response
+                        socketio_emit("lsp_response", response, room=sid)
+                    else:
+                        lsp_handler_log.warning(
+                            f"No response/error reading for msg ID: {message.get('id')} (SID: {sid})"
+                        )
+                        self._log_to_jsonl_file(
+                            {
+                                "id": message.get("id"),
+                                "error": "No response or timeout from LSP server",
+                            },
+                            "response_error",
+                        )
                 else:
-                    lsp_handler_log.warning(
-                        f"No response/error reading for msg ID: {message.get('id')} (SID: {sid})"
+                    lsp_handler_log.debug(
+                        f"Message (SID: {sid}, Method: {message.get('method')}) is a notification."
                     )
-                    self._log_to_jsonl_file(
-                        {
-                            "id": message.get("id"),
-                            "error": "No response or timeout from LSP server",
-                        },
-                        "response_error",
-                    )
-            else:
-                lsp_handler_log.debug(
-                    f"Message (SID: {sid}, Method: {message.get('method')}) is a notification."
-                )
 
         except BrokenPipeError:
             lsp_handler_log.error(
