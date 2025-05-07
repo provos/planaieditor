@@ -137,11 +137,34 @@ class TestTempFileManager(unittest.TestCase):
     def test_translate_did_change_to_server(self):
         original_uri = "inmemory://model/change_doc.py"
         initial_content = "initial content"
-        self.manager.create_or_update_temp_file(original_uri, initial_content)
+        # Simulate didOpen first to correctly initialize TextDocument in the manager
+        open_message = {
+            "jsonrpc": "2.0",
+            "method": "textDocument/didOpen",
+            "params": {
+                "textDocument": {
+                    "uri": original_uri,
+                    "languageId": "python",
+                    "version": 1,
+                    "text": initial_content,
+                }
+            },
+        }
+        self.manager.translate_message_to_server(open_message)
         temp_physical_path = self.manager._get_temp_file_path(original_uri)
+        self.assertIsNotNone(
+            temp_physical_path, "Temp file should be created by didOpen"
+        )
+        self.assertTrue(
+            os.path.exists(temp_physical_path), "Temp file should exist after didOpen"
+        )
+        with open(temp_physical_path, "r", encoding="utf-8") as f:
+            self.assertEqual(
+                f.read(), initial_content, "Content should be initial after didOpen"
+            )
 
         new_content = "updated content"
-        message = {
+        change_message = {
             "jsonrpc": "2.0",
             "method": "textDocument/didChange",
             "params": {
@@ -149,7 +172,7 @@ class TestTempFileManager(unittest.TestCase):
                 "contentChanges": [{"text": new_content}],
             },
         }
-        translated_message = self.manager.translate_message_to_server(message)
+        translated_message = self.manager.translate_message_to_server(change_message)
 
         self.assertTrue(os.path.exists(temp_physical_path))
         with open(temp_physical_path, "r", encoding="utf-8") as f:
@@ -335,6 +358,54 @@ class TestTempFileManager(unittest.TestCase):
         self.assertEqual(
             translated_message["params"]["textDocument"]["uri"], unhandled_inmemory_uri
         )
+
+    def test_translate_incremental_did_change_to_server(self):
+        original_uri = "inmemory://model/incremental_change_doc.py"
+        initial_content = "line one\nline two\nline three"
+
+        # 1. Simulate didOpen
+        open_message = {
+            "jsonrpc": "2.0",
+            "method": "textDocument/didOpen",
+            "params": {
+                "textDocument": {
+                    "uri": original_uri,
+                    "languageId": "python",
+                    "version": 1,
+                    "text": initial_content,
+                }
+            },
+        }
+        self.manager.translate_message_to_server(open_message)
+        temp_physical_path = self.manager._get_temp_file_path(original_uri)
+        self.assertIsNotNone(temp_physical_path)
+        with open(temp_physical_path, "r", encoding="utf-8") as f:
+            self.assertEqual(f.read(), initial_content)
+
+        # 2. Define and apply an incremental change (e.g., replace 'two' with 'TWO_MODIFIED')
+        change_event = {
+            "range": {
+                "start": {"line": 1, "character": 5},  # Start of 'two'
+                "end": {"line": 1, "character": 8},  # End of 'two'
+            },
+            "text": "TWO_MODIFIED",
+        }
+
+        change_message = {
+            "jsonrpc": "2.0",
+            "method": "textDocument/didChange",
+            "params": {
+                "textDocument": {"uri": original_uri, "version": 2},
+                "contentChanges": [change_event],
+            },
+        }
+        self.manager.translate_message_to_server(change_message)
+
+        # 3. Verify the content of the temp file
+        expected_content_after_change = "line one\nline TWO_MODIFIED\nline three"
+        self.assertTrue(os.path.exists(temp_physical_path))
+        with open(temp_physical_path, "r", encoding="utf-8") as f:
+            self.assertEqual(f.read(), expected_content_after_change)
 
 
 if __name__ == "__main__":

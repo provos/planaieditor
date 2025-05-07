@@ -4,7 +4,10 @@ import os
 import tempfile
 import threading
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
+
+from lsprotocol import types
+from pygls.workspace import TextDocument
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - [%(name)s] %(message)s"
@@ -24,6 +27,9 @@ class TempFileManager:
         self.temp_path_to_inmemory_uri: Dict[str, str] = (
             {}
         )  # "/tmp/xyz.py" -> "inmemory://model/1"
+        self.inmemory_documents: Dict[str, TextDocument] = (
+            {}
+        )  # "inmemory://model/1" -> TextDocument(...)
         self.temp_file_lock = threading.Lock()
         temp_file_log.info("TempFileManager instance initialized.")
 
@@ -117,6 +123,9 @@ class TempFileManager:
             uris_to_delete = list(self.inmemory_to_temp_path.keys())
             for uri in uris_to_delete:
                 self._delete_temp_file_internal(uri)  # Call the internal method
+                self.inmemory_documents.pop(
+                    uri, None
+                )  # Also remove from documents cache
             if not self.inmemory_to_temp_path and not self.temp_path_to_inmemory_uri:
                 temp_file_log.info(
                     "All temporary files and mappings cleaned up successfully."
@@ -224,8 +233,23 @@ class TempFileManager:
             )  # params is already a part of processed_message
             uri = doc.get("uri")
             text = doc.get("text")
+            version = doc.get("version")
+            language_id = doc.get("languageId", "python")  # Default to python
+
             if uri and uri.startswith("inmemory://") and text is not None:
-                temp_file_uri_str = self.create_or_update_temp_file(uri, text)
+                # Create and store TextDocument for inmemory URIs
+                document = TextDocument(
+                    uri=uri,
+                    source=text,
+                    version=version,
+                    language_id=language_id,
+                    sync_kind=types.TextDocumentSyncKind.Incremental,
+                )
+                self.inmemory_documents[uri] = document
+                # Use document.source to ensure consistency, though it's same as 'text' here
+                temp_file_uri_str = self.create_or_update_temp_file(
+                    uri, document.source
+                )
                 if not temp_file_uri_str:
                     temp_file_log.error(
                         f"Failed to create temp file for didOpen: {uri}. Sending original URI."
@@ -240,14 +264,39 @@ class TempFileManager:
         elif method == "textDocument/didChange" and params:
             doc_id = params.get("textDocument", {})
             uri = doc_id.get("uri")
-            content_changes = params.get("contentChanges")
+            content_changes: Optional[List[Dict[str, Any]]] = params.get(
+                "contentChanges"
+            )
+            version = doc_id.get("version")
+
             if uri and uri.startswith("inmemory://") and content_changes:
-                # Assuming full text updates for simplicity, as in the original example.
-                # LSP spec: contentChanges is an array. For full text, it has one item.
-                if len(content_changes) == 1 and "text" in content_changes[0]:
-                    full_new_text = content_changes[0]["text"]
+                document = self.inmemory_documents.get(uri)
+                if document:
+                    for change in content_changes:
+                        # The LSP spec says range can be missing for full updates.
+                        if "range" not in change:  # Full update
+                            pygls_change = types.TextDocumentContentChangeEvent_Type2(
+                                text=change["text"]
+                            )
+                        else:  # Incremental update
+                            pygls_change = types.TextDocumentContentChangeEvent_Type1(
+                                range=types.Range(
+                                    start=types.Position(
+                                        line=change["range"]["start"]["line"],
+                                        character=change["range"]["start"]["character"],
+                                    ),
+                                    end=types.Position(
+                                        line=change["range"]["end"]["line"],
+                                        character=change["range"]["end"]["character"],
+                                    ),
+                                ),
+                                text=change["text"],
+                            )
+                        document.apply_change(pygls_change)
+
+                    document.version = version
                     temp_file_uri_str = self.create_or_update_temp_file(
-                        uri, full_new_text
+                        uri, document.source
                     )
                     if not temp_file_uri_str:
                         temp_file_log.error(
@@ -255,17 +304,23 @@ class TempFileManager:
                         )
                     else:
                         temp_file_log.info(
-                            f"didChange: {uri} content updated in temp file; URI will be translated."
+                            f"didChange: {uri} content updated in temp file ({len(document.source)} chars); URI will be translated."
                         )
                 else:
                     temp_file_log.warning(
-                        f"didChange for {uri} received but not a full text update. Temp file not updated by manager. Client must ensure consistency or send full text."
+                        f"didChange for {uri} received but no document in memory. "
+                        "This might happen if didOpen was not processed first for this URI."
                     )
+            elif uri and uri.startswith("inmemory://"):
+                temp_file_log.warning(
+                    f"didChange for {uri} received with no content changes."
+                )
 
         elif method == "textDocument/didClose" and params:
             doc_id = params.get("textDocument", {})
             uri = doc_id.get("uri")
             if uri and uri.startswith("inmemory://"):
+                self.inmemory_documents.pop(uri, None)  # Remove from in-memory cache
                 temp_file_log.info(
                     f"didClose: Handling URI {uri}. Translating to file URI for server, then deleting temp file."
                 )
