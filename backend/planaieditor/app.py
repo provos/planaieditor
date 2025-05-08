@@ -26,6 +26,7 @@ from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 from planaieditor.filesystem import setup_filesystem
 from planaieditor.llm_interface_utils import list_models_for_provider
+from planaieditor.lsp_handler import lsp_handler_instance as lsp_handler
 from planaieditor.patch import get_definitions_from_file
 from planaieditor.python import (
     add_to_task_import_state,
@@ -35,9 +36,6 @@ from planaieditor.python import (
 from planaieditor.socket_server import SocketServer
 from planaieditor.utils import parse_traceback
 from planaieditor.venv import discover_python_environments
-
-# Import LSP handling functions
-from planaieditor.lsp_handler import lsp_handler_instance as lsp_handler
 
 # Determine mode and configure paths/CORS
 FLASK_ENV = os.environ.get("FLASK_ENV", "production")  # Default to production
@@ -506,7 +504,7 @@ def handle_start_lsp():
     python_executable = app.config.get("SELECTED_VENV_PATH", sys.executable)
 
     # XXX - we need to restart the LSP process if the venv changes
-    success = lsp_handler.start_lsp_process(python_executable)
+    success = lsp_handler.start_lsp_process(python_executable, sid, socketio.emit)
 
     if success:
         print(f"[{sid}] LSP process started successfully.")
@@ -523,12 +521,8 @@ def handle_lsp_message(message):
         print(f"[{sid}] Received invalid LSP message (not a dict): {message}")
         return
 
-    # Define the emit function to be passed to the handler
-    def emit_to_client(event, data, room):
-        socketio.emit(event, data, room=room)
-
     # Forward the message to the handler with the emit function
-    lsp_handler.send_lsp_message(sid, message, emit_to_client)
+    lsp_handler.send_lsp_message(message)
 
 
 @socketio.on("stop_lsp")

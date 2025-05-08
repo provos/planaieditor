@@ -27,12 +27,16 @@ class LSPHandler:
     CONTENT_LENGTH_RE = re.compile(rb"^Content-Length: *(\d+)\r\n", re.IGNORECASE)
 
     def __init__(self, write_log: bool = False, log_dir: Path = Path("lsp_logs")):
-        self.lsp_msg_lock: Optional[threading.Lock] = threading.Lock()
+        self.lsp_msg_lock: threading.Lock = threading.Lock()
         self.lsp_process: Optional[subprocess.Popen] = None
         self.lsp_stderr_reader: Optional[threading.Thread] = None
+        self.lsp_stdout_reader_thread: Optional[threading.Thread] = None
+
         self.lsp_log_dir: Path = log_dir
         self.current_lsp_log_file: Optional[Path] = None
-        self.lsp_log_lock: threading.Lock = threading.Lock() if write_log else None
+        self.lsp_log_lock: Optional[threading.Lock] = (
+            threading.Lock() if write_log else None
+        )
         self.write_log = write_log
         if write_log:
             self.lsp_log_dir.mkdir(parents=True, exist_ok=True)
@@ -41,6 +45,8 @@ class LSPHandler:
             )
 
         self.temp_file_manager = TempFileManager()
+        self.client_sid: Optional[str] = None
+        self.client_socketio_emit: Optional[Callable] = None
 
         lsp_handler_log.info("LSPHandler instance created with TempFileManager.")
 
@@ -95,10 +101,8 @@ class LSPHandler:
 
         ready_to_read, _, _ = select.select([stream], [], [], timeout)
         if not ready_to_read:
-            lsp_handler_log.info(
-                f"Timeout waiting for LSP response after {timeout} seconds (select)"
-            )
             return None
+
         try:
             content_length = -1
             header_start_time = time.time()
@@ -260,10 +264,21 @@ class LSPHandler:
         """Reads stderr from the LSP process for logging."""
         try:
             while self.lsp_process and not stream.closed:
+                # If self.lsp_process changes, this thread continues for the old proc until it ends.
                 ready_to_read, _, _ = select.select([stream], [], [], 0.5)
                 if not ready_to_read:
-                    if not self.lsp_process:
-                        break  # Process has been stopped
+                    current_process = self.lsp_process  # Sample self.lsp_process
+                    if not current_process or current_process.stderr != stream:
+                        # Process changed or stream invalid
+                        lsp_handler_log.info(
+                            "LSP stderr reader: process changed or stream invalid. Exiting."
+                        )
+                        break
+                    if current_process.poll() is not None:  # Process died
+                        lsp_handler_log.info(
+                            "LSP stderr reader: process died. Exiting."
+                        )
+                        break
                     continue
 
                 # Read all available lines
@@ -295,23 +310,85 @@ class LSPHandler:
         finally:
             lsp_handler_log.info("LSP stderr reader thread finished.")
 
-    def start_lsp_process(self, python_executable: str) -> bool:
+    def _read_stdout_loop(
+        self,
+        stdout_stream: IO[bytes],
+        associated_proc: subprocess.Popen,
+        sid: str,
+        socketio_emit_func: Callable,
+    ):
+        """Reads LSP messages from stdout in a loop and dispatches them."""
+        lsp_handler_log.info(
+            f"LSP stdout reader thread started for SID {sid}, PID {associated_proc.pid}."
+        )
+        try:
+            while (
+                self.lsp_process == associated_proc
+                and associated_proc.poll() is None
+                and not stdout_stream.closed
+            ):
+
+                response = self._read_one_lsp_message(stdout_stream, timeout=1.0)
+
+                if response is not None:
+                    lsp_handler_log.info(
+                        f"LSP message from server (for SID {sid}, PID {associated_proc.pid}): ID={response.get('id')}, Method={response.get('method')}"
+                    )
+                    # Response is already translated by _read_one_lsp_message
+                    self._log_to_jsonl_file(response, "response_from_server")
+                    socketio_emit_func("lsp_response", response, room=sid)
+                elif not (
+                    self.lsp_process == associated_proc
+                    and associated_proc.poll() is None
+                ):
+                    lsp_handler_log.info(
+                        f"LSP process {associated_proc.pid} (for SID {sid}) changed or ended. Stdout reader stopping."
+                    )
+                    break
+                # If response is None (timeout) and process is still the same and alive, continue loop.
+
+        except BrokenPipeError:
+            lsp_handler_log.info(
+                f"LSP stdout pipe broke for SID {sid}, PID {associated_proc.pid}. Reader thread stopping."
+            )
+        except Exception as e:
+            if self.lsp_process == associated_proc and associated_proc.poll() is None:
+                lsp_handler_log.error(
+                    f"Exception in LSP stdout reader loop for SID {sid}, PID {associated_proc.pid}: {e}",
+                    exc_info=True,
+                )
+            else:
+                lsp_handler_log.info(
+                    f"LSP stdout reader loop for SID {sid}, PID {associated_proc.pid} exiting due to process stop or change: {e}"
+                )
+        finally:
+            lsp_handler_log.info(
+                f"LSP stdout reader thread finished for SID {sid}, PID {associated_proc.pid}."
+            )
+
+    def start_lsp_process(
+        self, python_executable: str, sid: str, socketio_emit: Callable
+    ) -> bool:
         """Starts the jedi-language-server subprocess."""
-        # all of this happens under the write lock, so that all attempted send_lsp_message calls
-        # will wait until the new server is started
         with self.lsp_msg_lock:
             if self.lsp_process:
                 lsp_handler_log.warning(
                     "LSP process already running. Stopping it first."
                 )
-                self.stop_lsp_process()
+                self._stop_lsp_process_internal()
 
             self._rotate_lsp_log_file()
             # Re-initialize TempFileManager for a fresh session
             self.temp_file_manager = TempFileManager()
 
+            # Store current client info
+            self.client_sid = sid
+            self.client_socketio_emit = socketio_emit
+
             jedi_path_str = str(Path(python_executable).parent / "jedi-language-server")
-            lsp_handler_log.info(f"Starting LSP process using: {jedi_path_str}")
+            lsp_handler_log.info(
+                f"Starting LSP process using: {jedi_path_str} for SID: {sid}"
+            )
             try:
                 cmd = [jedi_path_str]
                 proc = subprocess.Popen(
@@ -327,92 +404,141 @@ class LSPHandler:
                     target=self._read_stderr, args=(proc.stderr,), daemon=True
                 )
                 self.lsp_stderr_reader.start()
+
+                self.lsp_stdout_reader_thread = threading.Thread(
+                    target=self._read_stdout_loop,
+                    args=(
+                        proc.stdout,
+                        proc,
+                        self.client_sid,
+                        self.client_socketio_emit,
+                    ),
+                    daemon=True,
+                )
+                self.lsp_stdout_reader_thread.start()
+
                 lsp_handler_log.info(
-                    f"LSP process started (PID: {proc.pid}). Stderr reader running."
+                    f"LSP process started (PID: {proc.pid}) for SID {sid}. Stderr and stdout readers running."
                 )
                 return True
             except FileNotFoundError:
                 lsp_handler_log.error(
                     f"Jedi-language-server executable not found: {jedi_path_str}"
                 )
-                self.lsp_process = None
+                # self.lsp_process is None here, _cleanup_lsp_resources will handle client_sid etc.
+                self._cleanup_lsp_resources()
                 return False
             except Exception as e:
                 lsp_handler_log.error(
-                    f"Failed to start LSP process: {e}", exc_info=True
+                    f"Failed to start LSP process for SID {sid}: {e}", exc_info=True
                 )
-                if self.lsp_process:
+                if (
+                    self.lsp_process
+                ):  # If proc was partially created and assigned to self.lsp_process
                     self._stop_lsp_process_internal()
-                self.lsp_process = None
+                else:  # if self.lsp_process was never assigned
+                    self._cleanup_lsp_resources()
                 return False
 
     def _cleanup_lsp_resources(self):
         """Internal helper to clear LSP resources."""
         self.lsp_process = None
-        self.lsp_stderr_reader = None  # Thread will exit on its own
-        lsp_handler_log.debug("LSP process and stderr_reader references cleared.")
+        self.lsp_stderr_reader = None
+        self.lsp_stdout_reader_thread = None  # Clear new thread reference
+        self.client_sid = None  # Clear client info
+        self.client_socketio_emit = None
+        lsp_handler_log.debug(
+            "LSP process, reader threads, and client info references cleared."
+        )
 
     def _stop_lsp_process_internal(self):
         """Stops the LSP process without acquiring the lock (for internal use)."""
-        proc = self.lsp_process
-        if proc:
-            current_pid = proc.pid
-            lsp_handler_log.info(f"Stopping LSP process (PID: {current_pid}).")
-            self.lsp_process = None  # Signal intent to stop early
+        proc_to_stop = self.lsp_process  # Capture the process to stop
 
-            try:
-                if proc.stdin and not proc.stdin.closed:
-                    proc.stdin.close()
-            except OSError as e:
+        if not proc_to_stop:
+            lsp_handler_log.info(
+                "No active LSP process found to stop by _stop_lsp_process_internal."
+            )
+            self._cleanup_lsp_resources()  # Ensure resources are clear if called when no proc
+            return
+
+        current_pid = proc_to_stop.pid
+        lsp_handler_log.info(f"Stopping LSP process (PID: {current_pid}).")
+
+        # Important: Signal threads that this specific process instance is ending.
+        # Do this by setting self.lsp_process to None if proc_to_stop is the current one.
+        # This must happen before joining, so threads see the change.
+        if self.lsp_process == proc_to_stop:
+            self.lsp_process = None
+
+        try:
+            if proc_to_stop.stdin and not proc_to_stop.stdin.closed:
+                proc_to_stop.stdin.close()
+        except OSError as e:
+            lsp_handler_log.warning(
+                f"Error closing LSP stdin for PID {current_pid}: {e}"
+            )
+
+        try:
+            proc_to_stop.terminate()
+            proc_to_stop.wait(timeout=2)  # Use proc_to_stop
+            lsp_handler_log.info(
+                f"LSP process (PID: {current_pid}) terminated gracefully."
+            )
+        except subprocess.TimeoutExpired:
+            lsp_handler_log.warning(
+                f"LSP process (PID: {current_pid}) did not terminate gracefully, killing."
+            )
+            proc_to_stop.kill()
+            proc_to_stop.wait(timeout=1)  # Use proc_to_stop
+            lsp_handler_log.info(f"LSP process (PID: {current_pid}) killed.")
+        except Exception as e:
+            lsp_handler_log.error(
+                f"Error stopping LSP process (PID: {current_pid}): {e}",
+                exc_info=True,
+            )
+
+        stdout_thread_ref = self.lsp_stdout_reader_thread
+        stderr_thread_ref = self.lsp_stderr_reader
+
+        if stdout_thread_ref and stdout_thread_ref.is_alive():
+            lsp_handler_log.debug(
+                f"Waiting for stdout reader thread (for PID {current_pid}) to join..."
+            )
+            stdout_thread_ref.join(timeout=1.0)
+            if stdout_thread_ref.is_alive():
                 lsp_handler_log.warning(
-                    f"Error closing LSP stdin for PID {current_pid}: {e}"
+                    f"Stdout reader thread (for PID {current_pid}) did not join in time."
                 )
-            try:
-                proc.terminate()
-                proc.wait(timeout=2)
-                lsp_handler_log.info(
-                    f"LSP process (PID: {current_pid}) terminated gracefully."
-                )
-            except subprocess.TimeoutExpired:
-                lsp_handler_log.warning(
-                    f"LSP process (PID: {current_pid}) did not terminate gracefully, killing."
-                )
-                proc.kill()
-                proc.wait(timeout=1)
-                lsp_handler_log.info(f"LSP process (PID: {current_pid}) killed.")
-            except Exception as e:
-                lsp_handler_log.error(
-                    f"Error stopping LSP process (PID: {current_pid}): {e}",
-                    exc_info=True,
-                )
-        else:
-            lsp_handler_log.info("No active LSP process found to stop.")
-
-        stderr_thread_ref = (
-            self.lsp_stderr_reader
-        )  # Local copy before it's cleared by _cleanup_lsp_resources
-
-        self._cleanup_lsp_resources()  # Clear self.lsp_process, self.lsp_stderr_reader
 
         if stderr_thread_ref and stderr_thread_ref.is_alive():
-            lsp_handler_log.debug("Waiting for stderr reader thread to join...")
+            lsp_handler_log.debug(
+                f"Waiting for stderr reader thread (for PID {current_pid}) to join..."
+            )
             stderr_thread_ref.join(timeout=1.0)
             if stderr_thread_ref.is_alive():
-                lsp_handler_log.warning("Stderr reader thread did not join in time.")
+                lsp_handler_log.warning(
+                    f"Stderr reader thread (for PID {current_pid}) did not join in time."
+                )
+
+        self._cleanup_lsp_resources()
 
         self.temp_file_manager.cleanup_all_temp_files()
         lsp_handler_log.info(
-            "LSP process and resources stop sequence complete, temporary files cleaned up."
+            f"LSP process stop sequence for PID {current_pid} complete, temporary files cleaned up."
         )
 
     def stop_lsp_process(self):
         """Stops the jedi-language-server subprocess and cleans up resources."""
-        self._stop_lsp_process_internal()
+        with self.lsp_msg_lock:  # Acquire lock here
+            self._stop_lsp_process_internal()
 
-    def send_lsp_message(self, sid: str, message: dict, socketio_emit: Callable):
-        """Sends a message to the LSP process and handles the response or notification."""
+    def send_lsp_message(self, message: dict):  # SID and socketio_emit removed
+        """Sends a message to the LSP process."""
+        lsp_handler_log.debug(
+            f"send_lsp_message called (current client SID: {self.client_sid}): Method={message.get('method')}, ID={message.get('id')}"
+        )
 
-        # Translate URIs in the message to be sent
         try:
             message_to_translate = json.loads(json.dumps(message))  # Deep copy
             translated_message_for_server = (
@@ -420,21 +546,20 @@ class LSPHandler:
             )
         except Exception as e:
             lsp_handler_log.error(
-                f"Error during URI translation for server-bound message (SID: {sid}): {e}",
+                f"Error during URI translation for server-bound message (SID: {self.client_sid}): {e}",
                 exc_info=True,
             )
             lsp_handler_log.error("Sending original message due to translation error.")
-            translated_message_for_server = message  # Fallback
+            translated_message_for_server = message
 
         if json.dumps(message) != json.dumps(translated_message_for_server):
             lsp_handler_log.info(
-                f"Client->Server URI Translation Occurred (SID: {sid})."
+                f"Client->Server URI Translation Occurred (SID: {self.client_sid})."
             )
             lsp_handler_log.debug(
-                f"LSP message for server (SID: {sid}, post-translation): {json.dumps(translated_message_for_server, indent=2)}"
+                f"LSP message for server (SID: {self.client_sid}, post-translation): {json.dumps(translated_message_for_server, indent=2)}"
             )
 
-        # Log the (potentially translated) request to JSONL file
         self._log_to_jsonl_file(translated_message_for_server, "request_to_server")
 
         formatted_message_bytes = self._format_lsp_message(
@@ -442,77 +567,45 @@ class LSPHandler:
         )
         if not formatted_message_bytes:
             lsp_handler_log.error(
-                f"Failed to format translated message (SID: {sid}), not sending."
+                f"Failed to format translated message (SID: {self.client_sid}), not sending."
             )
             return
 
         try:
             with self.lsp_msg_lock:
+                # Capture current state under lock
+                current_proc = self.lsp_process
+                current_sid_context = self.client_sid
+
                 if (
-                    not self.lsp_process
-                    or not self.lsp_process.stdin
-                    or self.lsp_process.stdin.closed
+                    not current_proc
+                    or not current_proc.stdin
+                    or current_proc.stdin.closed
                 ):
                     lsp_handler_log.warning(
-                        f"LSP process became inactive or stdin closed before writing (SID: {sid})."
+                        f"LSP process became inactive or stdin closed before writing (intended for SID: {current_sid_context}). Msg: {message.get('method')}"
                     )
                     return
+
                 lsp_handler_log.info(
-                    f"Preparing to send raw LSP message (SID: {sid}): Method={message.get('method')}, ID={message.get('id')}"
+                    f"Preparing to send raw LSP message (for SID: {current_sid_context}): Method={message.get('method')}, ID={message.get('id')}"
                 )
 
-                self.lsp_process.stdin.write(formatted_message_bytes)
-                self.lsp_process.stdin.flush()
+                current_proc.stdin.write(formatted_message_bytes)
+                current_proc.stdin.flush()
                 lsp_handler_log.debug(
-                    f"LSP message sent (SID: {sid}): {translated_message_for_server.get('method')}"
+                    f"LSP message sent (for SID: {current_sid_context}): {translated_message_for_server.get('method')}"
                 )
-
-                # we seralize response reading on the same lock
-                expects_response = "id" in message  # Check original message for 'id'
-                if expects_response:
-                    if not self.lsp_process or not self.lsp_process.stdout:
-                        lsp_handler_log.warning(
-                            f"LSP process or stdout not available for response (SID: {sid})."
-                        )
-                        return
-
-                    response = self._read_one_lsp_message(
-                        self.lsp_process.stdout, timeout=10.0
-                    )
-                    # response is already translated by _read_one_lsp_message
-                    if response:
-                        lsp_handler_log.info(
-                            f"LSP response received for ID {response.get('id')} (SID: {sid})"
-                        )
-                        self._log_to_jsonl_file(
-                            response, "response_from_server"
-                        )  # Log translated response
-                        socketio_emit("lsp_response", response, room=sid)
-                    else:
-                        lsp_handler_log.warning(
-                            f"No response/error reading for msg ID: {message.get('id')} (SID: {sid})"
-                        )
-                        self._log_to_jsonl_file(
-                            {
-                                "id": message.get("id"),
-                                "error": "No response or timeout from LSP server",
-                            },
-                            "response_error",
-                        )
-                else:
-                    lsp_handler_log.debug(
-                        f"Message (SID: {sid}, Method: {message.get('method')}) is a notification."
-                    )
 
         except BrokenPipeError:
             lsp_handler_log.error(
-                f"LSP stdin pipe broke (SID: {sid}). Process likely died.",
+                f"LSP stdin pipe broke (SID context: {self.client_sid}). Process likely died.",
                 exc_info=True,
             )
-            self.stop_lsp_process()
+            self.stop_lsp_process()  # This will acquire its own lock
         except Exception as e:
             lsp_handler_log.error(
-                f"Error writing to LSP stdin or reading response (SID: {sid}): {e}",
+                f"Error writing to LSP stdin or during lock (SID context: {self.client_sid}): {e}",
                 exc_info=True,
             )
 
@@ -525,7 +618,14 @@ if __name__ == "__main__":
     python_exe = "python"  # Adjust if jedi-language-server is not in PATH
     # or use /path/to/your/venv/bin/python
 
-    if not lsp_handler_instance.start_lsp_process(python_exe):
+    def mock_emit_main(event, data, room):
+        lsp_handler_log.info(
+            f"MOCK EMIT Event: {event}, SID: {room}, Data: {json.dumps(data, indent=2)}"
+        )
+
+    if not lsp_handler_instance.start_lsp_process(
+        python_exe, "main_test_session_456", mock_emit_main
+    ):
         lsp_handler_log.error("Failed to start LSP, exiting example.")
         exit()
 
@@ -551,14 +651,14 @@ if __name__ == "__main__":
             ],
         },
     }
-    lsp_handler_instance.send_lsp_message(sid_main_example, init_msg, mock_emit_main)
-    time.sleep(1)  # Allow time for server to respond to initialize
+    lsp_handler_instance.send_lsp_message(init_msg)
+    time.sleep(
+        2
+    )  # Allow time for server to respond to initialize and for stdout reader to process
 
     initialized_msg = {"jsonrpc": "2.0", "method": "initialized", "params": {}}
-    lsp_handler_instance.send_lsp_message(
-        sid_main_example, initialized_msg, mock_emit_main
-    )
-    time.sleep(0.1)
+    lsp_handler_instance.send_lsp_message(initialized_msg)
+    time.sleep(0.5)
 
     did_open_msg = {
         "jsonrpc": "2.0",
@@ -572,10 +672,8 @@ if __name__ == "__main__":
             }
         },
     }
-    lsp_handler_instance.send_lsp_message(
-        sid_main_example, did_open_msg, mock_emit_main
-    )
-    time.sleep(0.2)
+    lsp_handler_instance.send_lsp_message(did_open_msg)
+    time.sleep(0.5)
 
     code_action_msg = {
         "jsonrpc": "2.0",
@@ -590,30 +688,24 @@ if __name__ == "__main__":
             "context": {"diagnostics": []},
         },
     }
-    lsp_handler_instance.send_lsp_message(
-        sid_main_example, code_action_msg, mock_emit_main
-    )
-    time.sleep(2)  # Allow more time for code action
+    lsp_handler_instance.send_lsp_message(code_action_msg)
+    time.sleep(3)  # Allow more time for code action and response processing
 
     did_close_msg = {
         "jsonrpc": "2.0",
         "method": "textDocument/didClose",
         "params": {"textDocument": {"uri": "inmemory://project/file1.py"}},
     }
-    lsp_handler_instance.send_lsp_message(
-        sid_main_example, did_close_msg, mock_emit_main
-    )
-    time.sleep(0.1)
-
-    shutdown_msg = {"jsonrpc": "2.0", "id": 100, "method": "shutdown"}
-    lsp_handler_instance.send_lsp_message(
-        sid_main_example, shutdown_msg, mock_emit_main
-    )
+    lsp_handler_instance.send_lsp_message(did_close_msg)
     time.sleep(0.5)
 
+    shutdown_msg = {"jsonrpc": "2.0", "id": 100, "method": "shutdown"}
+    lsp_handler_instance.send_lsp_message(shutdown_msg)
+    time.sleep(1)
+
     exit_msg = {"jsonrpc": "2.0", "method": "exit"}
-    lsp_handler_instance.send_lsp_message(sid_main_example, exit_msg, mock_emit_main)
-    time.sleep(0.5)  # Give it a moment before forced stop if exit doesn't kill it
+    lsp_handler_instance.send_lsp_message(exit_msg)
+    time.sleep(1)  # Give it a moment before forced stop if exit doesn't kill it
 
     lsp_handler_instance.stop_lsp_process()
     lsp_handler_log.info("LSP Handler example finished.")
