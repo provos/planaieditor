@@ -17,7 +17,7 @@ alwaysApply: false
 
 # UI Component Library
 - We are using the headless bits UI component library
-- When using a CSS framework like [TailwindCSS](mdc:https:/tailwindcss.com), simply pass the classes to the component:
+- When using a CSS framework like [TailwindCSS](mdc:planaieditor/planaieditor/planaieditor/planaieditor/planaieditor/planaieditor/planaieditor/planaieditor/planaieditor/planaieditor/planaieditor/https:/tailwindcss.com), simply pass the classes to the component:
 
 ```svelte
 <script lang="ts">
@@ -45,4 +45,15 @@ let someData: number = $state(1);
 $effect(() => {
   data.nodeNumber = number;
 })
+```
+
+ - Effects should be avoided if they are not strictly necessary. Instead use callbacks or $derived or $derived.by()
+
+# Dealing with Monaco Editor and Monaco Language Client
+We are using Svelte 5, Vite and Sveltekit which make extensive use of SSR. That means that any imports related to monaco need to be done dynamically, e.g.
+
+```svelte
+console.log('Initializing VSCode services...');
+const { initServices } = await import('monaco-languageclient/vscode/services');
+await initServices({});
 ```
