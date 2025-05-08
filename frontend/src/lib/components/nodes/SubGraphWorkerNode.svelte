@@ -114,7 +114,7 @@
 				code={data.factoryInvocation}
 				language="python"
 				onUpdate={handleInvocationUpdate}
-				onCollapseToggle={handleCollapse}
+				onUpdateSize={handleCollapse}
 				initialCollapsed={true}
 			/>
 		</div>

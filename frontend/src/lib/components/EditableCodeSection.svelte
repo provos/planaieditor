@@ -15,7 +15,7 @@
 		onUpdate,
 		onReset = undefined,
 		showReset = false,
-		onCollapseToggle,
+		onUpdateSize,
 		maxHeight = 400
 	} = $props<{
 		title?: string;
@@ -25,7 +25,7 @@
 		onUpdate: (newCode: string) => void;
 		onReset?: () => void;
 		showReset?: boolean;
-		onCollapseToggle?: () => void;
+		onUpdateSize?: () => void;
 		maxHeight?: number; // Maximum height before scrolling
 	}>();
 
@@ -121,11 +121,12 @@
 			// Content fits, hide scrollbar
 			editor.updateOptions({ scrollbar: { vertical: 'hidden' } });
 		}
+		onUpdateSize?.();
 	}
 
 	function toggleCollapse() {
 		collapsed = !collapsed;
-		onCollapseToggle?.();
+		onUpdateSize?.();
 		if (!collapsed && editor) {
 			console.log('Editor container should now be visible. Scheduling layout.');
 

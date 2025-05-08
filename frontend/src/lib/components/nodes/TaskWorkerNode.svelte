@@ -90,7 +90,7 @@
 				language="python"
 				onUpdate={(newCode) => (data.methods.consume_work = newCode)}
 				showReset={true}
-				onCollapseToggle={handleCollapse}
+				onUpdateSize={handleCollapse}
 			/>
 		{/if}
 	</div>

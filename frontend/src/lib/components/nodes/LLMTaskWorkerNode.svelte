@@ -354,14 +354,14 @@
 			code={data.prompt}
 			language="markdown"
 			onUpdate={handlePromptUpdate}
-			onCollapseToggle={handleCollapse}
+			onUpdateSize={handleCollapse}
 		/>
 		<EditableCodeSection
 			title="System Prompt"
 			code={data.system_prompt}
 			language="markdown"
 			onUpdate={handleSystemPromptUpdate}
-			onCollapseToggle={handleCollapse}
+			onUpdateSize={handleCollapse}
 		/>
 
 		<!-- Customizable functions -->

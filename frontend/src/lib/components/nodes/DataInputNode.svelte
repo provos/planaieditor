@@ -193,7 +193,7 @@
 			language="json"
 			onUpdate={handleJsonUpdate}
 			initialCollapsed={false}
-			onCollapseToggle={handleCollapse}
+			onUpdateSize={handleCollapse}
 		/>
 		<div class="absolute bottom-1 right-3 z-10">
 			{#if isLoading}

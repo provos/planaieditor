@@ -148,7 +148,7 @@
 			onUpdate={handleCodeUpdate}
 			showReset={true}
 			initialCollapsed={false}
-			onCollapseToggle={handleCollapse}
+			onUpdateSize={handleCollapse}
 		/>
 	</div>
 </BaseWorkerNode>
