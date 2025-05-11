@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Handle, Position, useStore, useUpdateNodeInternals } from '@xyflow/svelte';
+	import { Handle, Position, useStore } from '@xyflow/svelte';
 	import type { Node, Edge } from '@xyflow/svelte';
 
 	import type { BaseWorkerData } from '$lib/components/nodes/BaseWorkerNode.svelte';
