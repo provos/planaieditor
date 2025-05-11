@@ -594,7 +594,7 @@ class LSPHandler:
                 current_proc.stdin.write(formatted_message_bytes)
                 current_proc.stdin.flush()
                 lsp_handler_log.debug(
-                    f"LSP message sent (for SID: {current_sid_context}): {translated_message_for_server.get('method')}"
+                    f"LSP message sent (for SID: {current_sid_context}): {message.get('method')}"
                 )
 
         except BrokenPipeError:
