@@ -39,5 +39,8 @@ export default defineConfig({
 		esbuildOptions: {
 			plugins: [importMetaUrlPlugin]
 		}
+	},
+	worker: {
+		format: 'es'
 	}
 });
