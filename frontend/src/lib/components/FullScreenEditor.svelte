@@ -142,6 +142,7 @@
 					language={fullScreenEditorState.language}
 					onUpdate={handleCodeUpdate}
 					onUpdateSize={() => {}}
+					fontsize={14}
 					maxHeight={editorContainerRef?.clientHeight ? editorContainerRef.clientHeight - 80 : 600}
 				/>
 			{/if}

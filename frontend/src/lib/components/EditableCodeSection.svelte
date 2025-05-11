@@ -18,6 +18,7 @@
 		showReset = false,
 		onUpdateSize,
 		onFullScreen,
+		fontsize = 11,
 		maxHeight = 400
 	} = $props<{
 		title?: string;
@@ -29,6 +30,7 @@
 		showReset?: boolean;
 		onUpdateSize?: () => void;
 		onFullScreen?: () => void;
+		fontsize?: number;
 		maxHeight?: number; // Maximum height before scrolling
 	}>();
 
@@ -61,7 +63,7 @@
 				value: code,
 				language: language,
 				automaticLayout: false,
-				fontSize: 11,
+				fontSize: fontsize,
 				minimap: { enabled: false },
 				scrollBeyondLastLine: false,
 				scrollbar: {
@@ -69,7 +71,6 @@
 					horizontalScrollbarSize: 8,
 					verticalScrollbarSize: 8
 				},
-				lineHeight: 18,
 				theme: 'vs-light',
 				fixedOverflowWidgets: false
 			});
