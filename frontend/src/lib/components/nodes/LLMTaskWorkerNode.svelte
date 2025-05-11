@@ -12,7 +12,7 @@
 	import { addAvailableMethod } from '$lib/utils/nodeUtils';
 	import type { Unsubscriber } from 'svelte/store';
 	import { persistNodeDataDebounced } from '$lib/utils/nodeUtils';
-
+	import { openFullScreenEditor } from '$lib/stores/fullScreenEditorStore.svelte';
 	// Extend the base data interface
 	export interface LLMWorkerData extends BaseWorkerData {
 		prompt: string;
@@ -266,6 +266,10 @@
 			event.stopPropagation();
 		}
 	}
+
+	function triggerOpenFullScreenEditor() {
+		openFullScreenEditor(id, 'python');
+	}
 </script>
 
 <BaseWorkerNode
@@ -380,6 +384,7 @@
 				language="markdown"
 				onUpdate={handlePromptUpdate}
 				onUpdateSize={handleCollapse}
+				onFullScreen={triggerOpenFullScreenEditor}
 			/>
 		{/key}
 		{#key nodeVersion}
@@ -389,6 +394,7 @@
 				language="markdown"
 				onUpdate={handleSystemPromptUpdate}
 				onUpdateSize={handleCollapse}
+				onFullScreen={triggerOpenFullScreenEditor}
 			/>
 		{/key}
 	</div>
