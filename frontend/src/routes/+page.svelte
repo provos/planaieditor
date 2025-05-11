@@ -138,10 +138,11 @@
 	function attemptLspConnection() {
 		startLspManager().then((success) => {
 			if (!success) {
-				console.error('Failed to start LSP Manager');
 				lspManagerAttempts++;
 				if (lspManagerAttempts < 3) {
 					setTimeout(attemptLspConnection, 1000);
+				} else {
+					console.error('Failed to start LSP Manager');
 				}
 			} else {
 				lspManagerAttempts = 0;
