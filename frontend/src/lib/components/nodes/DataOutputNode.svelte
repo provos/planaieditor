@@ -7,6 +7,9 @@
 	import { getColorForType } from '$lib/utils/colorUtils';
 	import TrashSimple from 'phosphor-svelte/lib/TrashSimple';
 	import HeaderIcon from '../HeaderIcon.svelte';
+	import { useStore } from '@xyflow/svelte';
+	import { persistNodeDataDebounced } from '$lib/utils/nodeUtils';
+
 	// Define the interface for the node's data
 	export interface DataOutputNodeData {
 		nodeId: string;
@@ -21,12 +24,16 @@
 		data: DataOutputNodeData;
 	}>();
 
+	const store = useStore();
+
 	// Ensure data fields are initialized
 	if (!data.receivedData) {
 		data.receivedData = [];
+		persistNodeDataDebounced(id, store.nodes, data);
 	}
 	if (!data.inputTypes) {
 		data.inputTypes = [];
+		persistNodeDataDebounced(id, store.nodes, data);
 	}
 
 	let receivedData = $derived<Record<string, any>[]>(data.receivedData || []);
@@ -51,6 +58,7 @@
 	function clearReceivedData() {
 		receivedData = [];
 		data.receivedData = [];
+		persistNodeDataDebounced(id, store.nodes, data);
 		handleContentUpdate();
 	}
 </script>

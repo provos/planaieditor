@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Handle, Position, NodeResizer, useStore, useUpdateNodeInternals } from '@xyflow/svelte';
+	import type { Node } from '@xyflow/svelte';
 	import { isValidPythonClassName } from '$lib/utils/validation';
 	import { getColorForType, calculateHandlePosition } from '$lib/utils/colorUtils';
 	import { taskClassNamesStore } from '$lib/stores/taskClassNamesStore';
@@ -10,10 +11,10 @@
 	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
 	import Archive from 'phosphor-svelte/lib/Archive';
 	import { Toggle } from 'bits-ui';
-	import type { Node } from '@xyflow/svelte';
 	import type { Snippet } from 'svelte';
 	import { tick } from 'svelte';
 	import { formatErrorMessage } from '$lib/utils/utils';
+	import { persistNodeDataDebounced } from '$lib/utils/nodeUtils';
 	import { onMount } from 'svelte';
 
 	// Base interface for worker node data
@@ -82,6 +83,7 @@
 				? [additionalOutputType]
 				: []
 	);
+	// svelte-ignore non_reactive_update
 	let workerType: string | undefined = undefined;
 	store.nodes.subscribe((values: Node[]) => {
 		const node = values.find((n) => n.id === id);
@@ -124,7 +126,10 @@
 	// Effect to sync localIsCached back to data.isCached
 	if (isEditable) {
 		$effect(() => {
-			data.isCached = localIsCached;
+			if (data.isCached !== localIsCached) {
+				data.isCached = localIsCached;
+				persistNodeDataDebounced(id, store.nodes, data);
+			}
 		});
 	}
 
@@ -145,7 +150,10 @@
 
 	function updateWorkerName() {
 		if (!validateWorkerName(tempWorkerName)) return;
-		data.workerName = tempWorkerName;
+		if (data.workerName !== tempWorkerName) {
+			data.workerName = tempWorkerName;
+			persistNodeDataDebounced(id, store.nodes, data);
+		}
 		editingWorkerName = false;
 	}
 
@@ -190,6 +198,7 @@
 		}
 		data.output_types = tmpOutputTypes;
 		currentOutputTypes = tmpOutputTypes;
+		persistNodeDataDebounced(id, store.nodes, data);
 		cancelTypeEditing();
 	}
 
@@ -198,6 +207,7 @@
 		tmpOutputTypes = tmpOutputTypes.filter((_: string, i: number) => i !== index);
 		data.output_types = tmpOutputTypes;
 		currentOutputTypes = tmpOutputTypes;
+		persistNodeDataDebounced(id, store.nodes, data);
 		typeError = '';
 	}
 
@@ -230,6 +240,7 @@
 		manuallySelectedInputType = '';
 		data.inputTypes = [];
 		inferredInputTypes = [];
+		persistNodeDataDebounced(id, store.nodes, data);
 	}
 
 	function addOutputTypeFromSelect(event: Event) {
@@ -239,6 +250,7 @@
 			if (!data.output_types.includes(newType)) {
 				data.output_types = [...data.output_types, newType];
 				currentOutputTypes = [...data.output_types];
+				persistNodeDataDebounced(id, store.nodes, data);
 			}
 			select.value = ''; // Reset select
 		}
@@ -253,9 +265,7 @@
 			data.otherMembersSource = newCode;
 			otherMembersSource = newCode;
 		}
-		tick().then(() => {
-			updateNodeInternals(id);
-		});
+		persistNodeDataDebounced(id, store.nodes, data);
 	}
 
 	function handleMethodUpdate(methodName: string, newCode: string) {
@@ -268,9 +278,7 @@
 		} else {
 			data.methods[methodName] = newCode;
 		}
-		tick().then(() => {
-			updateNodeInternals(id);
-		});
+		persistNodeDataDebounced(id, store.nodes, data);
 	}
 
 	// Define core methods that might have special display logic
@@ -286,6 +294,7 @@
 
 	function updateInferredInputTypes(updatedInputTypes: string[]) {
 		inferredInputTypes = updatedInputTypes;
+		persistNodeDataDebounced(id, store.nodes, data);
 	}
 </script>
 

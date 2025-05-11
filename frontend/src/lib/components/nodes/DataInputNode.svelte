@@ -11,7 +11,8 @@
 	import Spinner from 'phosphor-svelte/lib/Spinner';
 	import HeaderIcon from '../HeaderIcon.svelte';
 	import { selectedInterpreterPath } from '$lib/stores/pythonInterpreterStore.svelte';
-
+	import { useStore } from '@xyflow/svelte';
+	import { persistNodeDataDebounced } from '$lib/utils/nodeUtils';
 	// Define the interface for the node's data
 	export interface DataInputNodeData {
 		className: string | null; // Can be null initially
@@ -26,9 +27,12 @@
 		data: DataInputNodeData;
 	}>();
 
+	const store = useStore();
+
 	// Ensure jsonData is initialized
 	if (!data.jsonData) {
 		data.jsonData = '{}'; // Default to empty JSON object
+		persistNodeDataDebounced(id, store.nodes, data);
 	}
 
 	const nodes = useNodes();
@@ -49,6 +53,7 @@
 		if (selectedClassName && !taskClasses.has(selectedClassName)) {
 			selectedClassName = null;
 			data.className = null;
+			persistNodeDataDebounced(id, store.nodes, data);
 		}
 	});
 
@@ -68,15 +73,21 @@
 
 	// Update data when selectedClassName changes
 	$effect(() => {
-		data.className = selectedClassName;
-		tick().then(() => {
-			updateNodeInternals(id);
-		});
+		if (data.className !== selectedClassName) {
+			data.className = selectedClassName;
+			persistNodeDataDebounced(id, store.nodes, data);
+			tick().then(() => {
+				updateNodeInternals(id);
+			});
+		}
 	});
 
 	// Keep track of the json validity
 	$effect(() => {
-		data.isJsonValid = jsonIsValid;
+		if (data.isJsonValid !== jsonIsValid) {
+			data.isJsonValid = jsonIsValid;
+			persistNodeDataDebounced(id, store.nodes, data);
+		}
 	});
 
 	// Handler for code updates from EditableCodeSection
@@ -86,6 +97,7 @@
 		}
 
 		data.jsonData = newCode;
+		persistNodeDataDebounced(id, store.nodes, data);
 		errorMessage = null;
 		jsonIsValid = false;
 		debounce(validateJsonData, 1000)();

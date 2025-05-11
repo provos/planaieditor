@@ -7,6 +7,7 @@
 	import { useStore, useUpdateNodeInternals } from '@xyflow/svelte';
 	import type { Node, Edge } from '@xyflow/svelte';
 	import { tick, onMount } from 'svelte';
+	import { persistNodeDataDebounced } from '$lib/utils/nodeUtils';
 
 	// Extend the base data interface
 	interface JoinedWorkerData extends BaseWorkerData {
@@ -24,18 +25,21 @@
     # Example: self.publish_work(output_task, input_task=tasks[0])
     pass`;
 
+	const { nodes, edges } = useStore(); // Access the nodes and edges stores
+	const updateNodeInternals = useUpdateNodeInternals(); // Initialize the hook
+
 	if (!data.methods) {
 		data.methods = {};
+		persistNodeDataDebounced(id, nodes, data);
 	}
 	if (!data.methods.consume_work_joined) {
 		data.methods.consume_work_joined = defaultConsumeWorkJoined;
+		persistNodeDataDebounced(id, nodes, data);
 	}
 	if (!data.join_type) {
 		data.join_type = ''; // Initialize if not present
+		persistNodeDataDebounced(id, nodes, data);
 	}
-
-	const { nodes, edges } = useStore(); // Access the nodes and edges stores
-	const updateNodeInternals = useUpdateNodeInternals(); // Initialize the hook
 
 	// State for editing join_type
 	let availableWorkerClasses = $state<string[]>([]);
@@ -99,17 +103,16 @@
 
 	// Sync local joinType state back to data prop
 	$effect(() => {
-		data.join_type = joinType;
-	});
-
-	// Sync data prop changes to local state (e.g., on import)
-	$effect(() => {
-		joinType = data.join_type;
+		if (data.join_type !== joinType) {
+			data.join_type = joinType;
+			persistNodeDataDebounced(id, nodes, data);
+		}
 	});
 
 	// Update code in the data object
 	function handleCodeUpdate(newCode: string) {
 		data.methods.consume_work_joined = newCode;
+		persistNodeDataDebounced(id, nodes, data);
 	}
 
 	// Compute the title for the code section

@@ -11,6 +11,7 @@
 	import type { Action } from 'svelte/action';
 	import { addAvailableMethod } from '$lib/utils/nodeUtils';
 	import type { Unsubscriber } from 'svelte/store';
+	import { persistNodeDataDebounced } from '$lib/utils/nodeUtils';
 
 	// Extend the base data interface
 	export interface LLMWorkerData extends BaseWorkerData {
@@ -99,12 +100,15 @@
 	// Ensure all fields are initialized
 	if (!data.prompt) {
 		data.prompt = '';
+		persistNodeDataDebounced(id, nodes, data);
 	}
 	if (!data.system_prompt) {
 		data.system_prompt = '';
+		persistNodeDataDebounced(id, nodes, data);
 	}
 	if (!data.llm_output_type) {
 		data.llm_output_type = '';
+		persistNodeDataDebounced(id, nodes, data);
 	}
 
 	// Initialize default function code
@@ -116,15 +120,19 @@
 	// Initialize function code
 	if (!data.extraValidation) {
 		data.extraValidation = defaultExtraValidation;
+		persistNodeDataDebounced(id, nodes, data);
 	}
 	if (!data.formatPrompt) {
 		data.formatPrompt = defaultFormatPrompt;
+		persistNodeDataDebounced(id, nodes, data);
 	}
 	if (!data.preProcess) {
 		data.preProcess = defaultPreProcess;
+		persistNodeDataDebounced(id, nodes, data);
 	}
 	if (!data.postProcess) {
 		data.postProcess = defaultPostProcess;
+		persistNodeDataDebounced(id, nodes, data);
 	}
 
 	// Initialize enabled functions
@@ -135,14 +143,17 @@
 			preProcess: false,
 			postProcess: false
 		};
+		persistNodeDataDebounced(id, nodes, data);
 	}
 
 	// Initialize boolean flags if not present
 	if (data.use_xml === undefined) {
 		data.use_xml = false;
+		persistNodeDataDebounced(id, nodes, data);
 	}
 	if (data.debug_mode === undefined) {
 		data.debug_mode = false;
+		persistNodeDataDebounced(id, nodes, data);
 	}
 
 	// Subscribe to the taskClassNamesStore for output type selection
@@ -158,16 +169,23 @@
 		if (currentLLMOutputType && !availableTaskClasses.includes(currentLLMOutputType)) {
 			currentLLMOutputType = '';
 			data.llm_output_type = '';
+			persistNodeDataDebounced(id, nodes, data);
 		}
 	});
 
 	// Sync local state with data object
 	$effect(() => {
-		data.use_xml = useXml;
+		if (data.use_xml !== useXml) {
+			data.use_xml = useXml;
+			persistNodeDataDebounced(id, nodes, data);
+		}
 	});
 
 	$effect(() => {
-		data.debug_mode = debugMode;
+		if (data.debug_mode !== debugMode) {
+			data.debug_mode = debugMode;
+			persistNodeDataDebounced(id, nodes, data);
+		}
 	});
 
 	// Handle LLM config changes
@@ -179,15 +197,18 @@
 		data.llmConfigName = changes.configName;
 		data.llmConfigFromCode = changes.configFromCode;
 		data.llmConfigVar = changes.configVar;
+		persistNodeDataDebounced(id, nodes, data);
 	}
 
 	// Handle code updates
 	function handlePromptUpdate(newCode: string) {
 		data.prompt = newCode;
+		persistNodeDataDebounced(id, nodes, data);
 	}
 
 	function handleSystemPromptUpdate(newCode: string) {
 		data.system_prompt = newCode;
+		persistNodeDataDebounced(id, nodes, data);
 	}
 
 	// LLM Output Type functions
@@ -199,11 +220,13 @@
 		data.llm_output_type = typeName;
 		currentLLMOutputType = typeName;
 		showLLMOutputTypeDropdown = false;
+		persistNodeDataDebounced(id, nodes, data);
 	}
 
 	function deleteLLMOutputType() {
 		data.llm_output_type = '';
 		currentLLMOutputType = '';
+		persistNodeDataDebounced(id, nodes, data);
 	}
 
 	async function handleCollapse() {

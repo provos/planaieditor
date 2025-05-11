@@ -5,6 +5,8 @@
 	import { useStore, useUpdateNodeInternals } from '@xyflow/svelte'; // Import useStore and useUpdateNodeInternals
 	import type { Node, Edge } from '@xyflow/svelte';
 	import { tick } from 'svelte';
+	import { persistNodeDataDebounced } from '$lib/utils/nodeUtils';
+
 	export interface TaskWorkerData extends BaseWorkerData {
 		consume_work: string;
 	}
@@ -88,7 +90,10 @@
 				title={reactiveTitle}
 				code={data.methods.consume_work}
 				language="python"
-				onUpdate={(newCode) => (data.methods.consume_work = newCode)}
+				onUpdate={(newCode) => {
+					data.methods.consume_work = newCode;
+					persistNodeDataDebounce(id, store.nodes, data);
+				}}
 				showReset={true}
 				onUpdateSize={handleCollapse}
 			/>

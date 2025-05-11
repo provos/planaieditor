@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { NodeResizer } from '@xyflow/svelte';
+	import { NodeResizer, useStore } from '@xyflow/svelte';
+	import { persistNodeDataDebounced } from '$lib/utils/nodeUtils';
 	import { isValidPythonClassName, isValidPythonIdentifier } from '$lib/utils/validation';
 	import { allClassNames } from '$lib/stores/classNameStore';
 	import { taskClassNamesStore } from '$lib/stores/taskClassNamesStore';
@@ -40,9 +41,12 @@
 		children?: Snippet;
 	}>();
 
+	const store = useStore();
+
 	// Ensure data.fields is initialized
 	if (!children && !data.fields) {
 		data.fields = [];
+		persistNodeDataDebounced(id, store.nodes, data);
 	}
 
 	// State variables
@@ -153,6 +157,7 @@
 		}
 
 		data.className = tempClassName;
+		persistNodeDataDebounced(id, store.nodes, data);
 		editingClassName = false;
 	}
 
@@ -234,6 +239,8 @@
 			);
 		}
 
+		persistNodeDataDebounced(id, store.nodes, data);
+
 		// Update our local tracking state
 		currentFields = [...data.fields];
 
@@ -253,6 +260,7 @@
 	function deleteField(index: number) {
 		if (children) return;
 		data.fields = data.fields.filter((_: Field, i: number) => i !== index);
+		persistNodeDataDebounced(id, store.nodes, data);
 		currentFields = [...data.fields];
 	}
 
@@ -410,8 +418,9 @@
 							</select>
 
 							<div class="flex items-center">
-								<label class="text-2xs ml-0.5">List</label>
+								<label for="fieldIsList{id}{index}" class="text-2xs ml-0.5">List</label>
 								<input
+									id="fieldIsList{id}{index}"
 									type="checkbox"
 									bind:checked={editingFieldIsList}
 									class="ml-0.5 h-2.5 w-2.5 rounded"
@@ -597,8 +606,9 @@
 						</select>
 
 						<div class="flex items-center">
-							<label class="text-2xs ml-0.5">List</label>
+							<label for="newFieldIsList{id}" class="text-2xs ml-0.5">List</label>
 							<input
+								id="newFieldIsList{id}"
 								type="checkbox"
 								bind:checked={editingFieldIsList}
 								class="ml-0.5 h-2.5 w-2.5 rounded"

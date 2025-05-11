@@ -7,6 +7,8 @@
 	import Spinner from 'phosphor-svelte/lib/Spinner';
 	import { onMount, untrack } from 'svelte';
 	import { selectedInterpreterPath } from '$lib/stores/pythonInterpreterStore.svelte';
+	import { useStore } from '@xyflow/svelte';
+	import { persistNodeDataDebounced } from '$lib/utils/nodeUtils';
 
 	export interface ModuleLevelImportData {
 		code: string;
@@ -17,6 +19,8 @@
 		id: string;
 		data: ModuleLevelImportData;
 	}>();
+
+	const store = useStore();
 
 	let isLoading = $state<boolean>(false);
 	let errorMessage = $state<string | null>(null);
@@ -66,6 +70,7 @@
 		isValid = null; // Mark as unchecked when code changes
 		errorMessage = null;
 		debouncedValidate();
+		persistNodeDataDebounced(id, store.nodes, data);
 	};
 
 	onMount(() => {

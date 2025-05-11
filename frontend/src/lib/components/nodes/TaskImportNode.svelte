@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { tick } from 'svelte';
-	import { useStore } from '@xyflow/svelte';
-	import { useUpdateNodeInternals } from '@xyflow/svelte';
+	import { useUpdateNodeInternals, useStore } from '@xyflow/svelte';
+	import { persistNodeDataDebounced } from '$lib/utils/nodeUtils';
 	import { backendUrl } from '$lib/utils/backendUrl';
 	import TaskNode from './TaskNode.svelte';
 	import type { NodeData as TaskNodeData } from './TaskNode.svelte';
@@ -24,8 +24,14 @@
 	}>();
 
 	// Initialize data if needed
-	if (!data.modulePath) data.modulePath = '';
-	if (!data.className) data.className = null;
+	if (!data.modulePath) {
+		data.modulePath = '';
+		persistNodeDataDebounced(id, store.nodes, data);
+	}
+	if (!data.className) {
+		data.className = null;
+		persistNodeDataDebounced(id, store.nodes, data);
+	}
 
 	const updateNodeInternals = useUpdateNodeInternals();
 
@@ -42,6 +48,7 @@
 
 	if (!data.fields) {
 		data.fields = [];
+		persistNodeDataDebounced(id, store.nodes, data);
 	}
 
 	let dataCopy = $state(data);
@@ -78,6 +85,7 @@
 				availableClasses = []; // Clear local state on error
 				data.availableClasses = []; // Clear data prop on error
 			}
+			persistNodeDataDebounced(id, store.nodes, data);
 		} catch (err: any) {
 			error = err.message || 'Failed to fetch task classes.';
 		} finally {
@@ -107,6 +115,7 @@
 			if (response.ok && result.success) {
 				// Check response.ok too
 				data.fields = result.fields;
+				persistNodeDataDebounced(id, store.nodes, data);
 				dataCopy = {
 					...dataCopy,
 					fields: result.fields
@@ -119,6 +128,7 @@
 				);
 				error = result.error || `HTTP error ${response.status}`;
 				data.fields = [];
+				persistNodeDataDebounced(id, store.nodes, data);
 				dataCopy = {
 					...dataCopy,
 					fields: []
@@ -170,6 +180,7 @@
 	$effect(() => {
 		if (data.className !== localSelectedClassName) {
 			data.className = localSelectedClassName;
+			persistNodeDataDebounced(id, store.nodes, data);
 			dataCopy = {
 				...dataCopy,
 				className: localSelectedClassName

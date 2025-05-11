@@ -5,6 +5,10 @@
 	import EditableCodeSection from '../EditableCodeSection.svelte';
 	import { useUpdateNodeInternals } from '@xyflow/svelte';
 	import { tick } from 'svelte';
+	import { persistNodeDataDebounced } from '$lib/utils/nodeUtils';
+	import { useStore } from '@xyflow/svelte';
+
+	const store = useStore();
 
 	// Define available factory functions with their types
 	const availableFactoryFunctions = [
@@ -40,6 +44,7 @@
 
 	if (data.factoryInvocation === undefined) {
 		data.factoryInvocation = '';
+		persistNodeDataDebounced(id, store.nodes, data);
 	}
 
 	function updateFactoryFunction(event: Event) {
@@ -57,6 +62,7 @@
 				data.workerName = selectedFactory.className;
 				// Also update our local tracking variable
 				selectedFactoryName = selectedFactory.name;
+				persistNodeDataDebounced(id, store.nodes, data);
 			}
 			dataCopy = { ...data };
 			tick().then(() => updateNodeInternals(id));
@@ -69,12 +75,14 @@
 			data.workerName = undefined;
 			selectedFactoryName = '';
 			dataCopy = { ...data };
+			persistNodeDataDebounced(id, store.nodes, data);
 			tick().then(() => updateNodeInternals(id));
 		}
 	}
 
 	function handleInvocationUpdate(newCode: string) {
 		data.factoryInvocation = newCode;
+		persistNodeDataDebounced(id, store.nodes, data);
 	}
 
 	async function handleCollapse() {
