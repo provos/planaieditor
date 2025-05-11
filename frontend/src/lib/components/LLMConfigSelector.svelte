@@ -30,6 +30,7 @@
 
 	// State for the combined selection identifier (e.g., "user:uuid" or "code:uuid")
 	let selectedConfigName = $state<string | undefined>(initialConfigName || initialConfigVar);
+	let localConfigName: string | undefined = undefined;
 
 	// Combine user and code configs for the dropdown
 	const combinedConfigs = $derived<LLMConfigBasic[]>([...$llmConfigs, ...$llmConfigsFromCode]);
@@ -55,6 +56,10 @@
 	// Effect to emit changes back to parent
 	$effect(() => {
 		if (!onChange) return;
+
+		// Bad hack to prevent infinite loop
+		if (localConfigName === selectedConfigName) return;
+		localConfigName = selectedConfigName;
 
 		if (selectedConfigName) {
 			let sourceConfig = combinedConfigs.find((c) => c.name === selectedConfigName);
