@@ -16,6 +16,7 @@
 	import { formatErrorMessage } from '$lib/utils/utils';
 	import { persistNodeDataDebounced } from '$lib/utils/nodeUtils';
 	import { onMount } from 'svelte';
+	import { openFullScreenEditor } from '$lib/stores/fullScreenEditorStore.svelte';
 
 	// Base interface for worker node data
 	export interface BaseWorkerData {
@@ -30,6 +31,7 @@
 		otherMembersSource?: string;
 		classVars?: Record<string, any>;
 		entryPoint?: boolean;
+		_lastUpdated?: number;
 		// Derived components can extend this
 		[key: string]: any;
 	}
@@ -61,6 +63,7 @@
 	const updateNodeInternals = useUpdateNodeInternals();
 
 	// --- State Variables ---
+	let nodeVersion = $derived(data._lastUpdated || 0);
 	let editingWorkerName = $state(false);
 	let nameError = $state('');
 	let tempWorkerName = $state(data.workerName || defaultName);
@@ -75,6 +78,12 @@
 	let currentOutputTypes = $derived<string[]>([...(data.output_types || [])]);
 	let currentHeight = $state(minHeight); // State for reactive height
 	let localIsCached = $state(data.isCached ?? false); // Local state for the toggle
+
+	// Define core methods that might have special display logic
+	const coreMethods = data.requiredMembers || ['consume_work', 'prompt', 'system_prompt'];
+	let availableMethods = $derived(Object.keys(data.methods || {}));
+	let customMethods = $derived(availableMethods.filter((m) => !coreMethods.includes(m)));
+	let otherMembersSource = $derived(data?.otherMembersSource ?? undefined);
 
 	let combinedOutputTypes = $derived(
 		currentOutputTypes.length > 0
@@ -287,12 +296,6 @@
 		});
 	}
 
-	// Define core methods that might have special display logic
-	const coreMethods = data.requiredMembers || ['consume_work', 'prompt', 'system_prompt'];
-	let availableMethods = $derived(Object.keys(data.methods || {}));
-	let customMethods = $derived(availableMethods.filter((m) => !coreMethods.includes(m)));
-	let otherMembersSource = $derived(data?.otherMembersSource ?? undefined);
-
 	async function handleCollapse() {
 		await tick();
 		updateNodeInternals(id);
@@ -304,7 +307,7 @@
 	}
 
 	function handleFullScreen() {
-		console.log('handleFullScreen');
+		openFullScreenEditor(id, 'python');
 	}
 </script>
 
@@ -526,16 +529,18 @@
 		{#if otherMembersSource !== undefined}
 			<div class="mt-3 flex-none border-t border-gray-200 p-1.5">
 				<h3 class="text-2xs mb-1 font-semibold text-gray-600">Other Class Members</h3>
-				<EditableCodeSection
-					title="Custom Code"
-					code={data.otherMembersSource}
-					language="python"
-					showReset={true}
-					onReset={() => handleOtherMembersSourceUpdate(undefined)}
-					onUpdate={handleOtherMembersSourceUpdate}
-					onUpdateSize={handleCollapse}
-					onFullScreen={handleFullScreen}
-				/>
+				{#key nodeVersion}
+					<EditableCodeSection
+						title="Custom Code"
+						code={data.otherMembersSource}
+						language="python"
+						showReset={true}
+						onReset={() => handleOtherMembersSourceUpdate(undefined)}
+						onUpdate={handleOtherMembersSourceUpdate}
+						onUpdateSize={handleCollapse}
+						onFullScreen={handleFullScreen}
+					/>
+				{/key}
 			</div>
 		{/if}
 
@@ -551,17 +556,19 @@
 				<div class="mt-3 border-t border-gray-200 pt-1.5">
 					<h4 class="text-2xs mb-1 font-medium text-gray-500">Custom Methods</h4>
 					{#each customMethods as methodName (methodName)}
-						<EditableCodeSection
-							title={methodName}
-							initialCollapsed={true}
-							code={data.methods[methodName]}
-							showReset={true}
-							onReset={() => handleMethodUpdate(methodName, '')}
-							language="python"
-							onUpdate={(newCode) => handleMethodUpdate(methodName, newCode)}
-							onUpdateSize={handleCollapse}
-							onFullScreen={handleFullScreen}
-						/>
+						{#key nodeVersion}
+							<EditableCodeSection
+								title={methodName}
+								initialCollapsed={true}
+								code={data.methods[methodName]}
+								showReset={true}
+								onReset={() => handleMethodUpdate(methodName, '')}
+								language="python"
+								onUpdate={(newCode) => handleMethodUpdate(methodName, newCode)}
+								onUpdateSize={handleCollapse}
+								onFullScreen={handleFullScreen}
+							/>
+						{/key}
 					{/each}
 				</div>
 			{/if}

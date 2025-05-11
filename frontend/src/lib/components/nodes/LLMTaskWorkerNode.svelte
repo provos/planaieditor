@@ -47,6 +47,7 @@
 	const { nodes } = useStore();
 
 	// Create local state variables for reactivity
+	let nodeVersion = $derived(data._lastUpdated || 0);
 	let availableTaskClasses = $state<string[]>([]);
 	let showLLMOutputTypeDropdown = $state(false);
 	let currentLLMOutputType = $state(data.llm_output_type || '');
@@ -94,8 +95,8 @@
 	});
 
 	// Local state for boolean flags
-	let useXml = $state(data.use_xml);
-	let debugMode = $state(data.debug_mode);
+	let useXml = $derived(data.use_xml);
+	let debugMode = $derived(data.debug_mode);
 
 	// Ensure all fields are initialized
 	if (!data.prompt) {
@@ -372,23 +373,24 @@
 	<!-- Prompt and System Prompt Sections using new component -->
 	<div class="flex min-h-0 flex-grow flex-col space-y-3 overflow-auto p-1">
 		<!-- Main prompt sections always shown -->
-		<EditableCodeSection
-			title="Prompt"
-			code={data.prompt}
-			language="markdown"
-			onUpdate={handlePromptUpdate}
-			onUpdateSize={handleCollapse}
-		/>
-		<EditableCodeSection
-			title="System Prompt"
-			code={data.system_prompt}
-			language="markdown"
-			onUpdate={handleSystemPromptUpdate}
-			onUpdateSize={handleCollapse}
-		/>
-
-		<!-- Customizable functions -->
-		<!-- Custom method rendering is now handled by BaseWorkerNode -->
+		{#key nodeVersion}
+			<EditableCodeSection
+				title="Prompt"
+				code={data.prompt}
+				language="markdown"
+				onUpdate={handlePromptUpdate}
+				onUpdateSize={handleCollapse}
+			/>
+		{/key}
+		{#key nodeVersion}
+			<EditableCodeSection
+				title="System Prompt"
+				code={data.system_prompt}
+				language="markdown"
+				onUpdate={handleSystemPromptUpdate}
+				onUpdateSize={handleCollapse}
+			/>
+		{/key}
 	</div>
 </BaseWorkerNode>
 

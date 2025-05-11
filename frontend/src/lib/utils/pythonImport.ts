@@ -331,76 +331,7 @@ export async function importPythonCode(
             }
 
             // Map backend data to frontend node data structure
-            const nodeData: any = {
-                isCached: worker.isCached || false,
-                entryPoint: worker.entryPoint || false,
-                variableName: worker.variableName, // Use variableName if it exists
-                workerName: worker.className, // Use className as workerName
-                nodeId: id,
-                // Initialize common fields, specific nodes might override
-                inputTypes: worker.inputTypes || [], // Use parsed inputTypes from backend if available
-                output_types: worker.classVars?.output_types || [], // Map output_types
-                // Store unparsed methods and members for potential display/editing later
-                methods: worker.methods || {}, // Ensure methods exists
-                otherMembersSource: worker.otherMembersSource || undefined, // Store consolidated source
-                classVars: worker.classVars || {}, // Store the rest of class vars for now
-            };
-
-            // Store the llmConfigFromCode if present for display in the UI
-            if (worker.llmConfigFromCode) {
-                nodeData.llmConfigFromCode = worker.llmConfigFromCode;
-                nodeData.llmConfigVar = worker.llmConfigVar;
-
-                // Add a human-readable description of the imported LLM config
-                const provider = worker.llmConfigFromCode.provider.value || 'unknown';
-                const modelName = worker.llmConfigFromCode.model_name.value || 'unknown';
-                nodeData.llmConfigDescription = `Imported: ${provider} / ${modelName}`;
-
-                // Log the imported LLM config for debugging
-                console.log(`Imported LLM config for ${worker.className}:`, worker.llmConfigFromCode);
-
-                if (worker.llmConfigVar) {
-                    // Add the LLM config to the store if it's not already there
-                    addLLMConfigFromCode({
-                        name: worker.llmConfigVar,
-                        llmConfigFromCode: worker.llmConfigFromCode
-                    });
-                }
-            }
-
-            // Type-specific mappings
-            switch (worker.workerType) {
-                case 'taskworker':
-                    nodeData.requiredMembers = ['consume_work'];
-                    nodeData.isCached = worker.isCached;
-                    break;
-                case 'llmtaskworker':
-                    nodeData.isCached = worker.isCached;
-                    nodeData.requiredMembers = ['prompt', 'system_prompt'];
-                    nodeData.prompt = worker.classVars?.prompt || '# No prompt found';
-                    nodeData.system_prompt =
-                        worker.classVars?.system_prompt || worker.classVars?.system || '';
-                    // Map boolean flags directly from classVars (parser still puts them there)
-                    nodeData.use_xml = worker.classVars?.use_xml || false;
-                    nodeData.debug_mode = worker.classVars?.debug_mode || false;
-                    // Explicitly map llm_input_type from classVars
-                    nodeData.llm_input_type = worker.classVars?.llm_input_type || '';
-                    nodeData.llm_output_type = worker.classVars?.llm_output_type || '';
-                    break;
-                case 'joinedtaskworker':
-                    // Map the join_type from class variables
-                    nodeData.join_type = worker.classVars?.join_type || ''; // Use extracted join_type or default to empty
-                    nodeData.requiredMembers = ['consume_work_joined'];
-                    break;
-                case 'subgraphworker':
-                    console.log('SubGraphWorker found:', worker);
-                    // Store factory details if present
-                    nodeData.isFactoryCreated = !!worker.factoryFunction;
-                    nodeData.factoryFunction = worker.factoryFunction;
-                    nodeData.factoryInvocation = worker.factoryInvocation;
-                    break;
-                // Add other worker types if needed
-            }
+            const nodeData: any = convertWorkerToNodeData(worker, id);
 
             const newNode: Node = {
                 id,
@@ -499,4 +430,79 @@ export async function importPythonCode(
             message: `Import failed: ${error.message || 'Unknown error'}`
         };
     }
+}
+
+export function convertWorkerToNodeData(worker: ImportedWorker, id: string) {
+    const nodeData: any = {
+        isCached: worker.isCached || false,
+        entryPoint: worker.entryPoint || false,
+        variableName: worker.variableName, // Use variableName if it exists
+        workerName: worker.className, // Use className as workerName
+        nodeId: id,
+        // Initialize common fields, specific nodes might override
+        inputTypes: worker.inputTypes || [], // Use parsed inputTypes from backend if available
+        output_types: worker.classVars?.output_types || [], // Map output_types
+
+        // Store unparsed methods and members for potential display/editing later
+        methods: worker.methods || {}, // Ensure methods exists
+        otherMembersSource: worker.otherMembersSource || undefined, // Store consolidated source
+        classVars: worker.classVars || {}, // Store the rest of class vars for now
+    };
+
+    // Store the llmConfigFromCode if present for display in the UI
+    if (worker.llmConfigFromCode) {
+        nodeData.llmConfigFromCode = worker.llmConfigFromCode;
+        nodeData.llmConfigVar = worker.llmConfigVar;
+
+        // Add a human-readable description of the imported LLM config
+        const provider = worker.llmConfigFromCode.provider.value || 'unknown';
+        const modelName = worker.llmConfigFromCode.model_name.value || 'unknown';
+        nodeData.llmConfigDescription = `Imported: ${provider} / ${modelName}`;
+
+        // Log the imported LLM config for debugging
+        console.log(`Imported LLM config for ${worker.className}:`, worker.llmConfigFromCode);
+
+        if (worker.llmConfigVar) {
+            // Add the LLM config to the store if it's not already there
+            addLLMConfigFromCode({
+                name: worker.llmConfigVar,
+                llmConfigFromCode: worker.llmConfigFromCode
+            });
+        }
+    }
+
+    // Type-specific mappings
+    switch (worker.workerType) {
+        case 'taskworker':
+            nodeData.requiredMembers = ['consume_work'];
+            nodeData.isCached = worker.isCached;
+            break;
+        case 'llmtaskworker':
+            nodeData.isCached = worker.isCached;
+            nodeData.requiredMembers = ['prompt', 'system_prompt'];
+            nodeData.prompt = worker.classVars?.prompt || '# No prompt found';
+            nodeData.system_prompt =
+                worker.classVars?.system_prompt || worker.classVars?.system || '';
+            // Map boolean flags directly from classVars (parser still puts them there)
+            nodeData.use_xml = worker.classVars?.use_xml || false;
+            nodeData.debug_mode = worker.classVars?.debug_mode || false;
+            // Explicitly map llm_input_type from classVars
+            nodeData.llm_input_type = worker.classVars?.llm_input_type || '';
+            nodeData.llm_output_type = worker.classVars?.llm_output_type || '';
+            break;
+        case 'joinedtaskworker':
+            // Map the join_type from class variables
+            nodeData.join_type = worker.classVars?.join_type || ''; // Use extracted join_type or default to empty
+            nodeData.requiredMembers = ['consume_work_joined'];
+            break;
+        case 'subgraphworker':
+            console.log('SubGraphWorker found:', worker);
+            // Store factory details if present
+            nodeData.isFactoryCreated = !!worker.factoryFunction;
+            nodeData.factoryFunction = worker.factoryFunction;
+            nodeData.factoryInvocation = worker.factoryInvocation;
+            break;
+        // Add other worker types if needed
+    }
+    return nodeData;
 }

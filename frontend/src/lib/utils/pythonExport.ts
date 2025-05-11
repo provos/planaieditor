@@ -71,94 +71,7 @@ export function convertGraphtoJSON(nodes: Node[], edges: Edge[], mode: 'export' 
 
     // replace workerName with className for worker nodes
     const exportedNodes = nodes.map(node => {
-        const data = node.data as any; // Use any for easier manipulation
-        let processedData = { ...data };
-
-        // Standardize workerName to className for worker nodes
-        if (data?.workerName) {
-            processedData.className = data.workerName;
-            delete processedData.workerName;
-        }
-
-        // If it's an LLM worker node, handle LLM configuration
-        if ((node.type === 'llmtaskworker' || node.type === 'chattaskworker')) {
-            // Priority 1: If user selected an LLM config in the UI, use that
-            if (data?.llmConfigName) {
-                const configName = data.llmConfigName;
-                const allConfigs = get(llmConfigs); // Get current value of the store
-                const foundConfig = allConfigs.find(c => c.name === configName);
-
-                if (foundConfig) {
-                    // Add the full config object to the data being exported
-                    const convertConfig = convertLLMConfigToBackendFormat(foundConfig);
-
-                    processedData.llmConfig = convertConfig;
-                    // Remove the name now that we have the full object
-                    delete processedData.llmConfigName;
-
-                    // If there was an imported config, we're now overriding it
-                    if (processedData.llmConfigFromCode) {
-                        console.log(`Overriding imported LLM config with user-selected config: ${configName}`);
-                    }
-                } else {
-                    // Handle case where config name exists but config is not found (shouldn't happen ideally)
-                    console.warn(`LLM Configuration named '${configName}' selected but not found in store. Skipping LLM config export for node ${node.id}`);
-                    // Ensure llmConfig is not present if not found
-                    delete processedData.llmConfig;
-                    // Keep llmConfigName? Or delete it? Deleting might be cleaner for backend.
-                    delete processedData.llmConfigName;
-                }
-            }
-            // Priority 2: If no user-selected config but we have an imported config, use that
-            else if (data?.llmConfigFromCode) {
-                // The backend expects 'llmConfig' for code generation, so we convert the imported format
-                processedData.llmConfig = { ...data.llmConfigFromCode };
-
-                // If host is present, map it to baseUrl
-                if (data.llmConfigFromCode.host) {
-                    processedData.llmConfig.baseUrl = data.llmConfigFromCode.host;
-                    delete processedData.llmConfig.host;
-                }
-                delete processedData.llmConfigFromCode;
-                console.log(`Using imported LLM config for node ${node.id}`);
-            }
-
-            // Clean up display-only properties
-            delete processedData.llmConfigDescription;
-
-            console.log("LLM Config Node", processedData)
-        }
-
-        // Consolidate known class variables into classVars for worker nodes
-        const knownClassVars = [
-            'prompt',
-            'system_prompt',
-            'use_xml',
-            'debug_mode',
-            'llm_input_type',
-            'llm_output_type',
-            'join_type',
-            'output_types'
-        ];
-        if (node.type?.endsWith('worker')) { // Apply only to worker node types
-            if (!processedData.classVars) {
-                processedData.classVars = {};
-            }
-            for (const key of knownClassVars) {
-                if (processedData[key] !== undefined) {
-                    (processedData.classVars as Record<string, any>)[key] = processedData[key];
-                    delete processedData[key];
-                }
-            }
-        }
-
-        // Handle factory function details for subgraphworkers
-        if (node.type === 'subgraphworker' && data?.isFactoryCreated) {
-            // Remove isFactoryCreated flag as it's frontend-specific
-            delete processedData.isFactoryCreated;
-        }
-
-        return { ...node, data: processedData };
+        return convertNodeData(node);
     });
 
     // Transform edges to use class names instead of node IDs
@@ -183,12 +96,113 @@ export function convertGraphtoJSON(nodes: Node[], edges: Edge[], mode: 'export' 
         })
         .filter((edge): edge is { source: string; target: string; } => edge !== null); // Type guard to filter out nulls and satisfy TypeScript
 
-
-
-    // --- End Transformation ---
     // Send transformed data
     const graphData = { nodes: exportedNodes, edges: exportedEdges, mode: mode }; // Use transformed nodes and edges
     return graphData;
+}
+
+/**
+ * Converts a node's data into a format suitable for backend processing.
+ * 
+ * This function handles several transformations:
+ * 1. Standardizes workerName to className for worker nodes
+ * 2. Processes LLM configurations for LLM/chat task workers, handling both UI-selected and imported configs
+ * 3. Consolidates known class variables into a classVars object for worker nodes
+ * 4. Cleans up frontend-specific properties
+ * 
+ * @param node The node to process, containing type and data properties
+ * @returns A new node object with transformed data
+ */
+export function convertNodeData(node: Node) {
+    const data = node.data as any; // Use any for easier manipulation
+    let processedData = { ...data };
+
+    // Standardize workerName to className for worker nodes
+    if (data?.workerName) {
+        processedData.className = data.workerName;
+        delete processedData.workerName;
+    }
+
+    // If it's an LLM worker node, handle LLM configuration
+    if ((node.type === 'llmtaskworker' || node.type === 'chattaskworker')) {
+        // Priority 1: If user selected an LLM config in the UI, use that
+        if (data?.llmConfigName) {
+            const configName = data.llmConfigName;
+            const allConfigs = get(llmConfigs); // Get current value of the store
+            const foundConfig = allConfigs.find(c => c.name === configName);
+
+            if (foundConfig) {
+                // Add the full config object to the data being exported
+                const convertConfig = convertLLMConfigToBackendFormat(foundConfig);
+
+                processedData.llmConfig = convertConfig;
+                // Remove the name now that we have the full object
+                delete processedData.llmConfigName;
+
+                // If there was an imported config, we're now overriding it
+                if (processedData.llmConfigFromCode) {
+                    console.log(`Overriding imported LLM config with user-selected config: ${configName}`);
+                }
+            } else {
+                // Handle case where config name exists but config is not found (shouldn't happen ideally)
+                console.warn(`LLM Configuration named '${configName}' selected but not found in store. Skipping LLM config export for node ${node.id}`);
+                // Ensure llmConfig is not present if not found
+                delete processedData.llmConfig;
+                // Keep llmConfigName? Or delete it? Deleting might be cleaner for backend.
+                delete processedData.llmConfigName;
+            }
+        }
+
+        // Priority 2: If no user-selected config but we have an imported config, use that
+        else if (data?.llmConfigFromCode) {
+            // The backend expects 'llmConfig' for code generation, so we convert the imported format
+            processedData.llmConfig = { ...data.llmConfigFromCode };
+
+            // If host is present, map it to baseUrl
+            if (data.llmConfigFromCode.host) {
+                processedData.llmConfig.baseUrl = data.llmConfigFromCode.host;
+                delete processedData.llmConfig.host;
+            }
+            delete processedData.llmConfigFromCode;
+            console.log(`Using imported LLM config for node ${node.id}`);
+        }
+
+        // Clean up display-only properties
+        delete processedData.llmConfigDescription;
+
+        console.log("LLM Config Node", processedData);
+    }
+
+    // Consolidate known class variables into classVars for worker nodes
+    const knownClassVars = [
+        'prompt',
+        'system_prompt',
+        'use_xml',
+        'debug_mode',
+        'llm_input_type',
+        'llm_output_type',
+        'join_type',
+        'output_types'
+    ];
+    if (node.type?.endsWith('worker')) { // Apply only to worker node types
+        if (!processedData.classVars) {
+            processedData.classVars = {};
+        }
+        for (const key of knownClassVars) {
+            if (processedData[key] !== undefined) {
+                (processedData.classVars as Record<string, any>)[key] = processedData[key];
+                delete processedData[key];
+            }
+        }
+    }
+
+    // Handle factory function details for subgraphworkers
+    if (node.type === 'subgraphworker' && data?.isFactoryCreated) {
+        // Remove isFactoryCreated flag as it's frontend-specific
+        delete processedData.isFactoryCreated;
+    }
+
+    return { ...node, data: processedData };
 }
 
 /**

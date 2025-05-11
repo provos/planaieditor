@@ -18,10 +18,9 @@ export const fullScreenEditorState = $state<FullScreenEditorState>({
 
 export function openFullScreenEditor(
     id: string,
-    code: string,
     language: SupportedLanguage = 'python',
-    onSave: (newCode: string) => void,
-    onClose: () => void
+    onSave: (newCode: string) => void = () => {},
+    onClose: () => void = () => {}
 ) {
     fullScreenEditorState.id = id;
     fullScreenEditorState.language = language;

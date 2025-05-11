@@ -11,11 +11,13 @@
 		closeFullScreenEditorStore
 	} from '$lib/stores/fullScreenEditorStore.svelte';
 	import { backendUrl } from '$lib/utils/backendUrl';
+	import { convertNodeData } from '$lib/utils/pythonExport';
+	import { convertWorkerToNodeData } from '$lib/utils/pythonImport';
 
 	let isLoading = $state(true);
 	let currentCode = $state<string | undefined>(undefined);
 	let editorContainerRef: HTMLDivElement | undefined = $state();
-
+	let error = $state<string | undefined>(undefined);
 	const { nodes } = useStore();
 
 	async function handleLoad() {
@@ -35,7 +37,7 @@
 			headers: {
 				'Content-Type': 'application/json'
 			},
-			body: JSON.stringify(currentNode)
+			body: JSON.stringify(convertNodeData(currentNode))
 		});
 		const data = await response.json();
 		currentCode = data.code;
@@ -49,8 +51,43 @@
 		await handleLoad();
 	});
 
-	function internalSave() {
-		saveFullScreenEditor(currentCode);
+	async function internalSave() {
+		if (!currentCode || !fullScreenEditorState.id) {
+			console.error('No code to save or no id');
+			error = 'No code to save or no id';
+			return;
+		}
+
+		error = undefined;
+		try {
+			const response = await fetch(`${backendUrl}/api/code-to-node`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ code: currentCode })
+			});
+			const data = await response.json();
+			if (!data.success) {
+				error = data.error;
+				return;
+			}
+			const updatedNodeData = convertWorkerToNodeData(data.worker, fullScreenEditorState.id);
+			updatedNodeData._lastUpdated = Date.now();
+			nodes.update((nodes) => {
+				return nodes.map((node) => {
+					if (node.id === fullScreenEditorState.id) {
+						return { ...node, data: updatedNodeData };
+					}
+					return node;
+				});
+			});
+
+			saveFullScreenEditor(currentCode);
+		} catch (e) {
+			console.error(e);
+			error = 'Failed to save code';
+		}
 	}
 
 	function internalClose() {
@@ -92,11 +129,16 @@
 				</button>
 			</div>
 		</div>
+		{#if error}
+			<div class="mb-2 rounded-t-md bg-red-500 p-2 text-white">
+				<p class="text-sm">{error}</p>
+			</div>
+		{/if}
 		<div class="flex-grow overflow-hidden rounded-b-md bg-white">
 			{#if editorContainerRef && !isLoading}
 				<EditableCodeSection
 					title="Full Screen Edit"
-					code={currentCode}
+					code={currentCode || ''}
 					language={fullScreenEditorState.language}
 					onUpdate={handleCodeUpdate}
 					onUpdateSize={() => {}}

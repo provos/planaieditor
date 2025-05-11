@@ -31,6 +31,8 @@ from planaieditor.patch import get_definitions_from_file
 from planaieditor.python import (
     add_to_task_import_state,
     create_task_class,
+    create_worker_class,
+    format_python_code,
     generate_python_module,
 )
 from planaieditor.socket_server import SocketServer
@@ -1018,20 +1020,37 @@ def get_node_code():
 
     node_data = request.get_json()
 
-    print("--- get_node_code ---")
-    print(node_data)
-    print("--- end get_node_code ---")
-
-    node_id = node_data.get("id")
-    if not node_id:
-        return jsonify({"success": False, "error": "Missing 'id' in request"}), 400
+    python_code = create_worker_class(node_data, add_comment=False)
+    formatted_code = format_python_code(python_code)
 
     return (
-        jsonify(
-            {"success": True, "code": node_data.get("methods").get("consume_work")}
-        ),
+        jsonify({"success": True, "code": formatted_code}),
         200,
     )
+
+
+@app.route("/api/code-to-node", methods=["POST"])
+def code_to_node():
+    """Receives code and returns a node."""
+    if not request.is_json:
+        return jsonify({"success": False, "error": "Request must be JSON"}), 400
+
+    data = request.get_json()
+    code = data.get("code")
+
+    if not code:
+        return jsonify({"success": False, "error": "Missing 'code' in request"}), 400
+
+    definitions = get_definitions_from_file(code_string=code)
+    print(definitions)
+
+    workers = definitions.get("workers", [])
+    if len(workers) != 1:
+        return jsonify({"success": False, "error": "Expected exactly one worker"}), 200
+
+    worker = workers[0]
+
+    return jsonify({"success": True, "worker": worker}), 200
 
 
 if is_development:

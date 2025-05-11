@@ -7,6 +7,7 @@
 	import { tick } from 'svelte';
 	import { persistNodeDataDebounced } from '$lib/utils/nodeUtils';
 	import { openFullScreenEditor } from '$lib/stores/fullScreenEditorStore.svelte'; // Import store function
+	import { onMount } from 'svelte';
 
 	export interface TaskWorkerData extends BaseWorkerData {
 		consume_work: string;
@@ -24,8 +25,10 @@
 	// Use $state for the title and code content to ensure reactivity
 	const defaultTitle = 'def consume_work(self, task):';
 	let reactiveTitle = $state(defaultTitle);
+	let consumeWorkCode = $derived(data.methods?.consume_work || '');
+	let nodeVersion = $derived(data._lastUpdated || 0); // Key for re-rendering on external update
 
-	$effect(() => {
+	onMount(() => {
 		let currentNodes: Node[] = [];
 		let currentEdges: Edge[] = [];
 
@@ -85,42 +88,27 @@
 
 	// This function now calls the store to open the editor
 	function triggerOpenFullScreenEditor() {
-		if (data.methods?.consume_work) {
-			openFullScreenEditor(
-				id,
-				data.methods.consume_work,
-				'python',
-				(newCode) => {
-					// onSave callback
-					if (data.methods) {
-						data.methods.consume_work = newCode;
-						persistNodeDataDebounced(id, store.nodes, data);
-					}
-				},
-				() => {
-					// onClose callback (optional, can be empty if no specific action on close without save)
-					console.log('Full screen editor closed without saving from TaskWorkerNode');
-				}
-			);
-		}
+		openFullScreenEditor(id, 'python');
 	}
 </script>
 
 <BaseWorkerNode {id} {data} defaultName="TaskWorker">
 	<div class="flex min-h-0 flex-grow flex-col p-1">
 		{#if data.methods?.consume_work}
-			<EditableCodeSection
-				title={reactiveTitle}
-				code={data.methods.consume_work}
-				language="python"
-				onUpdate={(newCode) => {
-					data.methods.consume_work = newCode;
-					persistNodeDataDebounced(id, store.nodes, data);
-				}}
-				showReset={true}
-				onUpdateSize={handleCollapse}
-				onFullScreen={triggerOpenFullScreenEditor}
-			/>
+			{#key nodeVersion}
+				<EditableCodeSection
+					title={reactiveTitle}
+					code={consumeWorkCode}
+					language="python"
+					onUpdate={(newCode) => {
+						data.methods.consume_work = newCode;
+						persistNodeDataDebounced(id, store.nodes, data);
+					}}
+					showReset={true}
+					onUpdateSize={handleCollapse}
+					onFullScreen={triggerOpenFullScreenEditor}
+				/>
+			{/key}
 		{/if}
 	</div>
 </BaseWorkerNode>
