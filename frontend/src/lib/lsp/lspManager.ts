@@ -162,19 +162,40 @@ export class LspManager {
                     `[LSP Manager] Error during pending start operation while stopping:`,
                     e
                 );
+                // Even if startPromise failed, languageClient might have been partially initialized
             }
         }
 
-        const stopClientPromise = this.languageClient?.stop().catch((e) => {
-            console.error(`[LSP Manager] Error stopping language client:`, e);
-        });
+        // Stop the language client first, allowing it to use transports for shutdown
+        if (this.languageClient) {
+            try {
+                console.log(`[LSP Manager] Attempting to stop the language client...`);
+                await this.languageClient.stop();
+                console.log(`[LSP Manager] Language client stopped.`);
+            } catch (e) {
+                console.error(`[LSP Manager] Error stopping language client:`, e);
+            }
+        }
+        
+        // Then, dispose the transports
+        if (this.reader) {
+            try {
+                this.reader.dispose();
+                console.log(`[LSP Manager] SocketIOReader disposed.`);
+            } catch (e) {
+                console.error(`[LSP Manager] Error disposing SocketIOReader:`, e);
+            }
+        }
+        if (this.writer) {
+            try {
+                this.writer.dispose();
+                console.log(`[LSP Manager] SocketIOWriter disposed.`);
+            } catch (e) {
+                console.error(`[LSP Manager] Error disposing SocketIOWriter:`, e);
+            }
+        }
 
-        this.reader?.dispose();
-        this.writer?.dispose();
-
-        await stopClientPromise; // Wait for client stop after disposing transports
-
-        console.log(`[LSP Manager] LSP connection stopped.`);
+        console.log(`[LSP Manager] LSP connection resources released.`);
 
         // Reset state
         this.languageClient = undefined;
