@@ -588,7 +588,7 @@ def extract_worker_details(
             if method_name in known_method_names:
                 details["methods"][method_name] = method_source
             else:  # Not a specifically handled method, add to consolidated source
-                details["otherMembersSource"] += dedent(method_source) + "\n"
+                details["otherMembersSource"] += "\n" + dedent(method_source) + "\n"
         # Could add handling for other node types like Import, If, etc. if needed
 
     # Clean up trailing newlines from the consolidated source
@@ -667,19 +667,6 @@ def extract_input_type(
         final_input_type = input_type_from_consume
 
     return final_input_type
-
-
-# --- Edge Extraction Logic ---
-
-
-# Helper to safely evaluate constant AST nodes (strings, numbers, bools, None)
-def _safe_eval_constant(node: Optional[ast.expr]) -> Any:
-    if isinstance(node, ast.Constant):
-        return node.value
-    # Handle NameConstant for True, False, None in older Python versions if necessary
-    # if isinstance(node, ast.NameConstant):
-    #     return node.value
-    return None  # Cannot safely evaluate
 
 
 # Helper to evaluate constant AST nodes and determine if literal
