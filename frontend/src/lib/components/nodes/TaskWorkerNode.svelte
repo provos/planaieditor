@@ -86,7 +86,6 @@
 		updateNodeInternals(id);
 	}
 
-	// This function now calls the store to open the editor
 	function triggerOpenFullScreenEditor() {
 		openFullScreenEditor(id, 'python');
 	}
