@@ -325,7 +325,9 @@ def create_task_class(node: Dict[str, Any]) -> Optional[str]:
     return "\n".join(code)
 
 
-def create_worker_class(node: Dict[str, Any]) -> Optional[str]:
+def create_worker_class(
+    node: Dict[str, Any], add_comment: bool = True
+) -> Optional[str]:
     # Determine base class based on node type, including cached variants
     node_type = node.get("type")
     data = node.get("data", {})
@@ -354,8 +356,9 @@ def create_worker_class(node: Dict[str, Any]) -> Optional[str]:
     if data.get("isCached") and node_type in ["llmtaskworker", "taskworker"]:
         base_class = "Cached" + base_class
 
-    code.append(f"# Worker class: {worker_name}")
-    code.append(f"\nclass {worker_name}({base_class}):")
+    if add_comment:
+        code.append(f"# Worker class: {worker_name}\n")
+    code.append(f"class {worker_name}({base_class}):")
     class_body = []  # Store lines for the current class body
 
     # --- Process Class Variables ---
@@ -409,6 +412,16 @@ def create_worker_class(node: Dict[str, Any]) -> Optional[str]:
 
     if class_vars.get("debug_mode") is True:
         class_body.append("    debug_mode: bool = True")
+
+    # --- Process Other Members Source ---
+    other_source = data.get("otherMembersSource", None)
+    if other_source:
+        dedented_other = dedent(other_source).strip()
+        if dedented_other:
+            indented_other = indent(dedented_other, "    ").strip()
+            if add_comment:
+                class_body.append("\n    # --- Other Class Members ---")
+            class_body.append(f"    {indented_other}")
 
     # --- Process Methods ---
     methods = data.get("methods", {})
@@ -466,15 +479,6 @@ def create_worker_class(node: Dict[str, Any]) -> Optional[str]:
             else:
                 raise ValueError(f"Failed to parse method: {method_name}")
 
-    # --- Process Other Members Source ---
-    other_source = data.get("otherMembersSource", None)
-    if other_source:
-        dedented_other = dedent(other_source).strip()
-        if dedented_other:
-            indented_other = indent(dedented_other, "    ").strip()
-            class_body.append("\n    # --- Other Class Members ---")
-            class_body.append(f"    {indented_other}")
-
     # Add pass if class body is empty
     if not class_body:
         class_body.append("    pass")
@@ -482,6 +486,17 @@ def create_worker_class(node: Dict[str, Any]) -> Optional[str]:
     code.extend(class_body)
 
     return "\n".join(code)
+
+
+def format_python_code(code: str) -> str:
+    try:
+        isort_config = isort.Config(profile="black")
+        sorted_code = isort.code(code, config=isort_config)
+        formatted_code = black.format_str(sorted_code, mode=black.FileMode())
+        return formatted_code
+    except Exception as e:
+        print(f"Error formatting code: {e}")
+        return code
 
 
 def wrap_instantiation_in_try_except(
