@@ -99,10 +99,7 @@
 	}
 </script>
 
-<div
-	class="fixed inset-0 z-50 flex flex-col bg-gray-800/75 p-4 backdrop-blur-sm"
-	bind:this={editorContainerRef}
->
+<div class="fixed inset-0 z-50 flex flex-col bg-gray-800/75 p-4 backdrop-blur-sm">
 	{#if isLoading}
 		<div class="flex h-full flex-grow items-center justify-center">
 			<p class="text-2xl text-white">Loading editor...</p>
@@ -134,7 +131,7 @@
 				<p class="text-sm">{error}</p>
 			</div>
 		{/if}
-		<div class="flex-grow overflow-hidden rounded-b-md bg-white">
+		<div class="flex-grow rounded-b-md bg-white" bind:this={editorContainerRef}>
 			{#if editorContainerRef && !isLoading}
 				<EditableCodeSection
 					title="Full Screen Edit"
@@ -143,21 +140,9 @@
 					onUpdate={handleCodeUpdate}
 					onUpdateSize={() => {}}
 					fontsize={14}
-					maxHeight={editorContainerRef?.clientHeight ? editorContainerRef.clientHeight - 80 : 600}
+					maxHeight={editorContainerRef.clientHeight - 32}
 				/>
 			{/if}
 		</div>
 	{/if}
 </div>
-
-<style>
-	/* Ensure the editor within this component takes full available height */
-	:global(.monaco-editor) {
-		height: 100% !important;
-		width: 100% !important;
-	}
-	.flex-grow > div {
-		/* This targets the div wrapping EditableCodeSection */
-		height: 100%;
-	}
-</style>
