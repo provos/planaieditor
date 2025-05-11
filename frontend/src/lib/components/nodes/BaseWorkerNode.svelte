@@ -266,6 +266,9 @@
 			otherMembersSource = newCode;
 		}
 		persistNodeDataDebounced(id, store.nodes, data);
+		tick().then(() => {
+			updateNodeInternals(id);
+		});
 	}
 
 	function handleMethodUpdate(methodName: string, newCode: string) {
@@ -279,6 +282,9 @@
 			data.methods[methodName] = newCode;
 		}
 		persistNodeDataDebounced(id, store.nodes, data);
+		tick().then(() => {
+			updateNodeInternals(id);
+		});
 	}
 
 	// Define core methods that might have special display logic
