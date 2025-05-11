@@ -302,6 +302,10 @@
 		inferredInputTypes = updatedInputTypes;
 		persistNodeDataDebounced(id, store.nodes, data);
 	}
+
+	function handleFullScreen() {
+		console.log('handleFullScreen');
+	}
 </script>
 
 <div
@@ -530,6 +534,7 @@
 					onReset={() => handleOtherMembersSourceUpdate(undefined)}
 					onUpdate={handleOtherMembersSourceUpdate}
 					onUpdateSize={handleCollapse}
+					onFullScreen={handleFullScreen}
 				/>
 			</div>
 		{/if}
@@ -555,6 +560,7 @@
 							language="python"
 							onUpdate={(newCode) => handleMethodUpdate(methodName, newCode)}
 							onUpdateSize={handleCollapse}
+							onFullScreen={handleFullScreen}
 						/>
 					{/each}
 				</div>

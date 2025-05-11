@@ -595,7 +595,6 @@ def handle_export_graph(data):
     emit("export_result", response_data, room=request.sid)
 
 
-# --- New Endpoint for Python Import ---
 @app.route("/api/import-python", methods=["POST"])
 def import_python_module():
     """Receives Python code content, parses it for Task definitions, and returns them."""
@@ -1009,6 +1008,30 @@ except Exception as e:
     # Return the validation result directly to the frontend
     status_code = 200
     return jsonify(result), status_code
+
+
+@app.route("/api/get-node-code", methods=["POST"])
+def get_node_code():
+    """Receives a node data, and returns the code of the node."""
+    if not request.is_json:
+        return jsonify({"success": False, "error": "Request must be JSON"}), 400
+
+    node_data = request.get_json()
+
+    print("--- get_node_code ---")
+    print(node_data)
+    print("--- end get_node_code ---")
+
+    node_id = node_data.get("id")
+    if not node_id:
+        return jsonify({"success": False, "error": "Missing 'id' in request"}), 400
+
+    return (
+        jsonify(
+            {"success": True, "code": node_data.get("methods").get("consume_work")}
+        ),
+        200,
+    )
 
 
 if is_development:

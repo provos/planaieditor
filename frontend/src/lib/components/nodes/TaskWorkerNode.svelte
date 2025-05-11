@@ -6,6 +6,7 @@
 	import type { Node, Edge } from '@xyflow/svelte';
 	import { tick } from 'svelte';
 	import { persistNodeDataDebounced } from '$lib/utils/nodeUtils';
+	import { openFullScreenEditor } from '$lib/stores/fullScreenEditorStore.svelte'; // Import store function
 
 	export interface TaskWorkerData extends BaseWorkerData {
 		consume_work: string;
@@ -81,6 +82,28 @@
 		await tick();
 		updateNodeInternals(id);
 	}
+
+	// This function now calls the store to open the editor
+	function triggerOpenFullScreenEditor() {
+		if (data.methods?.consume_work) {
+			openFullScreenEditor(
+				id,
+				data.methods.consume_work,
+				'python',
+				(newCode) => {
+					// onSave callback
+					if (data.methods) {
+						data.methods.consume_work = newCode;
+						persistNodeDataDebounced(id, store.nodes, data);
+					}
+				},
+				() => {
+					// onClose callback (optional, can be empty if no specific action on close without save)
+					console.log('Full screen editor closed without saving from TaskWorkerNode');
+				}
+			);
+		}
+	}
 </script>
 
 <BaseWorkerNode {id} {data} defaultName="TaskWorker">
@@ -96,6 +119,7 @@
 				}}
 				showReset={true}
 				onUpdateSize={handleCollapse}
+				onFullScreen={triggerOpenFullScreenEditor}
 			/>
 		{/if}
 	</div>

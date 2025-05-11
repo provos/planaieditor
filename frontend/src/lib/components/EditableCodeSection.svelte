@@ -3,6 +3,7 @@
 	import ChevronDown from 'phosphor-svelte/lib/ArrowDown';
 	import ChevronRight from 'phosphor-svelte/lib/ArrowRight';
 	import Trash from 'phosphor-svelte/lib/Trash';
+	import ArrowsOutSimple from 'phosphor-svelte/lib/ArrowsOutSimple';
 	import type * as Monaco from 'monaco-editor/esm/vs/editor/editor.api';
 	import { tick } from 'svelte';
 	import { monacoInstance } from '$lib/stores/monacoStore.svelte'; // Import the shared instance
@@ -16,6 +17,7 @@
 		onReset = undefined,
 		showReset = false,
 		onUpdateSize,
+		onFullScreen,
 		maxHeight = 400
 	} = $props<{
 		title?: string;
@@ -26,6 +28,7 @@
 		onReset?: () => void;
 		showReset?: boolean;
 		onUpdateSize?: () => void;
+		onFullScreen?: () => void;
 		maxHeight?: number; // Maximum height before scrolling
 	}>();
 
@@ -190,15 +193,27 @@
 			<h3 class="text-2xs font-semibold text-gray-600">{title}</h3>
 		</div>
 
-		{#if showReset && onReset}
-			<button
-				class="text-2xs flex items-center rounded border border-gray-200 bg-gray-50 px-1 py-0.5 text-gray-500 opacity-70 hover:bg-gray-100 hover:text-red-500 hover:opacity-100"
-				onclick={onReset}
-			>
-				<Trash size={10} weight="bold" class="mr-1" />
-				Reset
-			</button>
-		{/if}
+		<div class="flex items-center space-x-1">
+			{#if showReset && onReset}
+				<button
+					class="text-2xs flex items-center rounded border border-gray-200 bg-gray-50 px-1 py-0.5 text-gray-500 opacity-70 hover:bg-gray-100 hover:text-red-500 hover:opacity-100"
+					onclick={onReset}
+					title="Remove the optional function"
+				>
+					<Trash size={10} weight="bold" class="mr-1" />
+					Reset
+				</button>
+			{/if}
+			{#if onFullScreen}
+				<button
+					class="text-2xs flex items-center rounded border border-gray-200 bg-gray-50 px-1 py-0.5 text-gray-500 opacity-70 hover:bg-gray-100 hover:text-blue-500 hover:opacity-100"
+					onclick={onFullScreen}
+					title="Fullscreen"
+				>
+					<ArrowsOutSimple size={10} weight="bold" class="mr-1" />
+				</button>
+			{/if}
+		</div>
 	</div>
 
 	<div

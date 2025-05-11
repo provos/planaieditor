@@ -52,6 +52,8 @@
 	import { onMount } from 'svelte';
 	import { selectedInterpreterPath } from '$lib/stores/pythonInterpreterStore.svelte';
 	import { addAvailableMethod } from '$lib/utils/nodeUtils';
+	import FullScreenEditor from '$lib/components/FullScreenEditor.svelte';
+	import { fullScreenEditorState } from '$lib/stores/fullScreenEditorStore.svelte';
 
 	// Import the LLM Config Modal
 	import LLMConfigModal from '$lib/components/LLMConfigModal.svelte';
@@ -1111,6 +1113,10 @@ Analyze the following information and provide a response.`,
 		currentGraphName = value;
 	});
 </script>
+
+{#if fullScreenEditorState.isOpen}
+	<FullScreenEditor />
+{/if}
 
 <div class="flex h-screen w-screen flex-col">
 	<div class="w-full border-b border-gray-300 bg-gray-100 p-4">
