@@ -9,6 +9,7 @@
 	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
 	import { onDestroy } from 'svelte';
 	import type { Snippet } from 'svelte';
+
 	// Define basic field types
 	type BaseFieldType = 'string' | 'integer' | 'float' | 'boolean' | 'literal';
 	// Enhanced field type can be a basic type or a custom Task name
@@ -34,20 +35,28 @@
 	let {
 		id,
 		data,
+		showAsNode = true,
+		allowEditing = true,
+		styleClasses = '',
 		children // indicates that we won't allow editing of the node
 	} = $props<{
 		id: string;
 		data: NodeData;
+		showAsNode?: boolean;
+		allowEditing?: boolean;
+		styleClasses?: string;
 		children?: Snippet;
 	}>();
 
 	const store = useStore();
 
 	// Ensure data.fields is initialized
-	if (!children && !data.fields) {
+	if (allowEditing && !data.fields) {
 		data.fields = [];
 		persistNodeDataDebounced(id, store.nodes, data);
 	}
+
+	let effectiveStyleClasses = $derived(styleClasses || 'rounded-md border border-gray-300 bg-white shadow-md');
 
 	// State variables
 	let editingClassName = $state(false);
@@ -112,7 +121,7 @@
 	});
 
 	function startEditingClassName() {
-		if (children) return;
+		if (!allowEditing) return;
 		tempClassName = data.className;
 		editingClassName = true;
 	}
@@ -168,7 +177,7 @@
 	}
 
 	function startEditingField(index: number) {
-		if (children) return;
+		if (!allowEditing) return;
 		const field = data.fields[index];
 		editingFieldIndex = index;
 		editingFieldName = field.name;
@@ -181,7 +190,7 @@
 	}
 
 	function startAddingField() {
-		if (children) return;
+		if (!allowEditing) return;
 		editingFieldIndex = -1;
 		editingFieldName = '';
 		editingFieldType = 'string';
@@ -258,7 +267,7 @@
 	}
 
 	function deleteField(index: number) {
-		if (children) return;
+		if (!allowEditing) return;
 		data.fields = data.fields.filter((_: Field, i: number) => i !== index);
 		persistNodeDataDebounced(id, store.nodes, data);
 		currentFields = [...data.fields];
@@ -333,60 +342,66 @@
 	});
 </script>
 
-<div class="task-node flex h-full flex-col rounded-md border border-gray-300 bg-white shadow-md">
-	<!-- Node Resizer -->
-	<NodeResizer
-		minWidth={200}
-		minHeight={150}
-		handleClass="resize-handle-custom"
-		lineClass="resize-line-custom"
-	/>
+<div class="task-node flex h-full flex-col {effectiveStyleClasses}">
+	{#if showAsNode}
+		<!-- Node Resizer -->
+		<NodeResizer
+			minWidth={200}
+			minHeight={150}
+			handleClass="resize-handle-custom"
+			lineClass="resize-line-custom"
+		/>
+	{/if}
 
-	<!-- Header with editable class name -->
-	<div class="flex-none border-b border-gray-200 bg-gray-50 p-1">
-		{#if children}
-			<!-- Render children snippet if provided -->
-			<div
-				class="w-full cursor-pointer rounded bg-blue-200 px-1 py-0.5 text-center text-xs font-medium"
-			>
-				{data.className || 'Unnamed Task'}
-			</div>
-			{@render children()}
-		{:else}
-			<!-- Default header: Editable class name -->
-			{#if editingClassName}
-				<div class="flex flex-col">
-					<input
-						type="text"
-						bind:value={tempClassName}
-						onblur={updateClassName}
-						onkeydown={handleClassNameKeydown}
-						class="w-full rounded border border-gray-200 bg-white px-1.5 py-0.5 text-xs font-medium {classNameError
-							? 'border-red-500'
-							: ''}"
-						autofocus
-					/>
-					{#if classNameError}
-						<div class="mt-0.5 text-xs text-red-500">{classNameError}</div>
-					{/if}
-				</div>
-			{:else}
-				<!-- svelte-ignore a11y_click_events_have_key_events -->
+	{#if showAsNode}
+		<!-- Header with editable class name -->
+		<div class="flex-none border-b border-gray-200 bg-gray-50 p-1">
+			{#if !allowEditing}
+				<!-- Render children snippet if provided -->
 				<div
-					class="w-full cursor-pointer rounded px-1 py-0.5 text-center text-xs font-medium hover:bg-gray-100"
-					onclick={startEditingClassName}
-					role="button"
-					tabindex={0}
+					class="w-full cursor-pointer rounded bg-blue-200 px-1 py-0.5 text-center text-xs font-medium"
 				>
 					{data.className || 'Unnamed Task'}
 				</div>
+				{#if children}
+					{@render children()}
+				{/if}
+			{:else}
+				<!-- Default header: Editable class name -->
+				{#if editingClassName}
+					<div class="flex flex-col">
+						<input
+							type="text"
+							bind:value={tempClassName}
+							onblur={updateClassName}
+							onkeydown={handleClassNameKeydown}
+							class="w-full rounded border border-gray-200 bg-white px-1.5 py-0.5 text-xs font-medium {classNameError
+								? 'border-red-500'
+								: ''}"
+							autofocus
+						/>
+						{#if classNameError}
+							<div class="mt-0.5 text-xs text-red-500">{classNameError}</div>
+						{/if}
+					</div>
+				{:else}
+					<!-- svelte-ignore a11y_click_events_have_key_events -->
+					<div
+						class="w-full cursor-pointer rounded px-1 py-0.5 text-center text-xs font-medium hover:bg-gray-100"
+						onclick={startEditingClassName}
+						role="button"
+						tabindex={0}
+					>
+						{data.className || 'Unnamed Task'}
+					</div>
+				{/if}
 			{/if}
-		{/if}
-	</div>
+		</div>
+	{/if}
 
 	<!-- Fields list with compact styling -->
 	<div class="relative h-full min-h-0 flex-grow overflow-y-auto p-1.5">
-		{#if !currentFields.length && editingFieldIndex !== -1 && !children}
+		{#if !currentFields.length && editingFieldIndex !== -1 && allowEditing}
 			<div class="text-2xs py-0.5 italic text-gray-400">No fields</div>
 		{/if}
 
@@ -404,13 +419,13 @@
 									? 'border-red-500'
 									: ''}"
 								autofocus
-								disabled={!!children}
+								disabled={!allowEditing}
 							/>
 
 							<select
 								bind:value={editingFieldType}
 								class="text-2xs w-auto min-w-[4rem] max-w-xs rounded border border-gray-200 px-1 py-0.5"
-								disabled={!!children}
+								disabled={!allowEditing}
 							>
 								{#each fieldTypeOptions as option}
 									<option value={option.value}>{option.label}</option>
@@ -424,7 +439,7 @@
 									type="checkbox"
 									bind:checked={editingFieldIsList}
 									class="ml-0.5 h-2.5 w-2.5 rounded"
-									disabled={!!children}
+									disabled={!allowEditing}
 								/>
 							</div>
 						</div>
@@ -441,7 +456,7 @@
 								placeholder="Description (optional)"
 								class="text-2xs w-full rounded border border-gray-200 px-1 py-0.5"
 								onkeydown={handleFieldKeydown}
-								disabled={!!children}
+								disabled={!allowEditing}
 							/>
 						</div>
 
@@ -456,12 +471,12 @@
 										placeholder="Add value..."
 										class="text-2xs flex-1 rounded border border-gray-200 px-1 py-0.5"
 										onkeydown={handleLiteralKeydown}
-										disabled={!!children}
+										disabled={!allowEditing}
 									/>
 									<button
 										class="text-2xs rounded bg-blue-100 px-1 py-0.5 text-blue-700 hover:bg-blue-200"
 										onclick={addLiteralValue}
-										disabled={!!children}
+										disabled={!allowEditing}
 									>
 										Add
 									</button>
@@ -480,7 +495,7 @@
 													class="text-gray-500 hover:text-red-500"
 													onclick={() => removeLiteralValue(idx)}
 													title="Remove value"
-													disabled={!!children}
+													disabled={!allowEditing}
 												>
 													×
 												</button>
@@ -498,7 +513,7 @@
 									id="fieldRequired{id}{index}"
 									bind:checked={editingFieldRequired}
 									class="h-2.5 w-2.5 rounded"
-									disabled={!!children}
+									disabled={!allowEditing}
 								/>
 								<label for="fieldRequired{id}{index}" class="text-2xs ml-0.5">Required</label>
 							</div>
@@ -507,14 +522,14 @@
 								<button
 									class="text-2xs rounded bg-gray-200 px-1 py-0.5 hover:bg-gray-300"
 									onclick={cancelFieldEditing}
-									disabled={!!children}
+									disabled={!allowEditing}
 								>
 									Cancel
 								</button>
 								<button
 									class="text-2xs rounded bg-blue-500 px-1 py-0.5 text-white hover:bg-blue-600"
 									onclick={saveField}
-									disabled={!!children}
+									disabled={!allowEditing}
 								>
 									Save
 								</button>
@@ -524,16 +539,16 @@
 				{:else}
 					<!-- svelte-ignore a11y_click_events_have_key_events -->
 					<div
-						class="text-2xs group flex {!!children
+						class="text-2xs group flex {!allowEditing
 							? 'cursor-default'
-							: 'cursor-pointer'} items-center justify-between rounded bg-gray-50 px-1 py-0.5 {!!children
+							: 'cursor-pointer'} items-center justify-between rounded bg-gray-50 px-1 py-0.5 {!allowEditing
 							? ''
 							: 'hover:bg-gray-100'}"
 						onclick={() => {
-							if (!children) startEditingField(index);
+							if (allowEditing) startEditingField(index);
 						}}
 						role="button"
-						tabindex={children ? -1 : 0}
+						tabindex={!allowEditing ? -1 : 0}
 					>
 						<div class="flex items-center gap-1">
 							<span class="font-medium">{field.name}</span>
@@ -551,7 +566,7 @@
 								<span class="text-gray-400">?</span>
 							{/if}
 						</div>
-						{#if !children}
+						{#if allowEditing}
 							<div class="flex items-center">
 								<button
 									class="ml-1 flex h-3.5 w-3.5 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-gray-200 hover:text-blue-500 group-hover:opacity-100"
@@ -592,13 +607,13 @@
 								? 'border-red-500'
 								: ''}"
 							autofocus
-							disabled={!!children}
+							disabled={!allowEditing}
 						/>
 
 						<select
 							bind:value={editingFieldType}
 							class="text-2xs w-auto min-w-[4rem] max-w-xs rounded border border-gray-200 px-1 py-0.5"
-							disabled={!!children}
+							disabled={!allowEditing}
 						>
 							{#each fieldTypeOptions as option}
 								<option value={option.value}>{option.label}</option>
@@ -612,7 +627,7 @@
 								type="checkbox"
 								bind:checked={editingFieldIsList}
 								class="ml-0.5 h-2.5 w-2.5 rounded"
-								disabled={!!children}
+								disabled={!allowEditing}
 							/>
 						</div>
 					</div>
@@ -629,7 +644,7 @@
 							placeholder="Description (optional)"
 							class="text-2xs w-full rounded border border-gray-200 px-1 py-0.5"
 							onkeydown={handleFieldKeydown}
-							disabled={!!children}
+							disabled={!allowEditing}
 						/>
 					</div>
 
@@ -644,12 +659,12 @@
 									placeholder="Add value..."
 									class="text-2xs flex-1 rounded border border-gray-200 px-1 py-0.5"
 									onkeydown={handleLiteralKeydown}
-									disabled={!!children}
+									disabled={!allowEditing}
 								/>
 								<button
 									class="text-2xs rounded bg-blue-100 px-1 py-0.5 text-blue-700 hover:bg-blue-200"
 									onclick={addLiteralValue}
-									disabled={!!children}
+									disabled={!allowEditing}
 								>
 									Add
 								</button>
@@ -666,7 +681,7 @@
 												class="text-gray-500 hover:text-red-500"
 												onclick={() => removeLiteralValue(idx)}
 												title="Remove value"
-												disabled={!!children}
+												disabled={!allowEditing}
 											>
 												×
 											</button>
@@ -684,7 +699,7 @@
 								id="newFieldRequired{id}"
 								bind:checked={editingFieldRequired}
 								class="h-2.5 w-2.5 rounded"
-								disabled={!!children}
+								disabled={!allowEditing}
 							/>
 							<label for="newFieldRequired{id}" class="text-2xs ml-0.5">Required</label>
 						</div>
@@ -693,14 +708,14 @@
 							<button
 								class="text-2xs rounded bg-gray-200 px-1 py-0.5 hover:bg-gray-300"
 								onclick={cancelFieldEditing}
-								disabled={!!children}
+								disabled={!allowEditing}
 							>
 								Cancel
 							</button>
 							<button
 								class="text-2xs rounded bg-blue-500 px-1 py-0.5 text-white hover:bg-blue-600"
 								onclick={saveField}
-								disabled={!!children}
+								disabled={!allowEditing}
 							>
 								Add
 							</button>
@@ -711,7 +726,7 @@
 		</div>
 
 		<!-- Plus button at the bottom center -->
-		{#if editingFieldIndex === null && !children}
+		{#if editingFieldIndex === null && allowEditing}
 			<div class="mt-2 flex justify-center">
 				<button
 					class="z-10 flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 text-blue-500 shadow-sm hover:bg-blue-200"

@@ -297,7 +297,7 @@
 	</div>
 {/snippet}
 
-<TaskNode {id} data={dataCopy}>
+<TaskNode {id} data={dataCopy} allowEditing={false}>
 	{@render ImportHeader()}
 </TaskNode>
 

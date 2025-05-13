@@ -10,13 +10,17 @@
 	import Trash from 'phosphor-svelte/lib/Trash';
 	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
 	import Archive from 'phosphor-svelte/lib/Archive';
+	import CaretUp from 'phosphor-svelte/lib/CaretUp';
+	import CaretDown from 'phosphor-svelte/lib/CaretDown';
 	import { Toggle } from 'bits-ui';
 	import type { Snippet } from 'svelte';
-	import { tick } from 'svelte';
+	import { tick, untrack } from 'svelte';
 	import { formatErrorMessage } from '$lib/utils/utils';
 	import { persistNodeDataDebounced } from '$lib/utils/nodeUtils';
 	import { onMount } from 'svelte';
 	import { openFullScreenEditor } from '$lib/stores/fullScreenEditorStore.svelte';
+	import type { NodeData } from './TaskNode.svelte';
+	import TaskNode from './TaskNode.svelte';
 
 	// Base interface for worker node data
 	export interface BaseWorkerData {
@@ -72,6 +76,7 @@
 	let typeError = $state('');
 	let availableTaskClasses = $state<string[]>([]);
 	let inferredInputTypes = $derived<string[]>(data.inputTypes);
+	let taskNodeVisibility = $state<Record<string, boolean>>({});
 	let manuallySelectedInputType = $derived<string>(
 		data.inputTypes.length > 0 ? data.inputTypes[0] : ''
 	);
@@ -103,6 +108,9 @@
 	const allowedCacheTypes = ['taskworker', 'llmtaskworker', 'chattaskworker'];
 	const showCachedOption = workerType && allowedCacheTypes.includes(workerType);
 
+	let inputTypeNodes = $state<Node[]>([]);
+	let outputTypeNodes = $state<Node[]>([]);
+
 	// --- Effects for Reactivity ---
 	onMount(() => {
 		if (!isEditable) {
@@ -117,6 +125,9 @@
 			if (thisNode) {
 				currentHeight = thisNode.measured?.height ?? thisNode.height ?? minHeight;
 			}
+
+			computeInputOutputTypes();
+			computeOutputTypeNodes();
 		});
 
 		// Subscribe to the taskClassNamesStore for output type selection
@@ -132,12 +143,43 @@
 		};
 	});
 
-	// Effect to sync localIsCached back to data.isCached
+	function computeInputOutputTypes() {
+		store.nodes.subscribe((nodes) => {
+			inputTypeNodes = nodes.filter(
+				(n) =>
+					(n.type === 'task' || n.type === 'taskimport') &&
+					n.data?.className &&
+					inferredInputTypes.includes((n.data as unknown as NodeData).className)
+			);
+		})();
+	}
+
+	function computeOutputTypeNodes() {
+		store.nodes.subscribe((nodes) => {
+			outputTypeNodes = nodes.filter(
+				(n) =>
+					(n.type === 'task' || n.type === 'taskimport') &&
+					n.data?.className &&
+					combinedOutputTypes.includes((n.data as unknown as NodeData).className)
+			);
+		})();
+	}
+
 	if (isEditable) {
+		// Effect to sync localIsCached back to data.isCached
 		$effect(() => {
 			if (data.isCached !== localIsCached) {
 				data.isCached = localIsCached;
 				persistNodeDataDebounced(id, store.nodes, data);
+			}
+		});
+
+		// Effect to recompute input/output types when combinedOutputTypes changes
+		$effect(() => {
+			if (combinedOutputTypes.length > 0) {
+				untrack(() => {
+					computeOutputTypeNodes();
+				});
 			}
 		});
 	}
@@ -249,6 +291,7 @@
 		manuallySelectedInputType = '';
 		data.inputTypes = [];
 		inferredInputTypes = [];
+		computeInputOutputTypes();
 		persistNodeDataDebounced(id, store.nodes, data);
 	}
 
@@ -296,6 +339,12 @@
 		});
 	}
 
+	async function toggleTaskNodeVisibility(type: string) {
+		taskNodeVisibility[type] = !taskNodeVisibility[type];
+		await tick();
+		updateNodeInternals(id);
+	}
+
 	async function handleCollapse() {
 		await tick();
 		updateNodeInternals(id);
@@ -304,6 +353,7 @@
 	function updateInferredInputTypes(updatedInputTypes: string[]) {
 		inferredInputTypes = updatedInputTypes;
 		persistNodeDataDebounced(id, store.nodes, data);
+		computeInputOutputTypes();
 	}
 
 	function handleFullScreen() {
@@ -428,22 +478,61 @@
 			<div class="mt-1 space-y-1">
 				{#each inferredInputTypes as type (type)}
 					{@const color = getColorForType(type)}
+					{@const node = inputTypeNodes.find(
+						(n) => (n.data as unknown as NodeData).className === type
+					)}
 					<div
-						class="text-2xs group flex items-center rounded px-1 py-0.5"
+						class="text-2xs group flex items-center justify-between rounded px-1 py-0.5"
 						style={`background-color: ${color}20; border-left: 3px solid ${color};`}
 					>
-						<span class="font-mono">{type}</span>
+						<div
+							class="flex flex-grow cursor-pointer items-center"
+							onclick={() => node && toggleTaskNodeVisibility(type)}
+							role="button"
+							tabindex={node ? 0 : -1}
+							onkeypress={(e) => {
+								if (node && (e.key === 'Enter' || e.key === ' ')) toggleTaskNodeVisibility(type);
+							}}
+							title={node
+								? taskNodeVisibility[type]
+									? `Collapse details for ${type}`
+									: `Expand details for ${type}`
+								: type}
+						>
+							<span class="font-mono">{type}</span>
+							{#if node}
+								{#if taskNodeVisibility[type]}
+									<CaretUp size={10} class="ml-1 text-gray-500 group-hover:text-gray-700" />
+								{:else}
+									<CaretDown size={10} class="ml-1 text-gray-500 group-hover:text-gray-700" />
+								{/if}
+							{/if}
+						</div>
 						{#if manuallySelectedInputType === type && isEditable}
 							<!-- Delete button for manually selected input type -->
 							<button
-								class="ml-auto flex h-3 w-3 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity duration-150 ease-in-out group-hover:opacity-100"
-								onclick={resetManualInputType}
+								class="ml-1 flex h-3 w-3 flex-shrink-0 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity duration-150 ease-in-out hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
+								onclick={(e) => {
+									e.stopPropagation(); // Prevent toggle when deleting
+									resetManualInputType();
+								}}
 								title="Remove manual input type"
 							>
 								<Trash size={8} weight="bold" />
 							</button>
 						{/if}
 					</div>
+					{#if node && taskNodeVisibility[type]}
+						<div class="ml-2 mt-0.5 border-l-2 border-gray-200 pl-2">
+							<TaskNode
+								id={node.id}
+								data={node.data as unknown as NodeData}
+								showAsNode={false}
+								allowEditing={false}
+								styleClasses="p-0"
+							/>
+						</div>
+					{/if}
 				{/each}
 			</div>
 		</div>
@@ -472,6 +561,9 @@
 			<div class="mt-1 space-y-1">
 				{#each currentOutputTypes as type, index (type)}
 					{@const color = getColorForType(type)}
+					{@const node = outputTypeNodes.find(
+						(n) => (n.data as unknown as NodeData).className === type
+					)}
 					{#if editingOutputType === index}
 						<!-- Output Type Edit Form -->
 						<div class="rounded border border-blue-200 bg-blue-50 p-1">
@@ -504,22 +596,61 @@
 							class="text-2xs group flex items-center justify-between rounded px-1 py-0.5"
 							style={`background-color: ${color}20; border-left: 3px solid ${color};`}
 						>
-							<span class="font-mono">{type}</span>
+							<div
+								class="flex flex-grow cursor-pointer items-center"
+								onclick={() => node && toggleTaskNodeVisibility(type)}
+								role="button"
+								tabindex={node ? 0 : -1}
+								onkeypress={(e) => {
+									if (node && (e.key === 'Enter' || e.key === ' ')) toggleTaskNodeVisibility(type);
+								}}
+								title={node
+									? taskNodeVisibility[type]
+										? `Collapse details for ${type}`
+										: `Expand details for ${type}`
+									: type}
+							>
+								<span class="font-mono">{type}</span>
+								{#if node}
+									{#if taskNodeVisibility[type]}
+										<CaretUp size={10} class="ml-1 text-gray-500 group-hover:text-gray-700" />
+									{:else}
+										<CaretDown size={10} class="ml-1 text-gray-500 group-hover:text-gray-700" />
+									{/if}
+								{/if}
+							</div>
 							{#if isEditable}
 								<div class="flex">
 									<button
 										class="ml-1 flex h-3 w-3 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-gray-200 hover:text-blue-500 group-hover:opacity-100"
-										onclick={() => startEditingOutputType(index)}
+										onclick={(e) => {
+											e.stopPropagation(); // Prevent toggle when editing
+											startEditingOutputType(index);
+										}}
 										title="Edit type"><PencilSimple size={8} weight="bold" /></button
 									>
 									<button
 										class="ml-1 flex h-3 w-3 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
-										onclick={() => deleteOutputType(index)}
+										onclick={(e) => {
+											e.stopPropagation(); // Prevent toggle when deleting
+											deleteOutputType(index);
+										}}
 										title="Remove type"><Trash size={8} weight="bold" /></button
 									>
 								</div>
 							{/if}
 						</div>
+						{#if node && taskNodeVisibility[type]}
+							<div class="ml-2 mt-0.5 border-l-2 border-gray-200 pl-2">
+								<TaskNode
+									id={node.id}
+									data={node.data as unknown as NodeData}
+									showAsNode={false}
+									allowEditing={false}
+									styleClasses="p-0"
+								/>
+							</div>
+						{/if}
 					{/if}
 				{/each}
 			</div>
