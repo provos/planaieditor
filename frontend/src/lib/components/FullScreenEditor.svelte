@@ -84,8 +84,14 @@
 			updatedNodeData._lastUpdated = Date.now();
 			nodes.update((nodes) => {
 				return nodes.map((node) => {
+					// there is a problem here with completely overwriting the node data; we lose some
+					// configuration information like llmConfig, etc.
+					let copiedData = { ...node.data };
+					delete copiedData?.otherMembersSource;
+					delete copiedData?.methods;
+					delete copiedData?.classVars;
 					if (node.id === fullScreenEditorState.id) {
-						return { ...node, data: updatedNodeData };
+						return { ...node, data: { ...copiedData, ...updatedNodeData } };
 					}
 					return node;
 				});
