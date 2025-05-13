@@ -1287,13 +1287,7 @@ def get_definitions_from_file(
             source_code.splitlines()[e.lineno - 1] if e.lineno else "<unknown line>"
         )
         print(f"  Error near line {e.lineno}, offset {e.offset}: {error_line.strip()}")
-        return {
-            "tasks": [],
-            "workers": [],
-            "edges": [],
-            "entryEdges": [],
-            "imported_tasks": [],
-        }
+        return {"error": f"Error: Syntax error parsing: {e}"}
     except Exception as e:
         print(f"Error: Could not parse {parse_target}: {e}")
         return {

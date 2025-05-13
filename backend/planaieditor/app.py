@@ -1063,6 +1063,9 @@ def code_to_node():
     definitions = get_definitions_from_file(code_string=code)
     print(definitions)
 
+    if "error" in definitions:
+        return jsonify({"success": False, "error": definitions["error"]}), 200
+
     workers = definitions.get("workers", [])
     if len(workers) != 1:
         return jsonify({"success": False, "error": "Expected exactly one worker"}), 200
