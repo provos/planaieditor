@@ -1020,8 +1020,27 @@ def get_node_code():
 
     node_data = request.get_json()
 
-    python_code = create_worker_class(node_data, add_comment=False)
-    formatted_code = format_python_code(python_code)
+    module_level_import = node_data.get("moduleLevelImport")
+
+    worker = node_data.get("worker")
+    preamble = """
+from planai import Task, TaskWorker, CachedTaskWorker, JoinedTaskWorker
+from planai import LLMTaskWorker, CachedLLMTaskWorker
+from typing import Optional, List, Dict, Any, Type
+
+"""
+
+    if module_level_import:
+        module_level_import_code = module_level_import.get("data", {}).get("code", "")
+        # strip all comments from the code
+        module_level_import_code = re.sub(r"^\s*#.*", "", module_level_import_code)
+        if module_level_import_code:
+            preamble += module_level_import_code + "\n"
+
+    preamble += "\n# Please, make changes to your worker class below. The code above is just for auto-completion purposes.\n"
+
+    python_code = create_worker_class(worker, add_comment=False)
+    formatted_code = format_python_code(preamble + python_code)
 
     return (
         jsonify({"success": True, "code": formatted_code}),
