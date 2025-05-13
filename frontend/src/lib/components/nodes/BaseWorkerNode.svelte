@@ -312,7 +312,7 @@
 </script>
 
 <div
-	class="base-worker-node relative flex flex-col rounded-md border border-gray-300 bg-white shadow-md {additionalClassStyle}"
+	class="base-worker-node relative flex h-full flex-col rounded-md border border-gray-300 bg-white shadow-md {additionalClassStyle}"
 >
 	<NodeResizer
 		{minWidth}
