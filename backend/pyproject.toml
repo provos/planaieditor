@@ -1,11 +1,11 @@
 [project]
 name = "planaieditor"
-version = "0.1.4"
+version = "0.1.5"
 description = "PlanAI Editor Backend and UI Server"
 authors = [{name = "Niels Provos", email = "niels@provos.com"}]
 license = "Apache-2.0"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<4.0"
 dependencies = [
     "flask (>=3.1.0,<4.0.0)",
     "flask-socketio (>=5.5.1,<6.0.0)",
@@ -13,8 +13,9 @@ dependencies = [
     "eventlet (>=0.39.1,<0.40.0)",
     "planai[all] (>=0.5.1) ; python_version >= \"3.10\" and python_version < \"4.0\"",
     "flask-cors (>=5.0.1) ; python_version >= \"3.10\" and python_version < \"4.0\"",
-    "jedi-language-server (>=0.45.0,<0.46.0) ; python_version >= \"3.10\" and python_version < \"4.0\"",
-    "isort (>=6.0.1,<7.0.0)"
+    "isort (>=6.0.1,<7.0.0)",
+    "jedi-language-server (>=0.45.1,<0.46.0)",
+    "llm-interface (>=0.1.11,<0.2.0)"
 ]
 
 # Explicitly define package location
