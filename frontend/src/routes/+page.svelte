@@ -434,6 +434,7 @@
 				const uniqueName = generateUniqueName(baseName, existingNames);
 				nodeData = {
 					workerName: uniqueName, // Assign the unique name
+					requiredMembers: ['consume_work'],
 					entryPoint: false,
 					inputTypes: [],
 					output_types: [],
@@ -449,6 +450,7 @@
 				const uniqueName = generateUniqueName(baseName, existingNames);
 				nodeData = {
 					workerName: uniqueName, // Assign the unique name
+					requiredMembers: ['prompt', 'system_prompt'],
 					entryPoint: false,
 					inputTypes: [],
 					output_types: [],
@@ -474,6 +476,7 @@ Analyze the following information and provide a response.`,
 				const uniqueName = generateUniqueName(baseName, existingNames);
 				nodeData = {
 					workerName: uniqueName, // Assign the unique name
+					requiredMembers: ['consume_work_joined'],
 					entryPoint: false,
 					inputTypes: [],
 					output_types: [],

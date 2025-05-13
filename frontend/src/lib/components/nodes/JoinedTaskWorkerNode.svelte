@@ -12,7 +12,6 @@
 	// Extend the base data interface
 	interface JoinedWorkerData extends BaseWorkerData {
 		join_type: string; // Class name of the worker to join on
-		// consume_work_joined is now handled within methods
 	}
 
 	let { id, data } = $props<{
@@ -27,6 +26,11 @@
 
 	const { nodes, edges } = useStore(); // Access the nodes and edges stores
 	const updateNodeInternals = useUpdateNodeInternals(); // Initialize the hook
+
+	if (!data.requiredMembers) {
+		data.requiredMembers = ['consume_work_joined'];
+		persistNodeDataDebounced(id, nodes, data);
+	}
 
 	if (!data.methods) {
 		data.methods = {};
