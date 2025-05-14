@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { X } from 'phosphor-svelte';
 	import { closeAssistant } from '$lib/stores/assistantStateStore.svelte';
-	import { useStore, useSvelteFlow } from '@xyflow/svelte';
-	import type { Node } from '@xyflow/svelte';
-	import type { NodeData } from '$lib/components/nodes/TaskNode.svelte';
+	import { useSvelteFlow, type Node, type Edge } from '@xyflow/svelte';
 	import type { DataInputNodeData } from '$lib/components/nodes/DataInputNode.svelte';
 	import { onMount } from 'svelte';
 	import { findDataInputForAssistant } from '$lib/utils/nodeUtils';
+	import { socketStore } from '$lib/stores/socketStore.svelte';
+	import { exportPythonCode } from '$lib/utils/pythonExport';
 
 	type MessageType = 'user' | 'assistant';
 
@@ -20,7 +20,7 @@
 	let inputMessage: string = $state('');
 	let chatContainer: HTMLElement;
 
-	let { getNodes } = useSvelteFlow();
+	let { getNodes, getEdges } = useSvelteFlow();
 	let dataInputNode = $state<Node | null>(null);
 
 	onMount(() => {
@@ -30,31 +30,79 @@
 	function sendMessage() {
 		if (!inputMessage.trim()) return;
 
-		// Add user message
+		const userQuery = inputMessage;
+
+		// Add user message to local chat UI
 		messages = [
 			...messages,
 			{
 				type: 'user',
-				content: inputMessage,
+				content: userQuery,
 				timestamp: new Date()
 			}
 		];
+		inputMessage = ''; // Clear input field early
 
-		const userQuery = inputMessage;
-		inputMessage = '';
+		// Find the DataInputNode for ChatTask (re-find to ensure it's current)
+		const currentFlowNodes = getNodes();
+		const targetNode = findDataInputForAssistant(currentFlowNodes);
 
-		// Simulate assistant response (dummy function for now)
-		setTimeout(() => {
+		if (targetNode) {
+			const transformedMessages = messages.map((message) => ({
+				role: message.type === 'user' ? 'user' : 'assistant',
+				content: message.content
+			}));
+			const chatTaskPayload = {
+				messages: transformedMessages
+			};
+			const jsonDataString = JSON.stringify(chatTaskPayload, null, 2);
+
+			const currentNodes = getNodes();
+			// Update the DataInputNode's jsonData in the global store
+			const nodesForExport: Node[] = currentNodes.map((node) => {
+				if (node.id === targetNode.id) {
+					return {
+						...node,
+						data: {
+							...node.data,
+							jsonData: jsonDataString,
+							isJsonValid: true // Assume valid as we constructed it
+						} as DataInputNodeData as any
+					};
+				}
+				return node;
+			});
+
+			// Trigger execute
+			const edgesForExport: Edge[] = getEdges();
+
+			if (socketStore.socket && socketStore.isConnected) {
+				exportPythonCode(socketStore.socket, nodesForExport, edgesForExport, 'execute');
+			} else {
+				console.error('Socket not connected, cannot execute.');
+				messages = [
+					...messages,
+					{
+						type: 'assistant',
+						content:
+							'Error: Could not connect to the backend to process your request. Please check the connection.',
+						timestamp: new Date()
+					}
+				];
+			}
+		} else {
+			console.warn('No suitable DataInputNode found for ChatTask or assistant.');
 			messages = [
 				...messages,
 				{
 					type: 'assistant',
-					content: `This is a dummy response to: "${userQuery}"`,
+					content:
+						"I'm not properly configured to process this request. A 'ChatTask' DataInput node is required.",
 					timestamp: new Date()
 				}
 			];
-			scrollToBottom();
-		}, 1000);
+		}
+		// scrollToBottom(); // Already handled by $effect for messages
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
