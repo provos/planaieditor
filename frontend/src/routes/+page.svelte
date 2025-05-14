@@ -27,7 +27,9 @@
 	import DataOutputNode from '$lib/components/nodes/DataOutputNode.svelte';
 	import type { BaseWorkerData } from '$lib/components/nodes/BaseWorkerNode.svelte';
 	import type { NodeData } from '$lib/components/nodes/TaskNode.svelte';
+	import type { TaskImportNodeData } from '$lib/components/nodes/TaskImportNode.svelte';
 	import type { DataOutputNodeData } from '$lib/components/nodes/DataOutputNode.svelte';
+	import type { DataInputNodeData } from '$lib/components/nodes/DataInputNode.svelte';
 	import { get } from 'svelte/store';
 	import { allClassNames } from '$lib/stores/classNameStore';
 	import { taskClassNamesStore } from '$lib/stores/taskClassNamesStore';
@@ -51,12 +53,12 @@
 	import { io } from 'socket.io-client';
 	import { onMount } from 'svelte';
 	import { selectedInterpreterPath } from '$lib/stores/pythonInterpreterStore.svelte';
-	import { addAvailableMethod } from '$lib/utils/nodeUtils';
+	import { addAvailableMethod, nodeDataFromType, addNewNode } from '$lib/utils/nodeUtils';
 	import FullScreenEditor from '$lib/components/FullScreenEditor.svelte';
 	import { fullScreenEditorState } from '$lib/stores/fullScreenEditorStore.svelte';
 	import { assistantState } from '$lib/stores/assistantStateStore.svelte';
 	import Assistant from '$lib/components/Assistant.svelte';
-	
+
 	// Import the LLM Config Modal
 	import LLMConfigModal from '$lib/components/LLMConfigModal.svelte';
 
@@ -363,17 +365,6 @@
 		return unsubNodes;
 	});
 
-	// Helper to generate unique node names
-	function generateUniqueName(baseName: string, existingNames: Set<string>): string {
-		let counter = 1;
-		let uniqueName = `${baseName}${counter}`;
-		while (existingNames.has(uniqueName)) {
-			counter++;
-			uniqueName = `${baseName}${counter}`;
-		}
-		return uniqueName;
-	}
-
 	// Process drag and drop of new nodes
 	function onDrop(event: DragEvent) {
 		event.preventDefault();
@@ -386,175 +377,48 @@
 		}
 
 		// Get the position using screenToFlowPosition
-		const position = screenToFlowPosition({
+		let position = screenToFlowPosition({
 			x: event.clientX,
 			y: event.clientY
 		});
 
-		// Create a unique ID for the new node
-		const id = `${nodeType}-${Date.now()}`;
+		if (nodeType === 'assistantinput') {
+			// We are potentially adding two nodes
+			// Check if we have a taskimport node of className "ChatTask"
+			const taskImportNode = getNodes().find(
+				(node) => node.type === 'taskimport' && node.data?.className === 'ChatTask'
+			);
+			if (!taskImportNode) {
+				// We have a taskimport node, so we can add the assistantinput node
+				const id = `taskimport-${Date.now()}`;
+				const nodeData: TaskImportNodeData = nodeDataFromType(id, 'taskimport');
+				nodeData.modulePath = 'planai';
+				nodeData.isImplicit = false;
+				nodeData.availableClasses = ['ChatTask'];
+				nodeData.className = 'ChatTask';
+				nodeData.nodeId = id;
 
-		// Configure node data based on node type
-		let nodeData: any = {};
+				addNewNode(nodes, id, 'taskimport', position, nodeData);
 
-		// Get current existing names
-		let currentNameMap = new Map<string, string>();
-		const unsubscribeNames = allClassNames.subscribe((map) => {
-			currentNameMap = map;
-		});
-		unsubscribeNames();
-		const existingNames = new Set(currentNameMap.values());
+				position = {
+					x: position.x,
+					y: position.y + 200
+				};
+			}
 
-		switch (nodeType) {
-			case 'task': {
-				const baseName = 'Task';
-				const uniqueName = generateUniqueName(baseName, existingNames);
-				nodeData = {
-					className: uniqueName,
-					fields: [],
-					nodeId: id
-				};
-				break;
-			}
-			case 'taskimport': {
-				nodeData = {
-					modulePath: '', // Initial empty module path
-					className: null,
-					nodeId: id
-				};
-				break;
-			}
-			case 'modulelevelimport': {
-				nodeData = {
-					code: '# Add your module level imports here',
-					nodeId: id
-				};
-				break;
-			}
-			case 'taskworker': {
-				const baseName = 'TaskWorker'; // Use base name for uniqueness check
-				const uniqueName = generateUniqueName(baseName, existingNames);
-				nodeData = {
-					workerName: uniqueName, // Assign the unique name
-					requiredMembers: ['consume_work'],
-					entryPoint: false,
-					inputTypes: [],
-					output_types: [],
-					methods: {
-						consume_work: `# Process the input task and produce output\n# self.publish_work(output_task, input_task=task)\npass`
-					},
-					nodeId: id
-				};
-				break;
-			}
-			case 'llmtaskworker': {
-				const baseName = 'LLMTaskWorker';
-				const uniqueName = generateUniqueName(baseName, existingNames);
-				nodeData = {
-					workerName: uniqueName, // Assign the unique name
-					requiredMembers: ['prompt', 'system_prompt'],
-					entryPoint: false,
-					inputTypes: [],
-					output_types: [],
-					prompt: `# Process the task using an LLM
-Analyze the following information and provide a response.`,
-					system_prompt: `You are a helpful task processing assistant.`,
-					extraValidation: 'return None',
-					formatPrompt: 'return self.prompt',
-					preProcess: 'return task',
-					postProcess: 'return task',
-					enabledFunctions: {
-						extraValidation: false,
-						formatPrompt: false,
-						preProcess: false,
-						postProcess: false
-					},
-					nodeId: id
-				};
-				break;
-			}
-			case 'joinedtaskworker': {
-				const baseName = 'JoinedTaskWorker';
-				const uniqueName = generateUniqueName(baseName, existingNames);
-				nodeData = {
-					workerName: uniqueName, // Assign the unique name
-					requiredMembers: ['consume_work_joined'],
-					entryPoint: false,
-					inputTypes: [],
-					output_types: [],
-					joinMethod: 'merge',
-					nodeId: id
-				};
-				break;
-			}
-			case 'subgraphworker': {
-				const baseName = 'SubGraphWorker';
-				const uniqueName = generateUniqueName(baseName, existingNames);
-				nodeData = {
-					workerName: uniqueName, // Assign the unique name
-					entryPoint: false,
-					inputTypes: [],
-					output_types: [],
-					nodeId: id
-				};
-				break;
-			}
-			case 'chattaskworker': {
-				const baseName = 'ChatTaskWorker';
-				const uniqueName = generateUniqueName(baseName, existingNames);
-				nodeData = {
-					workerName: uniqueName, // Assign the unique name
-					entryPoint: false,
-					inputTypes: ['ChatTask'],
-					output_types: ['ChatMessage'],
-					nodeId: id
-				};
-				break;
-			}
-			case 'datainput': {
-				// No name generation needed for data input
-				nodeData = {
-					className: null, // Start with no Task type selected
-					jsonData: '{}', // Default to empty JSON
-					nodeId: id
-				};
-				break;
-			}
-			case 'dataoutput': {
-				const baseName = 'DataOutput';
-				const uniqueName = generateUniqueName(baseName, existingNames);
-				nodeData = {
-					workerName: uniqueName,
-					nodeId: id,
-					receivedData: [],
-					inputTypes: []
-				};
-				break;
-			}
-			default:
-				console.log(`Unknown node type: ${nodeType}`);
-				return;
+			const id = `datainput-${Date.now()}`;
+			const nodeData: DataInputNodeData = nodeDataFromType(id, 'datainput');
+			nodeData.className = 'ChatTask';
+			addNewNode(nodes, id, 'datainput', position, nodeData);
+		} else {
+			// Create a unique ID for the new node
+			const id = `${nodeType}-${Date.now()}`;
+
+			// Configure node data based on node type
+			let nodeData: any = nodeDataFromType(id, nodeType);
+			// Then add the node to the graph
+			addNewNode(nodes, id, nodeType, position, nodeData);
 		}
-
-		// Create a new node object
-		const newNode: Node = {
-			id,
-			type: nodeType,
-			position,
-			draggable: true,
-			selectable: true,
-			deletable: true,
-			selected: false,
-			dragging: false,
-			zIndex: 0,
-			data: nodeData,
-			origin: [0, 0] // Set origin to top-left
-		};
-
-		// Update our nodes store
-		nodes.update((currentNodes) => {
-			return [...currentNodes, newNode];
-		});
 	}
 
 	function onDragOver(event: DragEvent) {

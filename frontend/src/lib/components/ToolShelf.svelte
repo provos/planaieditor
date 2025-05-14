@@ -8,14 +8,14 @@
 	import FloppyDisk from 'phosphor-svelte/lib/FloppyDisk';
 	import FolderOpen from 'phosphor-svelte/lib/FolderOpen';
 	import Robot from 'phosphor-svelte/lib/Robot';
-	import { useStore } from '@xyflow/svelte';
+	import { useStore, useSvelteFlow } from '@xyflow/svelte';
 	import type { BaseWorkerData } from './nodes/BaseWorkerNode.svelte';
 	import { Tabs, Tooltip } from 'bits-ui';
 	import { getNodeIconStyle } from '$lib/utils/defaults';
 	import SideDropdownMenu from './SideDropdownMenu.svelte';
 	import { openAssistant } from '$lib/stores/assistantStateStore.svelte';
 	import { onMount } from 'svelte';
-	import { findDataInputNodesWithSingleStringField } from '$lib/utils/nodeUtils';
+	import { findDataInputForAssistant } from '$lib/utils/nodeUtils';
 	let {
 		onExport,
 		onExecute,
@@ -52,6 +52,7 @@
 	let isExecutionReady = $state(false);
 	let isAssistantReady = $state(false);
 	const { edges, nodes } = useStore();
+	let { getNodes } = useSvelteFlow();
 
 	// Selected tab value
 	let selectedTab = $state('tasks');
@@ -67,14 +68,12 @@
 		'joinedtaskworker',
 		'subgraphworker',
 		'chattaskworker',
-		'datainput'
+		'datainput',
+		'assistantinput'
 	]);
 
 	onMount(() => {
-		const unsubscribe = nodes.subscribe((nodes) => {
-			isAssistantReady = findDataInputNodesWithSingleStringField(nodes).length === 1;
-		});
-		return () => unsubscribe();
+		isAssistantReady = findDataInputForAssistant(getNodes()) !== null;
 	});
 
 	$effect(() => {
@@ -352,6 +351,35 @@
 								>
 									Create an entry point for your PlanAI Graph that allows data to be injected when
 									executing the workflow.
+								</Tooltip.Content>
+							</Tooltip.Root>
+
+							<!-- AssistantInput Node -->
+							{@const assistantInputStyle = getNodeIconStyle('assistantinput')}
+							<Tooltip.Root delayDuration={400}>
+								<Tooltip.Trigger>
+									<div
+										class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-purple-50 p-2 shadow-sm transition-shadow hover:shadow-md"
+										role="button"
+										tabindex="0"
+										draggable="true"
+										ondragstart={(e) => onDragStart(e, 'assistantinput')}
+									>
+										<div class="flex items-center gap-1.5">
+											<assistantInputStyle.icon
+												size={16}
+												weight="fill"
+												class={assistantInputStyle.color}
+											/>
+											<div class="text-sm font-semibold">AssistantInput</div>
+										</div>
+									</div>
+								</Tooltip.Trigger>
+								<Tooltip.Content
+									class="z-50 max-w-xs rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 shadow-md"
+									side="bottom"
+								>
+									Provides a dedicated input node for the AI Assistant to interact with the graph.
 								</Tooltip.Content>
 							</Tooltip.Root>
 

@@ -68,3 +68,14 @@ export function downloadFile(filename: string = 'planai-graph.json', content: st
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 }
+
+// Helper to generate unique node names
+export function generateUniqueName(baseName: string, existingNames: Set<string>): string {
+    let counter = 1;
+    let uniqueName = `${baseName}${counter}`;
+    while (existingNames.has(uniqueName)) {
+        counter++;
+        uniqueName = `${baseName}${counter}`;
+    }
+    return uniqueName;
+}

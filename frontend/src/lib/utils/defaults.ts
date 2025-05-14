@@ -75,6 +75,7 @@ const defaultTaskWorkerIcons: Record<string, TaskWorkerStyle> = {
     subgraphworker: { icon: Network, color: 'text-teal-500' },
     chattaskworker: { icon: Chat, color: 'text-red-500' },
     datainput: { icon: Keyboard, color: 'text-gray-500' },
+    assistantinput: { icon: Robot, color: 'text-purple-500' },
     dataoutput: { icon: Table, color: 'text-pink-500' },
     task: { icon: Cube, color: 'text-blue-500' },
     taskimport: { icon: FileMagnifyingGlass, color: 'text-cyan-500' },
