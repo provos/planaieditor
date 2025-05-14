@@ -66,6 +66,11 @@
 	const store = useStore();
 	const updateNodeInternals = useUpdateNodeInternals();
 
+	if (!data.inputTypes) {
+		data.inputTypes = [];
+		persistNodeDataDebounced(id, store.nodes, data);
+	}
+
 	// --- State Variables ---
 	let nodeVersion = $derived(data._lastUpdated || 0);
 	let editingWorkerName = $state(false);
