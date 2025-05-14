@@ -492,13 +492,14 @@
 			];
 
 			if (
-				contextMenuNode.type === 'taskworker' ||
-				contextMenuNode.type === 'llmtaskworker' ||
-				contextMenuNode.type === 'joinedtaskworker' ||
-				contextMenuNode.type === 'subgraphworker' ||
-				contextMenuNode.type === 'chattaskworker'
+				contextMenuNode &&
+				(contextMenuNode.type === 'taskworker' ||
+					contextMenuNode.type === 'llmtaskworker' ||
+					contextMenuNode.type === 'joinedtaskworker' ||
+					contextMenuNode.type === 'subgraphworker' ||
+					contextMenuNode.type === 'chattaskworker')
 			) {
-				const inputEdges = get(edges).filter((edge) => edge.target === contextMenuNode.id);
+				const inputEdges = get(edges).filter((edge) => edge.target === contextMenuNode?.id);
 				const inputNodes = inputEdges.map((edge) => edge.source);
 				const hasDataInput = inputNodes.some(
 					(node) => get(nodes).find((n) => n.id === node)?.type === 'datainput'
