@@ -29,15 +29,13 @@
 		data: DataInputNodeData;
 	}>();
 
-	const store = useStore();
+	const { nodes, edges } = useStore();
 
 	// Ensure jsonData is initialized
 	if (!data.jsonData) {
 		data.jsonData = '{}'; // Default to empty JSON object
-		persistNodeDataDebounced(id, store.nodes, data);
+		persistNodeDataDebounced(id, nodes, data);
 	}
-
-	const nodes = useNodes();
 
 	// --- State Variables ---
 	let availableTaskClasses = $state<string[]>([]);
@@ -45,6 +43,7 @@
 	let errorMessage = $state<string | null>(null);
 	let jsonIsValid = $state<boolean>(false);
 	let isLoading = $state<boolean>(false);
+	let canBeUsedForAssistant = $state<boolean>(false);
 
 	const updateNodeInternals = useUpdateNodeInternals();
 
@@ -55,23 +54,32 @@
 		if (selectedClassName && !taskClasses.has(selectedClassName)) {
 			selectedClassName = null;
 			data.className = null;
-			persistNodeDataDebounced(id, store.nodes, data);
+			persistNodeDataDebounced(id, nodes, data);
 			deleteExistingEdges();
 		}
 	});
 
 	function deleteExistingEdges() {
 		let currentEdges: Edge[] = [];
-		store.edges.subscribe((edges) => {
+		edges.subscribe((edges) => {
 			currentEdges = edges;
 		});
-		store.edges.set(currentEdges.filter((edge) => edge.source !== id));
+		edges.set(currentEdges.filter((edge) => edge.source !== id));
+	}
+
+	async function checkCanBeUsedForAssistant() {
+		if (selectedClassName != 'ChatTask') {
+			canBeUsedForAssistant = false;
+			return;
+		}
+		canBeUsedForAssistant = true;
 	}
 
 	// --- Effects ---
 	onMount(() => {
 		if (selectedClassName) {
 			validateJsonData();
+			checkCanBeUsedForAssistant(); // async function does not trigger reactivity
 		}
 	});
 
@@ -86,7 +94,8 @@
 	$effect(() => {
 		if (data.className !== selectedClassName) {
 			data.className = selectedClassName;
-			persistNodeDataDebounced(id, store.nodes, data);
+			checkCanBeUsedForAssistant(); // async function does not trigger reactivity
+			persistNodeDataDebounced(id, nodes, data);
 			deleteExistingEdges();
 			if (selectedClassName) {
 				validateJsonData();
@@ -101,7 +110,7 @@
 	$effect(() => {
 		if (data.isJsonValid !== jsonIsValid) {
 			data.isJsonValid = jsonIsValid;
-			persistNodeDataDebounced(id, store.nodes, data);
+			persistNodeDataDebounced(id, nodes, data);
 		}
 	});
 
@@ -112,7 +121,7 @@
 		}
 
 		data.jsonData = newCode;
-		persistNodeDataDebounced(id, store.nodes, data);
+		persistNodeDataDebounced(id, nodes, data);
 		errorMessage = null;
 		jsonIsValid = false;
 		debounce(validateJsonData, 1000)();
@@ -182,8 +191,10 @@
 	<NodeResizer
 		minWidth={200}
 		minHeight={150}
-		handleClass="resize-handle-datainput"
-		lineClass="resize-line-datainput"
+		handleClass={canBeUsedForAssistant
+			? 'resize-handle-datainput-assistant'
+			: 'resize-handle-datainput'}
+		lineClass={canBeUsedForAssistant ? 'resize-line-datainput-assistant' : 'resize-line-datainput'}
 	/>
 
 	<!-- Output Handle -->
@@ -197,8 +208,10 @@
 	{/if}
 
 	<!-- Header with Task Type Selector -->
-	<div class="flex-none border-b bg-gray-50 bg-orange-100 p-1">
-		<HeaderIcon workerType={'datainput'} />
+	<div class="flex-none border-b bg-gray-50 {canBeUsedForAssistant
+		? 'bg-purple-100'
+		: 'bg-orange-100'} p-1">
+		<HeaderIcon workerType={'datainput'} extraText={canBeUsedForAssistant ? '(Assistant Ready)' : ''} />
 		<select
 			bind:value={selectedClassName}
 			class="w-full cursor-pointer rounded px-1 py-0.5 text-center text-xs font-medium hover:bg-gray-100"
@@ -265,6 +278,19 @@
 
 	:global(.resize-line-datainput) {
 		border-color: var(--color-orange-200) !important;
+		border-width: 2px !important;
+	}
+
+	:global(.resize-handle-datainput-assistant) {
+		width: 12px !important;
+		height: 12px !important;
+		border-radius: 3px !important;
+		border: 2px solid var(--color-purple-300) !important;
+		background-color: rgba(100, 149, 237, 0.2) !important;
+	}
+
+	:global(.resize-line-datainput-assistant) {
+		border-color: var(--color-purple-300) !important;
 		border-width: 2px !important;
 	}
 
