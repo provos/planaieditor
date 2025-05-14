@@ -58,6 +58,7 @@
 	import { fullScreenEditorState } from '$lib/stores/fullScreenEditorStore.svelte';
 	import { assistantState } from '$lib/stores/assistantStateStore.svelte';
 	import Assistant from '$lib/components/Assistant.svelte';
+	import { assistantResponse } from '$lib/stores/assistantResponseStore';
 
 	// Import the LLM Config Modal
 	import LLMConfigModal from '$lib/components/LLMConfigModal.svelte';
@@ -265,27 +266,49 @@
 				try {
 					const taskData = JSON.parse(taskJsonString);
 
-					nodes.update((currentNodes) => {
-						return currentNodes.map((node) => {
-							if (node.id === node_id && node.type === 'dataoutput') {
-								// Prepend the new data to the receivedData array
-								const nodeData = node.data as unknown as DataOutputNodeData;
-								const previousReceivedData = nodeData.receivedData || [];
-								const updatedReceivedData = [taskData, ...previousReceivedData];
-								// Limit history if needed, e.g., keep last 10 items
-								// updatedReceivedData = updatedReceivedData.slice(0, 10);
-
-								return {
-									...node,
-									data: {
-										...node.data,
-										receivedData: updatedReceivedData
-									}
-								};
+					// If assistant is open, try to pass the message to it
+					if (assistantState.isOpen) {
+						if (taskData && typeof taskData === 'object') {
+							let foundResponse: string | null = null;
+							for (const value of Object.values(taskData)) {
+								if (typeof value === 'string') {
+									foundResponse = value;
+									break; // Use the first string value found
+								}
 							}
-							return node;
+
+							if (foundResponse) {
+								assistantResponse.set(foundResponse);
+							} else {
+								console.log(
+									'No string value found in taskData to use as assistant response.',
+									taskData
+								);
+								assistantResponse.set("I am sorry, Dave. I am afraid I can't do that.");
+							}
+						} else {
+							console.log('TaskData is not a valid object for the assistant.', taskData);
+						}
+					} else {
+						nodes.update((currentNodes) => {
+							return currentNodes.map((node) => {
+								if (node.id === node_id && node.type === 'dataoutput') {
+									// Prepend the new data to the receivedData array
+									const nodeData = node.data as unknown as DataOutputNodeData;
+									const previousReceivedData = nodeData.receivedData || [];
+									const updatedReceivedData = [taskData, ...previousReceivedData];
+									return {
+										...node,
+										data: {
+											...node.data,
+											receivedData: updatedReceivedData
+										}
+									};
+								}
+								return node;
+							});
 						});
-					});
+					}
 				} catch (parseError) {
 					console.error(
 						'Error parsing task JSON in dataoutput_callback:',

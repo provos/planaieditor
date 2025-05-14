@@ -7,6 +7,8 @@
 	import { findDataInputForAssistant } from '$lib/utils/nodeUtils';
 	import { socketStore } from '$lib/stores/socketStore.svelte';
 	import { exportPythonCode } from '$lib/utils/pythonExport';
+	import { assistantResponse } from '$lib/stores/assistantResponseStore';
+	import { tick } from 'svelte';
 
 	type MessageType = 'user' | 'assistant';
 
@@ -124,6 +126,28 @@
 		if (messages.length) {
 			scrollToBottom();
 		}
+	});
+
+	// Effect to listen for responses from the backend via the store
+	$effect(() => {
+		const unsubscribe = assistantResponse.subscribe((responseContent) => {
+			if (responseContent) {
+				messages = [
+					...messages,
+					{
+						type: 'assistant',
+						content: responseContent,
+						timestamp: new Date()
+					}
+				];
+				assistantResponse.set(null); // Reset the store to prevent re-adding the message
+				tick().then(scrollToBottom); // Ensure DOM is updated before scrolling
+			}
+		});
+
+		return () => {
+			unsubscribe();
+		};
 	});
 </script>
 
