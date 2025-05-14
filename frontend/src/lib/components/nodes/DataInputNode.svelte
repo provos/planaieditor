@@ -13,6 +13,8 @@
 	import { selectedInterpreterPath } from '$lib/stores/pythonInterpreterStore.svelte';
 	import { useStore } from '@xyflow/svelte';
 	import { persistNodeDataDebounced } from '$lib/utils/nodeUtils';
+	import type { Edge } from '@xyflow/svelte';
+
 	// Define the interface for the node's data
 	export interface DataInputNodeData {
 		className: string | null; // Can be null initially
@@ -54,8 +56,17 @@
 			selectedClassName = null;
 			data.className = null;
 			persistNodeDataDebounced(id, store.nodes, data);
+			deleteExistingEdges();
 		}
 	});
+
+	function deleteExistingEdges() {
+		let currentEdges: Edge[] = [];
+		store.edges.subscribe((edges) => {
+			currentEdges = edges;
+		});
+		store.edges.set(currentEdges.filter((edge) => edge.source !== id));
+	}
 
 	// --- Effects ---
 	onMount(() => {
@@ -76,6 +87,10 @@
 		if (data.className !== selectedClassName) {
 			data.className = selectedClassName;
 			persistNodeDataDebounced(id, store.nodes, data);
+			deleteExistingEdges();
+			if (selectedClassName) {
+				validateJsonData();
+			}
 			tick().then(() => {
 				updateNodeInternals(id);
 			});
