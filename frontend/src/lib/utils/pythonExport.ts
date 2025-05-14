@@ -103,13 +103,13 @@ export function convertGraphtoJSON(nodes: Node[], edges: Edge[], mode: 'export' 
 
 /**
  * Converts a node's data into a format suitable for backend processing.
- * 
+ *
  * This function handles several transformations:
  * 1. Standardizes workerName to className for worker nodes
  * 2. Processes LLM configurations for LLM/chat task workers, handling both UI-selected and imported configs
  * 3. Consolidates known class variables into a classVars object for worker nodes
  * 4. Cleans up frontend-specific properties
- * 
+ *
  * @param node The node to process, containing type and data properties
  * @returns A new node object with transformed data
  */
@@ -167,6 +167,18 @@ export function convertNodeData(node: Node) {
             console.log(`Using imported LLM config for node ${node.id}`);
         }
 
+        // Convert inputTypes to llm_input_type
+        if (data.inputTypes) {
+            if (!processedData.classVars) {
+                processedData.classVars = {};
+            }
+            console.log('Input types:', data.inputTypes);
+            processedData.classVars['llm_input_type'] = data.inputTypes[0];
+            console.log('classVars:', processedData.classVars);
+            delete processedData.inputTypes;
+            delete processedData.llm_input_type;
+        }
+
         // Clean up display-only properties
         delete processedData.llmConfigDescription;
 
@@ -179,7 +191,6 @@ export function convertNodeData(node: Node) {
         'system_prompt',
         'use_xml',
         'debug_mode',
-        'llm_input_type',
         'llm_output_type',
         'join_type',
         'output_types'
