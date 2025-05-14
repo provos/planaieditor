@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { X } from 'phosphor-svelte';
 	import { closeAssistant } from '$lib/stores/assistantStateStore.svelte';
-	import { useStore } from '@xyflow/svelte';
+	import { useStore, useSvelteFlow } from '@xyflow/svelte';
 	import type { Node } from '@xyflow/svelte';
 	import type { NodeData } from '$lib/components/nodes/TaskNode.svelte';
 	import type { DataInputNodeData } from '$lib/components/nodes/DataInputNode.svelte';
 	import { onMount } from 'svelte';
-	import { findDataInputNodesWithSingleStringField } from '$lib/utils/nodeUtils';
+	import { findDataInputForAssistant } from '$lib/utils/nodeUtils';
+
 	type MessageType = 'user' | 'assistant';
 
 	interface Message {
@@ -19,14 +20,11 @@
 	let inputMessage: string = $state('');
 	let chatContainer: HTMLElement;
 
-	let { nodes } = useStore();
-	let dataInputNodes = $state<Node[]>([]);
+	let { getNodes } = useSvelteFlow();
+	let dataInputNode = $state<Node | null>(null);
 
 	onMount(() => {
-		nodes.subscribe((nodes) => {
-			dataInputNodes = findDataInputNodesWithSingleStringField(nodes);
-			console.log(dataInputNodes);
-		});
+		dataInputNode = findDataInputForAssistant(getNodes());
 	});
 
 	function sendMessage() {
