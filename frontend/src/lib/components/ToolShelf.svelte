@@ -7,12 +7,15 @@
 	import Gear from 'phosphor-svelte/lib/Gear';
 	import FloppyDisk from 'phosphor-svelte/lib/FloppyDisk';
 	import FolderOpen from 'phosphor-svelte/lib/FolderOpen';
+	import Robot from 'phosphor-svelte/lib/Robot';
 	import { useStore } from '@xyflow/svelte';
 	import type { BaseWorkerData } from './nodes/BaseWorkerNode.svelte';
 	import { Tabs, Tooltip } from 'bits-ui';
 	import { getNodeIconStyle } from '$lib/utils/defaults';
 	import SideDropdownMenu from './SideDropdownMenu.svelte';
-
+	import { openAssistant } from '$lib/stores/assistantStateStore.svelte';
+	import { onMount } from 'svelte';
+	import { findDataInputNodesWithSingleStringField } from '$lib/utils/nodeUtils';
 	let {
 		onExport,
 		onExecute,
@@ -47,6 +50,7 @@
 	}
 
 	let isExecutionReady = $state(false);
+	let isAssistantReady = $state(false);
 	const { edges, nodes } = useStore();
 
 	// Selected tab value
@@ -65,6 +69,13 @@
 		'chattaskworker',
 		'datainput'
 	]);
+
+	onMount(() => {
+		const unsubscribe = nodes.subscribe((nodes) => {
+			isAssistantReady = findDataInputNodesWithSingleStringField(nodes).length === 1;
+		});
+		return () => unsubscribe();
+	});
 
 	$effect(() => {
 		const currentNodes = $nodes;
@@ -90,7 +101,7 @@
 
 		const hasDataInput = currentNodes.filter((node) => node.type === 'datainput').length > 0;
 		if (!hasDataInput) {
-			isExecutionReady = false;
+			isAssistantReady = false;
 			unconnectedWorkersTooltip = 'No DataInput node found';
 			return;
 		}
@@ -284,7 +295,9 @@
 							<Tooltip.Root delayDuration={400}>
 								<Tooltip.Trigger>
 									<div
-										class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 p-2 shadow-sm transition-shadow hover:shadow-md {canAddModuleLevelImport ? 'bg-white cursor-grab' : 'cursor-not-allowed opacity-50'}"
+										class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 p-2 shadow-sm transition-shadow hover:shadow-md {canAddModuleLevelImport
+											? 'cursor-grab bg-white'
+											: 'cursor-not-allowed opacity-50'}"
 										role="button"
 										tabindex="0"
 										draggable={canAddModuleLevelImport}
@@ -595,6 +608,16 @@
 			>
 				<Play size={18} class="mr-1.5" />
 				Execute
+			</button>
+			<!-- Assistant Button -->
+			<button
+				onclick={openAssistant}
+				class="flex items-center rounded bg-purple-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-purple-600"
+				title="Open AI Assistant"
+				disabled={!isAssistantReady}
+			>
+				<Robot size={18} class="mr-1.5" />
+				Assistant
 			</button>
 			<!-- Clear Button -->
 			<button

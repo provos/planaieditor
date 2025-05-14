@@ -113,14 +113,13 @@
 		try {
 			// find the Task Class Node
 			let taskClassNode: Node | undefined;
-			const unsubNodes = nodes.subscribe((nodes) => {
+			nodes.subscribe((nodes) => {
 				taskClassNode = nodes.find(
 					(node) =>
 						(node.type === 'task' || node.type === 'taskimport') &&
 						(node.data as unknown as TaskNodeData).className === selectedClassName
 				);
-			});
-			unsubNodes();
+			})();
 
 			if (!taskClassNode) {
 				errorMessage = `No Task Class Node found for ${selectedClassName}`;

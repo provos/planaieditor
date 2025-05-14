@@ -7,7 +7,7 @@
 	import { useStore, useUpdateNodeInternals } from '@xyflow/svelte';
 	import type { Node, Edge } from '@xyflow/svelte';
 	import { tick, onMount } from 'svelte';
-	import { persistNodeDataDebounced } from '$lib/utils/nodeUtils';
+	import { persistNodeDataDebounced, isWorkerTypeNode } from '$lib/utils/nodeUtils';
 	import { openFullScreenEditor } from '$lib/stores/fullScreenEditorStore.svelte';
 	// Extend the base data interface
 	interface JoinedWorkerData extends BaseWorkerData {
@@ -63,7 +63,7 @@
 			nameMap.forEach((name, nodeId) => {
 				const node = currentNodes.find((n: Node) => n.id === nodeId); // Add type annotation
 				// Check if it's a worker type (excluding self) and has a name
-				if (node && node.type !== 'task' && node.id !== id && name) {
+				if (node && isWorkerTypeNode(node) && node.id !== id && name) {
 					workers.push(name);
 				}
 			});

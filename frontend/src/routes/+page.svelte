@@ -54,7 +54,9 @@
 	import { addAvailableMethod } from '$lib/utils/nodeUtils';
 	import FullScreenEditor from '$lib/components/FullScreenEditor.svelte';
 	import { fullScreenEditorState } from '$lib/stores/fullScreenEditorStore.svelte';
-
+	import { assistantState } from '$lib/stores/assistantStateStore.svelte';
+	import Assistant from '$lib/components/Assistant.svelte';
+	
 	// Import the LLM Config Modal
 	import LLMConfigModal from '$lib/components/LLMConfigModal.svelte';
 
@@ -1119,6 +1121,10 @@ Analyze the following information and provide a response.`,
 
 {#if fullScreenEditorState.isOpen}
 	<FullScreenEditor />
+{/if}
+
+{#if assistantState.isOpen}
+	<Assistant />
 {/if}
 
 <div class="flex h-screen w-screen flex-col">
