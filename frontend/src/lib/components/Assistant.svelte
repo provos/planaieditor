@@ -9,6 +9,7 @@
 	import { exportPythonCode } from '$lib/utils/pythonExport';
 	import { assistantResponse } from '$lib/stores/assistantResponseStore';
 	import { tick } from 'svelte';
+	import { marked } from 'marked';
 
 	type MessageType = 'user' | 'assistant';
 
@@ -171,16 +172,20 @@
 		<div class="flex flex-col space-y-4">
 			{#each messages as message, i (i)}
 				<div
-					class={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in-50 slide-in-from-${message.type === 'user' ? 'right' : 'left'}-5 duration-200`}
+					class={`flex ${message.type === 'user' ? 'justify-end' : 'justify-center'} animate-in fade-in-50 slide-in-from-${message.type === 'user' ? 'right' : 'left'}-5 duration-200`}
 				>
 					<div
 						class={`max-w-[80%] rounded-lg p-3 ${
 							message.type === 'user'
 								? 'rounded-tr-none bg-blue-600 text-white'
-								: 'rounded-tl-none bg-gray-700 text-white'
+								: 'prose prose-invert prose-sm rounded-tl-none bg-gray-700 text-white'
 						}`}
 					>
-						<p class="whitespace-pre-wrap">{message.content}</p>
+						{#if message.type === 'assistant'}
+							{@html marked.parse(message.content)}
+						{:else}
+							<p class="whitespace-pre-wrap">{message.content}</p>
+						{/if}
 						<div class="mt-1 text-right text-xs opacity-70">
 							{message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
 						</div>
