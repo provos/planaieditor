@@ -1,6 +1,11 @@
 <script lang="ts">
-	import { X } from 'phosphor-svelte';
-	import { closeAssistant, assistantResponse } from '$lib/stores/assistantStateStore.svelte';
+	import { X, Eraser } from 'phosphor-svelte';
+	import {
+		closeAssistant,
+		assistantResponse,
+		assistantMessages,
+		clearAssistantMessages
+	} from '$lib/stores/assistantStateStore.svelte';
 	import { useSvelteFlow, type Node, type Edge } from '@xyflow/svelte';
 	import type { DataInputNodeData } from '$lib/components/nodes/DataInputNode.svelte';
 	import { onMount } from 'svelte';
@@ -9,6 +14,7 @@
 	import { exportPythonCode } from '$lib/utils/pythonExport';
 	import { tick } from 'svelte';
 	import { marked } from 'marked';
+	import { get } from 'svelte/store';
 
 	type MessageType = 'user' | 'assistant';
 
@@ -18,7 +24,6 @@
 		timestamp: Date;
 	}
 
-	let messages: Message[] = $state([]);
 	let inputMessage: string = $state('');
 	let chatContainer: HTMLElement;
 
@@ -34,23 +39,22 @@
 
 		const userQuery = inputMessage;
 
-		// Add user message to local chat UI
-		messages = [
-			...messages,
+		assistantMessages.update((currentMessages) => [
+			...currentMessages,
 			{
 				type: 'user',
 				content: userQuery,
 				timestamp: new Date()
 			}
-		];
-		inputMessage = ''; // Clear input field early
+		]);
+		inputMessage = '';
 
-		// Find the DataInputNode for ChatTask (re-find to ensure it's current)
 		const currentFlowNodes = getNodes();
 		const targetNode = findDataInputForAssistant(currentFlowNodes);
 
 		if (targetNode) {
-			const transformedMessages = messages.map((message) => ({
+			const currentMessages = get(assistantMessages);
+			const transformedMessages = currentMessages.map((message) => ({
 				role: message.type === 'user' ? 'user' : 'assistant',
 				content: message.content
 			}));
@@ -59,9 +63,8 @@
 			};
 			const jsonDataString = JSON.stringify(chatTaskPayload, null, 2);
 
-			const currentNodes = getNodes();
-			// Update the DataInputNode's jsonData in the global store
-			const nodesForExport: Node[] = currentNodes.map((node) => {
+			const nodesFromFlow = getNodes();
+			const nodesForExport: Node[] = nodesFromFlow.map((node) => {
 				if (node.id === targetNode.id) {
 					return {
 						...node,
@@ -75,36 +78,39 @@
 				return node;
 			});
 
-			// Trigger execute
 			const edgesForExport: Edge[] = getEdges();
 
 			if (socketStore.socket && socketStore.isConnected) {
 				exportPythonCode(socketStore.socket, nodesForExport, edgesForExport, 'execute');
 			} else {
 				console.error('Socket not connected, cannot execute.');
-				messages = [
-					...messages,
+				assistantMessages.update((currentMessages) => [
+					...currentMessages,
 					{
 						type: 'assistant',
 						content:
 							'Error: Could not connect to the backend to process your request. Please check the connection.',
 						timestamp: new Date()
 					}
-				];
+				]);
 			}
 		} else {
 			console.warn('No suitable DataInputNode found for ChatTask or assistant.');
-			messages = [
-				...messages,
+			assistantMessages.update((currentMessages) => [
+				...currentMessages,
 				{
 					type: 'assistant',
 					content:
 						"I'm not properly configured to process this request. A 'ChatTask' DataInput node is required.",
 					timestamp: new Date()
 				}
-			];
+			]);
 		}
-		// scrollToBottom(); // Already handled by $effect for messages
+	}
+
+	function handleNewChat() {
+		clearAssistantMessages();
+		inputMessage = '';
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
@@ -123,25 +129,26 @@
 	}
 
 	$effect(() => {
-		if (messages.length) {
-			scrollToBottom();
-		}
+		const unsubscribe = assistantMessages.subscribe((currentMessagesVal) => {
+			if (currentMessagesVal.length) {
+				tick().then(scrollToBottom);
+			}
+		});
+		return unsubscribe;
 	});
 
-	// Effect to listen for responses from the backend via the store
 	$effect(() => {
 		const unsubscribe = assistantResponse.subscribe((responseContent) => {
 			if (responseContent) {
-				messages = [
-					...messages,
+				assistantMessages.update((currentMessages) => [
+					...currentMessages,
 					{
 						type: 'assistant',
 						content: responseContent,
 						timestamp: new Date()
 					}
-				];
-				assistantResponse.set(null); // Reset the store to prevent re-adding the message
-				tick().then(scrollToBottom); // Ensure DOM is updated before scrolling
+				]);
+				assistantResponse.set(null);
 			}
 		});
 
@@ -156,12 +163,22 @@
 >
 	<div class="mb-4 flex items-center justify-between">
 		<h2 class="text-xl font-semibold text-white">Assistant Mode</h2>
-		<button
-			class="rounded-full p-2 text-gray-300 transition-colors hover:bg-gray-700 hover:text-white"
-			onclick={closeAssistant}
-		>
-			<X size={24} weight="bold" />
-		</button>
+		<div>
+			<button
+				class="mr-2 rounded-full p-2 text-gray-300 transition-colors hover:bg-gray-700 hover:text-white"
+				onclick={handleNewChat}
+				title="New Chat"
+			>
+				<Eraser size={22} weight="bold" />
+			</button>
+			<button
+				class="rounded-full p-2 text-gray-300 transition-colors hover:bg-gray-700 hover:text-white"
+				onclick={closeAssistant}
+				title="Close Assistant"
+			>
+				<X size={24} weight="bold" />
+			</button>
+		</div>
 	</div>
 
 	<div
@@ -169,7 +186,7 @@
 		bind:this={chatContainer}
 	>
 		<div class="flex flex-col space-y-4">
-			{#each messages as message, i (i)}
+			{#each $assistantMessages as message, i (i)}
 				<div
 					class={`flex ${message.type === 'user' ? 'justify-end' : 'justify-center'} animate-in fade-in-50 slide-in-from-${message.type === 'user' ? 'right' : 'left'}-5 duration-200`}
 				>
