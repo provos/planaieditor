@@ -56,10 +56,9 @@
 	import { addAvailableMethod, nodeDataFromType, addNewNode } from '$lib/utils/nodeUtils';
 	import FullScreenEditor from '$lib/components/FullScreenEditor.svelte';
 	import { fullScreenEditorState } from '$lib/stores/fullScreenEditorStore.svelte';
-	import { assistantState } from '$lib/stores/assistantStateStore.svelte';
+	import { assistantState, assistantResponse } from '$lib/stores/assistantStateStore.svelte';
 	import Assistant from '$lib/components/Assistant.svelte';
-	import { assistantResponse } from '$lib/stores/assistantResponseStore';
-
+	
 	// Import the LLM Config Modal
 	import LLMConfigModal from '$lib/components/LLMConfigModal.svelte';
 

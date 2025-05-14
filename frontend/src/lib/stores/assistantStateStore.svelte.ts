@@ -1,3 +1,5 @@
+import { writable } from 'svelte/store';
+
 interface AssistantState {
     isOpen: boolean;
 }
@@ -13,3 +15,5 @@ export function openAssistant() {
 export function closeAssistant() {
     assistantState.isOpen = false;
 }
+
+export const assistantResponse = writable<string | null>(null);

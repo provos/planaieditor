@@ -1,13 +1,12 @@
 <script lang="ts">
 	import { X } from 'phosphor-svelte';
-	import { closeAssistant } from '$lib/stores/assistantStateStore.svelte';
+	import { closeAssistant, assistantResponse } from '$lib/stores/assistantStateStore.svelte';
 	import { useSvelteFlow, type Node, type Edge } from '@xyflow/svelte';
 	import type { DataInputNodeData } from '$lib/components/nodes/DataInputNode.svelte';
 	import { onMount } from 'svelte';
 	import { findDataInputForAssistant } from '$lib/utils/nodeUtils';
 	import { socketStore } from '$lib/stores/socketStore.svelte';
 	import { exportPythonCode } from '$lib/utils/pythonExport';
-	import { assistantResponse } from '$lib/stores/assistantResponseStore';
 	import { tick } from 'svelte';
 	import { marked } from 'marked';
 
