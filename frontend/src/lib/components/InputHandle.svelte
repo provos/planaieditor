@@ -14,12 +14,16 @@
 		onUpdate: (inferredInputTypes: string[]) => void;
 	}>();
 
-	let inferredInputTypes = $derived<string[]>(data.inputTypes);
+	let inferredInputTypes = $derived<string[]>(data.inputTypes || []);
 	let entryPoint = $derived(data.entryPoint || false);
 
 	const store = useStore();
 
-	let handleColor = $derived(getColorForType(inferredInputTypes[0]));
+	let handleColor = $derived(
+		getColorForType(
+			inferredInputTypes && inferredInputTypes.length > 0 ? inferredInputTypes[0] : ''
+		)
+	);
 
 	let handleStyle = $derived.by(() => {
 		if (entryPoint) {
