@@ -14,8 +14,9 @@
 	import { getNodeIconStyle } from '$lib/utils/defaults';
 	import SideDropdownMenu from './SideDropdownMenu.svelte';
 	import { openAssistant } from '$lib/stores/assistantStateStore.svelte';
-	import { onMount } from 'svelte';
+	import { untrack } from 'svelte';
 	import { findDataInputForAssistant } from '$lib/utils/nodeUtils';
+	
 	let {
 		onExport,
 		onExecute,
@@ -72,8 +73,12 @@
 		'assistantinput'
 	]);
 
-	onMount(() => {
-		isAssistantReady = findDataInputForAssistant(getNodes()) !== null;
+	// Track the nodes to check if an assistant input node is present
+	$effect(() => {
+		const currentNodes = $nodes;
+		untrack(() => {
+			isAssistantReady = findDataInputForAssistant(currentNodes) !== null;
+		});
 	});
 
 	$effect(() => {
