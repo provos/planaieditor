@@ -5,7 +5,7 @@
 	import List from 'phosphor-svelte/lib/List';
 	import simpleIOExample from '$lib/examples/simple-input-output.json';
 	import simpleTopicExtraction from '$lib/examples/simple-topic-extraction.json';
-
+	import availableDomains from '$lib/examples/available-domains.json';
 	let { onLoadJSON }: { onLoadJSON: (data: any) => void } = $props();
 </script>
 
@@ -51,6 +51,14 @@
 						}}
 					>
 						Simple Page Topic Extraction
+					</DropdownMenu.Item>
+					<DropdownMenu.Item
+						class="relative flex h-8 cursor-default select-none items-center rounded-sm px-2 py-1.5 pl-8 text-sm outline-none hover:bg-gray-100 data-[disabled]:pointer-events-none data-[highlighted]:bg-gray-100 data-[disabled]:opacity-50"
+						onSelect={() => {
+							onLoadJSON(JSON.stringify(availableDomains));
+						}}
+					>
+						Assistant For Available Domains
 					</DropdownMenu.Item>
 				</DropdownMenu.SubContent>
 			</DropdownMenu.Sub>
