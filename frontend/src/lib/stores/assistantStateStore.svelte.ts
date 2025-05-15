@@ -3,6 +3,7 @@ import { persisted } from 'svelte-persisted-store';
 
 interface AssistantState {
 	isOpen: boolean;
+	isRunning: boolean;
 }
 
 interface Message {
@@ -12,7 +13,8 @@ interface Message {
 }
 
 export const assistantState = $state<AssistantState>({
-	isOpen: false
+	isOpen: false,
+	isRunning: false
 });
 
 export function openAssistant() {

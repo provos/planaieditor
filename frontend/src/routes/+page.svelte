@@ -241,6 +241,12 @@
 
 				// Update the export status
 				exportStatus = result.status;
+				if (assistantState.isOpen) {
+					assistantResponse.set(
+						"I did not get a response from the backend. Sorry, I'm not sure what happened."
+					);
+					assistantState.isRunning = false;
+				}
 
 				// If there are updated nodes (with errors), update the store
 				if (result.updatedNodes) {
@@ -271,6 +277,7 @@
 
 					// If assistant is open, try to pass the message to it
 					if (assistantState.isOpen) {
+						assistantState.isRunning = false;
 						if (taskData && typeof taskData === 'object') {
 							let foundResponse: string | null = null;
 							for (const value of Object.values(taskData)) {

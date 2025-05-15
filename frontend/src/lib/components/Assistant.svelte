@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { X, Eraser } from 'phosphor-svelte';
+	import { X, Eraser, CircleNotch } from 'phosphor-svelte';
 	import {
 		closeAssistant,
+		assistantState,
 		assistantResponse,
 		assistantMessages,
 		clearAssistantMessages
@@ -95,6 +96,7 @@
 
 			if (socketStore.socket && socketStore.isConnected) {
 				exportPythonCode(socketStore.socket, nodesForExport, edgesForExport, 'execute');
+				assistantState.isRunning = true;
 			} else {
 				console.error('Socket not connected, cannot execute.');
 				assistantMessages.update((currentMessages) => [
@@ -106,6 +108,7 @@
 						timestamp: new Date()
 					}
 				]);
+				assistantState.isRunning = false;
 			}
 		} else {
 			console.warn('No suitable DataInputNode found for ChatTask or assistant.');
@@ -118,6 +121,7 @@
 					timestamp: new Date()
 				}
 			]);
+			assistantState.isRunning = false;
 		}
 	}
 
@@ -216,11 +220,26 @@
 							<p class="whitespace-pre-wrap">{message.content}</p>
 						{/if}
 						<div class="mt-1 text-right text-xs opacity-70">
-							{message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+							{message.timestamp && message.timestamp instanceof Date
+								? message.timestamp.toLocaleTimeString([], {
+										hour: '2-digit',
+										minute: '2-digit'
+									})
+								: ''}
 						</div>
 					</div>
 				</div>
 			{/each}
+			{#if assistantState.isRunning}
+				<div class="animate-in fade-in-50 slide-in-from-left-5 flex justify-center duration-200">
+					<div
+						class="prose prose-invert prose-md inline-flex w-full max-w-6xl rounded-tl-none text-white"
+					>
+						<CircleNotch size={20} class="mr-2 animate-spin" />
+						Thinking...
+					</div>
+				</div>
+			{/if}
 		</div>
 	</div>
 
@@ -237,13 +256,19 @@
 
 		<div class="flex items-center justify-between bg-gray-800 p-2">
 			<div class="text-xs text-gray-400">Press Enter to send, Shift+Enter for new line</div>
-			<button
-				class="rounded-md bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-				onclick={sendMessage}
-				disabled={!inputMessage.trim()}
-			>
-				Send
-			</button>
+			{#if assistantState.isRunning}
+				<div class="flex items-center justify-center px-4 py-2 text-white">
+					<CircleNotch size={24} class="animate-spin" />
+				</div>
+			{:else}
+				<button
+					class="rounded-md bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+					onclick={sendMessage}
+					disabled={!inputMessage.trim() || assistantState.isRunning}
+				>
+					Send
+				</button>
+			{/if}
 		</div>
 	</div>
 </div>
