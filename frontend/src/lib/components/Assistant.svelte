@@ -17,6 +17,7 @@
 	import { marked } from 'marked';
 	import { get } from 'svelte/store';
 	import { escapeHtml } from '$lib/utils/utils';
+	import { graphName } from '$lib/stores/graphNameStore.svelte';
 
 	let inputMessage: string = $state('');
 	let chatContainer: HTMLElement;
@@ -179,7 +180,12 @@
 	class="animate-in fade-in-0 slide-in-from-bottom-5 fixed inset-0 z-50 flex flex-col bg-gray-900/95 p-4 backdrop-blur-sm duration-200"
 >
 	<div class="mb-4 flex items-center justify-between">
-		<h2 class="text-xl font-semibold text-white">Assistant Mode</h2>
+		<div class="flex items-baseline">
+			<h2 class="text-xl font-semibold text-white">Assistant Mode</h2>
+			{#if $graphName}
+				<span class="ml-2 text-sm text-gray-400">({$graphName})</span>
+			{/if}
+		</div>
 		<div>
 			<button
 				class="mr-2 rounded-full p-2 text-gray-300 transition-colors hover:bg-gray-700 hover:text-white"
