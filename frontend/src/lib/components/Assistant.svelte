@@ -32,6 +32,29 @@
 
 	onMount(() => {
 		dataInputNode = findDataInputForAssistant(getNodes());
+
+		// validate that the messages follow the interface
+		assistantMessages.subscribe((currentMessages) => {
+			if (currentMessages.length) {
+				let isValid = true;
+				for (const message of currentMessages) {
+					if (
+						!message ||
+						(message.type !== 'user' && message.type !== 'assistant') ||
+						typeof message.content !== 'string' ||
+						message.content.trim() === '' ||
+						!(message.timestamp instanceof Date)
+					) {
+						isValid = false;
+						break;
+					}
+				}
+				if (!isValid) {
+					console.error('Invalid messages in assistant mode. Clearing messages.');
+					assistantMessages.set([]);
+				}
+			}
+		})();
 	});
 
 	function sendMessage() {
