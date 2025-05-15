@@ -1,894 +1,781 @@
 {
-    "version": 1,
-    "name": "DomainNames",
-    "nodes": [
-        {
-            "id": "imported-task-Query-1747157454464",
-            "type": "task",
-            "position": {
-                "x": 158,
-                "y": 12
-            },
-            "draggable": true,
-            "selectable": true,
-            "deletable": true,
-            "selected": false,
-            "dragging": false,
-            "zIndex": 0,
-            "data": {
-                "className": "Query",
-                "fields": [
-                    {
-                        "name": "query",
-                        "type": "string",
-                        "isList": false,
-                        "required": true,
-                        "description": "the user query"
-                    }
-                ],
-                "nodeId": "imported-task-Query-1747157454464"
-            },
-            "origin": [
-                0,
-                0
-            ],
-            "measured": {
-                "width": 185,
-                "height": 90
-            }
-        },
-        {
-            "id": "imported-task-DomainNames-1747157454464",
-            "type": "task",
-            "position": {
-                "x": 1391,
-                "y": 12
-            },
-            "draggable": true,
-            "selectable": true,
-            "deletable": true,
-            "selected": false,
-            "dragging": false,
-            "zIndex": 0,
-            "data": {
-                "className": "DomainNames",
-                "fields": [
-                    {
-                        "name": "domain_names",
-                        "type": "string",
-                        "isList": true,
-                        "required": true,
-                        "description": "a list of potential names for an Internet Domain without TLD"
-                    }
-                ],
-                "nodeId": "imported-task-DomainNames-1747157454464"
-            },
-            "origin": [
-                0,
-                0
-            ],
-            "measured": {
-                "width": 458,
-                "height": 90
-            }
-        },
-        {
-            "id": "imported-llmtaskworker-LLMTaskWorker1-1747157454464",
-            "type": "llmtaskworker",
-            "position": {
-                "x": 714,
-                "y": 187
-            },
-            "draggable": true,
-            "selectable": true,
-            "deletable": true,
-            "selected": false,
-            "dragging": false,
-            "zIndex": 0,
-            "data": {
-                "isCached": true,
-                "entryPoint": true,
-                "variableName": "llmtaskworker1_worker",
-                "workerName": "LLMTaskWorker1",
-                "nodeId": "imported-llmtaskworker-LLMTaskWorker1-1747157454464",
-                "inputTypes": [
-                    "ChatTask"
-                ],
-                "output_types": [
-                    "DomainNames"
-                ],
-                "methods": {
-                    "post_process": "    def post_process(self, response: Optional[Task], input_task: Task):\n        \"\"\"Optional: Post-process the LLM response before publishing.\"\"\"\n        # Process the response, potentially publishing different tasks\n        if response:\n            # convert all names to be lower case\n            names = [name.lower() for name in response.domain_names]\n            self.publish_work(DomainNames(domain_names=names), input_task=input_task)"
-                },
-                "classVars": {
-                    "llm_input_type": "ChatTask",
-                    "output_types": [
-                        "DomainNames"
-                    ],
-                    "prompt": "The user is trying to find potential domain names for their new company. Propose five different names.\nFeel free to conceptionally expand around their proposed idea. Add their ideal name to the list as well.\nList only the main name without adding the TLD.",
-                    "system_prompt": "You are a helpful task processing assistant knowledgable about internet promotion and marketing.",
-                    "use_xml": false,
-                    "debug_mode": false,
-                    "llm_output_type": ""
-                },
-                "requiredMembers": [
-                    "prompt",
-                    "system_prompt"
-                ],
-                "prompt": "The user is trying to find potential domain names for their new company. Propose five different names.\nFeel free to conceptionally expand around their proposed idea. Add their ideal name to the list as well.\nList only the main name without adding the TLD.",
-                "system_prompt": "You are a helpful task processing assistant knowledgable about internet promotion and marketing.",
-                "use_xml": false,
-                "debug_mode": false,
-                "llm_input_type": "Query",
-                "llm_output_type": "",
-                "extraValidation": "return None",
-                "formatPrompt": "return self.prompt",
-                "preProcess": "return task",
-                "postProcess": "return super().post_process(response, input_task)",
-                "enabledFunctions": {
-                    "extraValidation": false,
-                    "formatPrompt": false,
-                    "preProcess": false,
-                    "postProcess": false
-                },
-                "llmConfigName": "O4 Mini"
-            },
-            "origin": [
-                0,
-                0
-            ],
-            "measured": {
-                "width": 830,
-                "height": 820
-            },
-            "width": 830,
-            "height": 820
-        },
-        {
-            "id": "datainput-1747157490533",
-            "type": "datainput",
-            "position": {
-                "x": 12,
-                "y": 455
-            },
-            "draggable": true,
-            "selectable": true,
-            "deletable": true,
-            "selected": false,
-            "dragging": false,
-            "zIndex": 0,
-            "data": {
-                "className": "ChatTask",
-                "jsonData": "{ \"messages\": [{\"role\": \"user\", \"content\": \"find me domain names related to my desired domain gardenbloom which is about showing pictures of my garden. \"}]}",
-                "nodeId": "datainput-1747157490533",
-                "isJsonValid": true
-            },
-            "origin": [
-                0,
-                0
-            ],
-            "measured": {
-                "width": 582,
-                "height": 284
-            },
-            "width": 582,
-            "height": 284
-        },
-        {
-            "id": "taskworker-1747157725559",
-            "type": "taskworker",
-            "position": {
-                "x": 1664,
-                "y": 389
-            },
-            "draggable": true,
-            "selectable": true,
-            "deletable": true,
-            "selected": false,
-            "dragging": false,
-            "zIndex": 0,
-            "data": {
-                "workerName": "DomainSplitter",
-                "entryPoint": false,
-                "inputTypes": [
-                    "DomainNames"
-                ],
-                "output_types": [
-                    "SingleDomainName"
-                ],
-                "nodeId": "taskworker-1747157725559",
-                "isCached": false,
-                "requiredMembers": [
-                    "consume_work"
-                ],
-                "_lastUpdated": 1747160910712,
-                "methods": {
-                    "consume_work": "    def consume_work(self, task: DomainNames):\n        TLDS_TO_TEST = [\n            \".com\", \".net\", \".org\", \".info\", \".biz\", \".co\", \".xyz\"\n        ]\n        for name in task.domain_names:\n            for tld in TLDS_TO_TEST:\n                self.publish_work(SingleDomainName(domain=name+tld), input_task=task)"
-                },
-                "classVars": {
-                    "output_types": [
-                        "SingleDomainName"
-                    ]
-                }
-            },
-            "origin": [
-                0,
-                0
-            ],
-            "measured": {
-                "width": 696,
-                "height": 416
-            },
-            "width": 696,
-            "height": 416
-        },
-        {
-            "id": "task-1747157739958",
-            "type": "task",
-            "position": {
-                "x": 12,
-                "y": 12
-            },
-            "draggable": true,
-            "selectable": true,
-            "deletable": true,
-            "selected": false,
-            "dragging": false,
-            "zIndex": 0,
-            "data": {
-                "className": "SingleDomainName",
-                "fields": [
-                    {
-                        "name": "domain",
-                        "type": "string",
-                        "isList": false,
-                        "required": true
-                    }
-                ],
-                "nodeId": "task-1747157739958"
-            },
-            "origin": [
-                0,
-                0
-            ],
-            "measured": {
-                "width": 126,
-                "height": 90
-            }
-        },
-        {
-            "id": "modulelevelimport-1747160978125",
-            "type": "modulelevelimport",
-            "position": {
-                "x": 1869,
-                "y": 12
-            },
-            "draggable": true,
-            "selectable": true,
-            "deletable": true,
-            "selected": false,
-            "dragging": false,
-            "zIndex": 0,
-            "data": {
-                "code": "import dns.resolver\r\nfrom textwrap import dedent",
-                "nodeId": "modulelevelimport-1747160978125"
-            },
-            "origin": [
-                0,
-                0
-            ],
-            "measured": {
-                "width": 531,
-                "height": 118
-            }
-        },
-        {
-            "id": "taskworker-1747161014157",
-            "type": "taskworker",
-            "position": {
-                "x": 2480,
-                "y": 172
-            },
-            "draggable": true,
-            "selectable": true,
-            "deletable": true,
-            "selected": false,
-            "dragging": false,
-            "zIndex": 0,
-            "data": {
-                "workerName": "TaskWorker1",
-                "entryPoint": false,
-                "inputTypes": [
-                    "SingleDomainName"
-                ],
-                "output_types": [
-                    "DomainIsAvailable"
-                ],
-                "nodeId": "taskworker-1747161014157",
-                "isCached": true,
-                "requiredMembers": [
-                    "consume_work"
-                ],
-                "_lastUpdated": 1747161210943,
-                "methods": {
-                    "consume_work": "    def consume_work(self, task: SingleDomainName):\n        is_available = not self.is_domain_registered(task.domain)\n        self.publish_work(\n            DomainIsAvailable(domain=task.domain, available=is_available), input_task=task\n        )"
-                },
-                "otherMembersSource": "def is_domain_registered(self, domain_name):\n    \"\"\"\n    Checks if a domain name appears to be registered by querying for NS records.\n\n    Args:\n        domain_name (str): The domain name to check (e.g., \"google.com\").\n\n    Returns:\n        bool: True if NS records are found (suggesting registration), False otherwise.\n    \"\"\"\n    try:\n        resolver = dns.resolver.Resolver()\n        ns_records = resolver.resolve(domain_name, \"NS\")\n        return True\n    except dns.resolver.NXDOMAIN:\n        return False\n    except dns.resolver.NoAnswer:\n        return False\n    except dns.exception.Timeout:\n        self.print(f\"Timeout while querying NS records for {domain_name}\")\n        return False\n    except Exception as e:\n        self.print(f\"An error occurred while checking {domain_name}: {e}\")\n        return False",
-                "classVars": {
-                    "output_types": [
-                        "DomainIsAvailable"
-                    ]
-                }
-            },
-            "origin": [
-                0,
-                0
-            ],
-            "measured": {
-                "width": 691,
-                "height": 850
-            },
-            "width": 691,
-            "height": 850
-        },
-        {
-            "id": "task-1747161066501",
-            "type": "task",
-            "position": {
-                "x": 552,
-                "y": 12
-            },
-            "draggable": true,
-            "selectable": true,
-            "deletable": true,
-            "selected": false,
-            "dragging": false,
-            "zIndex": 0,
-            "data": {
-                "className": "DomainIsAvailable",
-                "fields": [
-                    {
-                        "name": "domain",
-                        "type": "string",
-                        "isList": false,
-                        "required": true,
-                        "description": "the domain name"
-                    },
-                    {
-                        "name": "available",
-                        "type": "boolean",
-                        "isList": false,
-                        "required": true
-                    }
-                ],
-                "nodeId": "task-1747161066501"
-            },
-            "origin": [
-                0,
-                0
-            ],
-            "measured": {
-                "width": 209,
-                "height": 114
-            }
-        },
-        {
-            "id": "joinedtaskworker-1747161413751",
-            "type": "joinedtaskworker",
-            "position": {
-                "x": 3291,
-                "y": 375
-            },
-            "draggable": true,
-            "selectable": true,
-            "deletable": true,
-            "selected": false,
-            "dragging": false,
-            "zIndex": 0,
-            "data": {
-                "workerName": "JoinedTaskWorker1",
-                "entryPoint": false,
-                "inputTypes": [
-                    "DomainIsAvailable"
-                ],
-                "output_types": [
-                    "DomainResults"
-                ],
-                "joinMethod": "merge",
-                "nodeId": "joinedtaskworker-1747161413751",
-                "methods": {
-                    "consume_work_joined": "available = [result.domain for result in tasks if result.available]\nunavailable = [result.domain for result in tasks if not result.available]\nself.publish_work(DomainResults(available=available, unavailable=unavailable), input_task=tasks[0])"
-                },
-                "join_type": "LLMTaskWorker1",
-                "isCached": false,
-                "requiredMembers": [
-                    "consume_work_joined"
-                ]
-            },
-            "origin": [
-                0,
-                0
-            ],
-            "measured": {
-                "width": 661,
-                "height": 444
-            },
-            "width": 661,
-            "height": 444
-        },
-        {
-            "id": "task-1747161452479",
-            "type": "task",
-            "position": {
-                "x": 1081,
-                "y": 12
-            },
-            "draggable": true,
-            "selectable": true,
-            "deletable": true,
-            "selected": false,
-            "dragging": false,
-            "zIndex": 0,
-            "data": {
-                "className": "DomainResults",
-                "fields": [
-                    {
-                        "name": "available",
-                        "type": "string",
-                        "isList": true,
-                        "required": true,
-                        "description": "available domain names"
-                    },
-                    {
-                        "name": "unavailable",
-                        "type": "string",
-                        "isList": true,
-                        "required": true,
-                        "description": "unavailable domain names"
-                    }
-                ],
-                "nodeId": "task-1747161452479"
-            },
-            "origin": [
-                0,
-                0
-            ],
-            "measured": {
-                "width": 290,
-                "height": 114
-            }
-        },
-        {
-            "id": "task-1747178090753",
-            "type": "task",
-            "position": {
-                "x": 781,
-                "y": 12
-            },
-            "draggable": true,
-            "selectable": true,
-            "deletable": true,
-            "selected": false,
-            "dragging": false,
-            "zIndex": 0,
-            "data": {
-                "className": "Result",
-                "fields": [
-                    {
-                        "name": "result",
-                        "type": "string",
-                        "isList": false,
-                        "required": true,
-                        "description": "the result of the query in markdown"
-                    }
-                ],
-                "nodeId": "task-1747178090753"
-            },
-            "origin": [
-                0,
-                0
-            ],
-            "measured": {
-                "width": 280,
-                "height": 90
-            }
-        },
-        {
-            "id": "taskworker-1747178115875",
-            "type": "taskworker",
-            "position": {
-                "x": 4072,
-                "y": 357.5
-            },
-            "draggable": true,
-            "selectable": true,
-            "deletable": true,
-            "selected": false,
-            "dragging": false,
-            "zIndex": 0,
-            "data": {
-                "workerName": "TaskWorker2",
-                "requiredMembers": [
-                    "consume_work"
-                ],
-                "entryPoint": false,
-                "inputTypes": [
-                    "DomainResults"
-                ],
-                "output_types": [
-                    "Result"
-                ],
-                "nodeId": "taskworker-1747178115875",
-                "isCached": false,
-                "_lastUpdated": 1747266340003,
-                "methods": {
-                    "consume_work": "    def consume_work(self, task: DomainResults):\n        result = dedent(\n            \"\"\"\n        The following domains are available:\n        \n        {available}\n        \n        But these domains were not available:\n        \n        {unavailable}\n        \"\"\"\n        ).strip()\n\n        available = \"\\n\".join([f\"- {name}\" for name in task.available])\n        unavailable = \"\\n\".join([f\"- {name}\" for name in task.unavailable])\n\n        self.publish_work(\n            Result(result=result.format(available=available, unavailable=unavailable)),\n            input_task=task,\n        )"
-                },
-                "classVars": {
-                    "output_types": [
-                        "Result"
-                    ]
-                }
-            },
-            "origin": [
-                0,
-                0
-            ],
-            "measured": {
-                "width": 574,
-                "height": 479
-            },
-            "width": 574,
-            "height": 479
-        },
-        {
-            "id": "dataoutput-1747178416382",
-            "type": "dataoutput",
-            "position": {
-                "x": 4766,
-                "y": 437
-            },
-            "draggable": true,
-            "selectable": true,
-            "deletable": true,
-            "selected": true,
-            "dragging": false,
-            "zIndex": 0,
-            "data": {
-                "workerName": "DataOutput1",
-                "nodeId": "dataoutput-1747178416382",
-                "receivedData": [
-                    {
-                        "result": "The following domains are available:\n\n- gardenbloom.net\n- gardenbloom.org\n- gardenbloom.info\n- gardenbloom.biz\n- gardenbloom.co\n- gardenbloom.xyz\n- bloomgallery.net\n- bloomgallery.org\n- bloomgallery.info\n- bloomgallery.biz\n- bloomgallery.co\n- bloomgallery.xyz\n- petalportfolio.com\n- petalportfolio.net\n- petalportfolio.org\n- petalportfolio.info\n- petalportfolio.biz\n- petalportfolio.co\n- petalportfolio.xyz\n- flowervista.net\n- flowervista.org\n- flowervista.info\n- flowervista.biz\n- flowervista.co\n- flowervista.xyz\n- gardencaptures.com\n- gardencaptures.net\n- gardencaptures.org\n- gardencaptures.info\n- gardencaptures.biz\n- gardencaptures.co\n- gardencaptures.xyz\n\nBut these domains were not available:\n\n- gardenbloom.com\n- bloomgallery.com\n- flowervista.com"
-                    }
-                ],
-                "inputTypes": [
-                    "Result"
-                ]
-            },
-            "origin": [
-                0,
-                0
-            ],
-            "measured": {
-                "width": 925,
-                "height": 320
-            },
-            "width": 925,
-            "height": 320
-        },
-        {
-            "id": "taskimport-1747245524049",
-            "type": "taskimport",
-            "position": {
-                "x": 363,
-                "y": 12
-            },
-            "draggable": true,
-            "selectable": true,
-            "deletable": true,
-            "selected": false,
-            "dragging": false,
-            "zIndex": 0,
-            "data": {
-                "modulePath": "planai",
-                "className": "ChatTask",
-                "nodeId": "taskimport-1747245524049",
-                "fields": [
-                    {
-                        "description": null,
-                        "isList": true,
-                        "literalValues": null,
-                        "name": "messages",
-                        "required": true,
-                        "type": "ChatMessage"
-                    }
-                ],
-                "availableClasses": [
-                    "ChatMessage",
-                    "ChatTask"
-                ]
-            },
-            "origin": [
-                0,
-                0
-            ],
-            "measured": {
-                "width": 169,
-                "height": 140
-            }
-        }
-    ],
-    "edges": [
-        {
-            "type": "smoothstep",
-            "style": "stroke-width:3;stroke:#1f77b4;",
-            "source": "imported-llmtaskworker-LLMTaskWorker1-1747157454464",
-            "sourceHandle": "output-DomainNames",
-            "target": "taskworker-1747157725559",
-            "targetHandle": "input",
-            "id": "xy-edge__imported-llmtaskworker-LLMTaskWorker1-1747157454464output-DomainNames-taskworker-1747157725559input",
-            "animated": false,
-            "selected": false,
-            "sources": [
-                "imported-llmtaskworker-LLMTaskWorker1-1747157454464"
-            ],
-            "targets": [
-                "taskworker-1747157725559"
-            ],
-            "container": "root",
-            "sections": [
-                {
-                    "id": "xy-edge__imported-llmtaskworker-LLMTaskWorker1-1747157454464output-DomainNames-taskworker-1747157725559input_s0",
-                    "startPoint": {
-                        "x": 1544,
-                        "y": 597
-                    },
-                    "endPoint": {
-                        "x": 1664,
-                        "y": 597
-                    },
-                    "bendPoints": [
-                        {
-                            "x": 1544,
-                            "y": 597
-                        },
-                        {
-                            "x": 1604,
-                            "y": 597
-                        }
-                    ],
-                    "incomingShape": "imported-llmtaskworker-LLMTaskWorker1-1747157454464",
-                    "outgoingShape": "taskworker-1747157725559"
-                }
-            ]
-        },
-        {
-            "type": "smoothstep",
-            "style": "stroke-width:3;stroke:#ff7f0e;",
-            "source": "taskworker-1747157725559",
-            "sourceHandle": "output-SingleDomainName",
-            "target": "taskworker-1747161014157",
-            "targetHandle": "input",
-            "id": "xy-edge__taskworker-1747157725559output-SingleDomainName-taskworker-1747161014157input",
-            "animated": false,
-            "selected": false,
-            "sources": [
-                "taskworker-1747157725559"
-            ],
-            "targets": [
-                "taskworker-1747161014157"
-            ],
-            "container": "root",
-            "sections": [
-                {
-                    "id": "xy-edge__taskworker-1747157725559output-SingleDomainName-taskworker-1747161014157input_s0",
-                    "startPoint": {
-                        "x": 2360,
-                        "y": 597
-                    },
-                    "endPoint": {
-                        "x": 2480,
-                        "y": 597
-                    },
-                    "bendPoints": [
-                        {
-                            "x": 2360,
-                            "y": 597
-                        },
-                        {
-                            "x": 2420,
-                            "y": 597
-                        }
-                    ],
-                    "incomingShape": "taskworker-1747157725559",
-                    "outgoingShape": "taskworker-1747161014157"
-                }
-            ]
-        },
-        {
-            "type": "smoothstep",
-            "style": "stroke-width:3;stroke:#2ca02c;",
-            "source": "taskworker-1747161014157",
-            "sourceHandle": "output-DomainIsAvailable",
-            "target": "joinedtaskworker-1747161413751",
-            "targetHandle": "input",
-            "id": "xy-edge__taskworker-1747161014157output-DomainIsAvailable-joinedtaskworker-1747161413751input",
-            "animated": false,
-            "selected": false,
-            "sources": [
-                "taskworker-1747161014157"
-            ],
-            "targets": [
-                "joinedtaskworker-1747161413751"
-            ],
-            "container": "root",
-            "sections": [
-                {
-                    "id": "xy-edge__taskworker-1747161014157output-DomainIsAvailable-joinedtaskworker-1747161413751input_s0",
-                    "startPoint": {
-                        "x": 3171,
-                        "y": 597
-                    },
-                    "endPoint": {
-                        "x": 3291,
-                        "y": 597
-                    },
-                    "bendPoints": [
-                        {
-                            "x": 3171,
-                            "y": 597
-                        },
-                        {
-                            "x": 3231,
-                            "y": 597
-                        }
-                    ],
-                    "incomingShape": "taskworker-1747161014157",
-                    "outgoingShape": "joinedtaskworker-1747161413751"
-                }
-            ]
-        },
-        {
-            "type": "smoothstep",
-            "style": "stroke-width:3;stroke:#d62728;",
-            "source": "joinedtaskworker-1747161413751",
-            "sourceHandle": "output-DomainResults",
-            "target": "taskworker-1747178115875",
-            "targetHandle": "input",
-            "id": "xy-edge__joinedtaskworker-1747161413751output-DomainResults-taskworker-1747178115875input",
-            "animated": false,
-            "selected": false,
-            "sources": [
-                "joinedtaskworker-1747161413751"
-            ],
-            "targets": [
-                "taskworker-1747178115875"
-            ],
-            "container": "root",
-            "sections": [
-                {
-                    "id": "xy-edge__joinedtaskworker-1747161413751output-DomainResults-taskworker-1747178115875input_s0",
-                    "startPoint": {
-                        "x": 3952,
-                        "y": 597
-                    },
-                    "endPoint": {
-                        "x": 4072,
-                        "y": 597
-                    },
-                    "bendPoints": [
-                        {
-                            "x": 3952,
-                            "y": 597
-                        },
-                        {
-                            "x": 4012,
-                            "y": 597
-                        }
-                    ],
-                    "incomingShape": "joinedtaskworker-1747161413751",
-                    "outgoingShape": "taskworker-1747178115875"
-                }
-            ]
-        },
-        {
-            "type": "smoothstep",
-            "style": "stroke-width:3;stroke:#9467bd;",
-            "source": "taskworker-1747178115875",
-            "sourceHandle": "output-Result",
-            "target": "dataoutput-1747178416382",
-            "targetHandle": "input",
-            "id": "xy-edge__taskworker-1747178115875output-Result-dataoutput-1747178416382input",
-            "animated": false,
-            "selected": false,
-            "sources": [
-                "taskworker-1747178115875"
-            ],
-            "targets": [
-                "dataoutput-1747178416382"
-            ],
-            "container": "root",
-            "sections": [
-                {
-                    "id": "xy-edge__taskworker-1747178115875output-Result-dataoutput-1747178416382input_s0",
-                    "startPoint": {
-                        "x": 4646,
-                        "y": 597
-                    },
-                    "endPoint": {
-                        "x": 4766,
-                        "y": 597
-                    },
-                    "bendPoints": [
-                        {
-                            "x": 4646,
-                            "y": 597
-                        },
-                        {
-                            "x": 4706,
-                            "y": 597
-                        }
-                    ],
-                    "incomingShape": "taskworker-1747178115875",
-                    "outgoingShape": "dataoutput-1747178416382"
-                }
-            ]
-        },
-        {
-            "type": "smoothstep",
-            "style": "stroke-width:3;stroke:#8c564b;",
-            "source": "datainput-1747157490533",
-            "sourceHandle": "output-ChatTask",
-            "target": "imported-llmtaskworker-LLMTaskWorker1-1747157454464",
-            "targetHandle": "input",
-            "id": "xy-edge__datainput-1747157490533output-ChatTask-imported-llmtaskworker-LLMTaskWorker1-1747157454464input",
-            "animated": true,
-            "selected": false,
-            "sources": [
-                "datainput-1747157490533"
-            ],
-            "targets": [
-                "imported-llmtaskworker-LLMTaskWorker1-1747157454464"
-            ],
-            "container": "root",
-            "sections": [
-                {
-                    "id": "xy-edge__datainput-1747157490533output-ChatTask-imported-llmtaskworker-LLMTaskWorker1-1747157454464input_s0",
-                    "startPoint": {
-                        "x": 594,
-                        "y": 597
-                    },
-                    "endPoint": {
-                        "x": 714,
-                        "y": 597
-                    },
-                    "bendPoints": [
-                        {
-                            "x": 594,
-                            "y": 597
-                        },
-                        {
-                            "x": 654,
-                            "y": 597
-                        }
-                    ],
-                    "incomingShape": "datainput-1747157490533",
-                    "outgoingShape": "imported-llmtaskworker-LLMTaskWorker1-1747157454464"
-                }
-            ]
-        }
-    ],
-    "llmConfigs": [
-        {
-            "json_mode": false,
-            "structured_outputs": false,
-            "provider": "openai",
-            "name": "O4 Mini",
-            "modelId": "o4-mini",
-            "id": "be57a531-b575-4c7e-8a5e-08fd5413a199",
-            "source": "user"
-        }
-    ],
-    "llmConfigsFromCode": []
+	"version": 1,
+	"name": "DomainNames",
+	"nodes": [
+		{
+			"id": "imported-task-Query-1747157454464",
+			"type": "task",
+			"position": {
+				"x": 158,
+				"y": 12
+			},
+			"draggable": true,
+			"selectable": true,
+			"deletable": true,
+			"selected": false,
+			"dragging": false,
+			"zIndex": 0,
+			"data": {
+				"className": "Query",
+				"fields": [
+					{
+						"name": "query",
+						"type": "string",
+						"isList": false,
+						"required": true,
+						"description": "the user query"
+					}
+				],
+				"nodeId": "imported-task-Query-1747157454464"
+			},
+			"origin": [0, 0],
+			"measured": {
+				"width": 185,
+				"height": 90
+			}
+		},
+		{
+			"id": "imported-task-DomainNames-1747157454464",
+			"type": "task",
+			"position": {
+				"x": 1391,
+				"y": 12
+			},
+			"draggable": true,
+			"selectable": true,
+			"deletable": true,
+			"selected": false,
+			"dragging": false,
+			"zIndex": 0,
+			"data": {
+				"className": "DomainNames",
+				"fields": [
+					{
+						"name": "domain_names",
+						"type": "string",
+						"isList": true,
+						"required": true,
+						"description": "a list of potential names for an Internet Domain without TLD"
+					}
+				],
+				"nodeId": "imported-task-DomainNames-1747157454464"
+			},
+			"origin": [0, 0],
+			"measured": {
+				"width": 458,
+				"height": 90
+			}
+		},
+		{
+			"id": "imported-llmtaskworker-LLMTaskWorker1-1747157454464",
+			"type": "llmtaskworker",
+			"position": {
+				"x": 714,
+				"y": 187
+			},
+			"draggable": true,
+			"selectable": true,
+			"deletable": true,
+			"selected": false,
+			"dragging": false,
+			"zIndex": 0,
+			"data": {
+				"isCached": true,
+				"entryPoint": true,
+				"variableName": "llmtaskworker1_worker",
+				"workerName": "LLMTaskWorker1",
+				"nodeId": "imported-llmtaskworker-LLMTaskWorker1-1747157454464",
+				"inputTypes": ["ChatTask"],
+				"output_types": ["DomainNames"],
+				"methods": {
+					"post_process": "    def post_process(self, response: Optional[Task], input_task: Task):\n        \"\"\"Optional: Post-process the LLM response before publishing.\"\"\"\n        # Process the response, potentially publishing different tasks\n        if response:\n            # convert all names to be lower case\n            names = [name.lower() for name in response.domain_names]\n            self.publish_work(DomainNames(domain_names=names), input_task=input_task)"
+				},
+				"classVars": {
+					"llm_input_type": "ChatTask",
+					"output_types": ["DomainNames"],
+					"prompt": "The user is trying to find potential domain names for their new company. Propose five different names.\nFeel free to conceptionally expand around their proposed idea. Add their ideal name to the list as well.\nList only the main name without adding the TLD.",
+					"system_prompt": "You are a helpful task processing assistant knowledgable about internet promotion and marketing.",
+					"use_xml": false,
+					"debug_mode": false,
+					"llm_output_type": ""
+				},
+				"requiredMembers": ["prompt", "system_prompt"],
+				"prompt": "The user is trying to find potential domain names for their new company. Propose five different names.\nFeel free to conceptionally expand around their proposed idea. Add their ideal name to the list as well.\nList only the main name without adding the TLD.",
+				"system_prompt": "You are a helpful task processing assistant knowledgable about internet promotion and marketing.",
+				"use_xml": false,
+				"debug_mode": false,
+				"llm_input_type": "Query",
+				"llm_output_type": "",
+				"extraValidation": "return None",
+				"formatPrompt": "return self.prompt",
+				"preProcess": "return task",
+				"postProcess": "return super().post_process(response, input_task)",
+				"enabledFunctions": {
+					"extraValidation": false,
+					"formatPrompt": false,
+					"preProcess": false,
+					"postProcess": false
+				},
+				"llmConfigName": "O4 Mini"
+			},
+			"origin": [0, 0],
+			"measured": {
+				"width": 830,
+				"height": 820
+			},
+			"width": 830,
+			"height": 820
+		},
+		{
+			"id": "datainput-1747157490533",
+			"type": "datainput",
+			"position": {
+				"x": 12,
+				"y": 455
+			},
+			"draggable": true,
+			"selectable": true,
+			"deletable": true,
+			"selected": false,
+			"dragging": false,
+			"zIndex": 0,
+			"data": {
+				"className": "ChatTask",
+				"jsonData": "{ \"messages\": [{\"role\": \"user\", \"content\": \"find me domain names related to my desired domain gardenbloom which is about showing pictures of my garden. \"}]}",
+				"nodeId": "datainput-1747157490533",
+				"isJsonValid": true
+			},
+			"origin": [0, 0],
+			"measured": {
+				"width": 582,
+				"height": 284
+			},
+			"width": 582,
+			"height": 284
+		},
+		{
+			"id": "taskworker-1747157725559",
+			"type": "taskworker",
+			"position": {
+				"x": 1664,
+				"y": 389
+			},
+			"draggable": true,
+			"selectable": true,
+			"deletable": true,
+			"selected": false,
+			"dragging": false,
+			"zIndex": 0,
+			"data": {
+				"workerName": "DomainSplitter",
+				"entryPoint": false,
+				"inputTypes": ["DomainNames"],
+				"output_types": ["SingleDomainName"],
+				"nodeId": "taskworker-1747157725559",
+				"isCached": false,
+				"requiredMembers": ["consume_work"],
+				"_lastUpdated": 1747160910712,
+				"methods": {
+					"consume_work": "    def consume_work(self, task: DomainNames):\n        TLDS_TO_TEST = [\n            \".com\", \".net\", \".org\", \".info\", \".biz\", \".co\", \".xyz\"\n        ]\n        for name in task.domain_names:\n            for tld in TLDS_TO_TEST:\n                self.publish_work(SingleDomainName(domain=name+tld), input_task=task)"
+				},
+				"classVars": {
+					"output_types": ["SingleDomainName"]
+				}
+			},
+			"origin": [0, 0],
+			"measured": {
+				"width": 696,
+				"height": 416
+			},
+			"width": 696,
+			"height": 416
+		},
+		{
+			"id": "task-1747157739958",
+			"type": "task",
+			"position": {
+				"x": 12,
+				"y": 12
+			},
+			"draggable": true,
+			"selectable": true,
+			"deletable": true,
+			"selected": false,
+			"dragging": false,
+			"zIndex": 0,
+			"data": {
+				"className": "SingleDomainName",
+				"fields": [
+					{
+						"name": "domain",
+						"type": "string",
+						"isList": false,
+						"required": true
+					}
+				],
+				"nodeId": "task-1747157739958"
+			},
+			"origin": [0, 0],
+			"measured": {
+				"width": 126,
+				"height": 90
+			}
+		},
+		{
+			"id": "modulelevelimport-1747160978125",
+			"type": "modulelevelimport",
+			"position": {
+				"x": 1869,
+				"y": 12
+			},
+			"draggable": true,
+			"selectable": true,
+			"deletable": true,
+			"selected": false,
+			"dragging": false,
+			"zIndex": 0,
+			"data": {
+				"code": "import dns.resolver\r\nfrom textwrap import dedent",
+				"nodeId": "modulelevelimport-1747160978125"
+			},
+			"origin": [0, 0],
+			"measured": {
+				"width": 531,
+				"height": 118
+			}
+		},
+		{
+			"id": "taskworker-1747161014157",
+			"type": "taskworker",
+			"position": {
+				"x": 2480,
+				"y": 172
+			},
+			"draggable": true,
+			"selectable": true,
+			"deletable": true,
+			"selected": false,
+			"dragging": false,
+			"zIndex": 0,
+			"data": {
+				"workerName": "TaskWorker1",
+				"entryPoint": false,
+				"inputTypes": ["SingleDomainName"],
+				"output_types": ["DomainIsAvailable"],
+				"nodeId": "taskworker-1747161014157",
+				"isCached": true,
+				"requiredMembers": ["consume_work"],
+				"_lastUpdated": 1747161210943,
+				"methods": {
+					"consume_work": "    def consume_work(self, task: SingleDomainName):\n        is_available = not self.is_domain_registered(task.domain)\n        self.publish_work(\n            DomainIsAvailable(domain=task.domain, available=is_available), input_task=task\n        )"
+				},
+				"otherMembersSource": "def is_domain_registered(self, domain_name):\n    \"\"\"\n    Checks if a domain name appears to be registered by querying for NS records.\n\n    Args:\n        domain_name (str): The domain name to check (e.g., \"google.com\").\n\n    Returns:\n        bool: True if NS records are found (suggesting registration), False otherwise.\n    \"\"\"\n    try:\n        resolver = dns.resolver.Resolver()\n        ns_records = resolver.resolve(domain_name, \"NS\")\n        return True\n    except dns.resolver.NXDOMAIN:\n        return False\n    except dns.resolver.NoAnswer:\n        return False\n    except dns.exception.Timeout:\n        self.print(f\"Timeout while querying NS records for {domain_name}\")\n        return False\n    except Exception as e:\n        self.print(f\"An error occurred while checking {domain_name}: {e}\")\n        return False",
+				"classVars": {
+					"output_types": ["DomainIsAvailable"]
+				}
+			},
+			"origin": [0, 0],
+			"measured": {
+				"width": 691,
+				"height": 850
+			},
+			"width": 691,
+			"height": 850
+		},
+		{
+			"id": "task-1747161066501",
+			"type": "task",
+			"position": {
+				"x": 552,
+				"y": 12
+			},
+			"draggable": true,
+			"selectable": true,
+			"deletable": true,
+			"selected": false,
+			"dragging": false,
+			"zIndex": 0,
+			"data": {
+				"className": "DomainIsAvailable",
+				"fields": [
+					{
+						"name": "domain",
+						"type": "string",
+						"isList": false,
+						"required": true,
+						"description": "the domain name"
+					},
+					{
+						"name": "available",
+						"type": "boolean",
+						"isList": false,
+						"required": true
+					}
+				],
+				"nodeId": "task-1747161066501"
+			},
+			"origin": [0, 0],
+			"measured": {
+				"width": 209,
+				"height": 114
+			}
+		},
+		{
+			"id": "joinedtaskworker-1747161413751",
+			"type": "joinedtaskworker",
+			"position": {
+				"x": 3291,
+				"y": 375
+			},
+			"draggable": true,
+			"selectable": true,
+			"deletable": true,
+			"selected": false,
+			"dragging": false,
+			"zIndex": 0,
+			"data": {
+				"workerName": "JoinedTaskWorker1",
+				"entryPoint": false,
+				"inputTypes": ["DomainIsAvailable"],
+				"output_types": ["DomainResults"],
+				"joinMethod": "merge",
+				"nodeId": "joinedtaskworker-1747161413751",
+				"methods": {
+					"consume_work_joined": "available = [result.domain for result in tasks if result.available]\nunavailable = [result.domain for result in tasks if not result.available]\nself.publish_work(DomainResults(available=available, unavailable=unavailable), input_task=tasks[0])"
+				},
+				"join_type": "LLMTaskWorker1",
+				"isCached": false,
+				"requiredMembers": ["consume_work_joined"]
+			},
+			"origin": [0, 0],
+			"measured": {
+				"width": 661,
+				"height": 444
+			},
+			"width": 661,
+			"height": 444
+		},
+		{
+			"id": "task-1747161452479",
+			"type": "task",
+			"position": {
+				"x": 1081,
+				"y": 12
+			},
+			"draggable": true,
+			"selectable": true,
+			"deletable": true,
+			"selected": false,
+			"dragging": false,
+			"zIndex": 0,
+			"data": {
+				"className": "DomainResults",
+				"fields": [
+					{
+						"name": "available",
+						"type": "string",
+						"isList": true,
+						"required": true,
+						"description": "available domain names"
+					},
+					{
+						"name": "unavailable",
+						"type": "string",
+						"isList": true,
+						"required": true,
+						"description": "unavailable domain names"
+					}
+				],
+				"nodeId": "task-1747161452479"
+			},
+			"origin": [0, 0],
+			"measured": {
+				"width": 290,
+				"height": 114
+			}
+		},
+		{
+			"id": "task-1747178090753",
+			"type": "task",
+			"position": {
+				"x": 781,
+				"y": 12
+			},
+			"draggable": true,
+			"selectable": true,
+			"deletable": true,
+			"selected": false,
+			"dragging": false,
+			"zIndex": 0,
+			"data": {
+				"className": "Result",
+				"fields": [
+					{
+						"name": "result",
+						"type": "string",
+						"isList": false,
+						"required": true,
+						"description": "the result of the query in markdown"
+					}
+				],
+				"nodeId": "task-1747178090753"
+			},
+			"origin": [0, 0],
+			"measured": {
+				"width": 280,
+				"height": 90
+			}
+		},
+		{
+			"id": "taskworker-1747178115875",
+			"type": "taskworker",
+			"position": {
+				"x": 4072,
+				"y": 357.5
+			},
+			"draggable": true,
+			"selectable": true,
+			"deletable": true,
+			"selected": false,
+			"dragging": false,
+			"zIndex": 0,
+			"data": {
+				"workerName": "TaskWorker2",
+				"requiredMembers": ["consume_work"],
+				"entryPoint": false,
+				"inputTypes": ["DomainResults"],
+				"output_types": ["Result"],
+				"nodeId": "taskworker-1747178115875",
+				"isCached": false,
+				"_lastUpdated": 1747266340003,
+				"methods": {
+					"consume_work": "    def consume_work(self, task: DomainResults):\n        result = dedent(\n            \"\"\"\n        The following domains are available:\n        \n        {available}\n        \n        But these domains were not available:\n        \n        {unavailable}\n        \"\"\"\n        ).strip()\n\n        available = \"\\n\".join([f\"- {name}\" for name in task.available])\n        unavailable = \"\\n\".join([f\"- {name}\" for name in task.unavailable])\n\n        self.publish_work(\n            Result(result=result.format(available=available, unavailable=unavailable)),\n            input_task=task,\n        )"
+				},
+				"classVars": {
+					"output_types": ["Result"]
+				}
+			},
+			"origin": [0, 0],
+			"measured": {
+				"width": 574,
+				"height": 479
+			},
+			"width": 574,
+			"height": 479
+		},
+		{
+			"id": "dataoutput-1747178416382",
+			"type": "dataoutput",
+			"position": {
+				"x": 4766,
+				"y": 437
+			},
+			"draggable": true,
+			"selectable": true,
+			"deletable": true,
+			"selected": true,
+			"dragging": false,
+			"zIndex": 0,
+			"data": {
+				"workerName": "DataOutput1",
+				"nodeId": "dataoutput-1747178416382",
+				"receivedData": [
+					{
+						"result": "The following domains are available:\n\n- gardenbloom.net\n- gardenbloom.org\n- gardenbloom.info\n- gardenbloom.biz\n- gardenbloom.co\n- gardenbloom.xyz\n- bloomgallery.net\n- bloomgallery.org\n- bloomgallery.info\n- bloomgallery.biz\n- bloomgallery.co\n- bloomgallery.xyz\n- petalportfolio.com\n- petalportfolio.net\n- petalportfolio.org\n- petalportfolio.info\n- petalportfolio.biz\n- petalportfolio.co\n- petalportfolio.xyz\n- flowervista.net\n- flowervista.org\n- flowervista.info\n- flowervista.biz\n- flowervista.co\n- flowervista.xyz\n- gardencaptures.com\n- gardencaptures.net\n- gardencaptures.org\n- gardencaptures.info\n- gardencaptures.biz\n- gardencaptures.co\n- gardencaptures.xyz\n\nBut these domains were not available:\n\n- gardenbloom.com\n- bloomgallery.com\n- flowervista.com"
+					}
+				],
+				"inputTypes": ["Result"]
+			},
+			"origin": [0, 0],
+			"measured": {
+				"width": 925,
+				"height": 320
+			},
+			"width": 925,
+			"height": 320
+		},
+		{
+			"id": "taskimport-1747245524049",
+			"type": "taskimport",
+			"position": {
+				"x": 363,
+				"y": 12
+			},
+			"draggable": true,
+			"selectable": true,
+			"deletable": true,
+			"selected": false,
+			"dragging": false,
+			"zIndex": 0,
+			"data": {
+				"modulePath": "planai",
+				"className": "ChatTask",
+				"nodeId": "taskimport-1747245524049",
+				"fields": [
+					{
+						"description": null,
+						"isList": true,
+						"literalValues": null,
+						"name": "messages",
+						"required": true,
+						"type": "ChatMessage"
+					}
+				],
+				"availableClasses": ["ChatMessage", "ChatTask"]
+			},
+			"origin": [0, 0],
+			"measured": {
+				"width": 169,
+				"height": 140
+			}
+		}
+	],
+	"edges": [
+		{
+			"type": "smoothstep",
+			"style": "stroke-width:3;stroke:#1f77b4;",
+			"source": "imported-llmtaskworker-LLMTaskWorker1-1747157454464",
+			"sourceHandle": "output-DomainNames",
+			"target": "taskworker-1747157725559",
+			"targetHandle": "input",
+			"id": "xy-edge__imported-llmtaskworker-LLMTaskWorker1-1747157454464output-DomainNames-taskworker-1747157725559input",
+			"animated": false,
+			"selected": false,
+			"sources": ["imported-llmtaskworker-LLMTaskWorker1-1747157454464"],
+			"targets": ["taskworker-1747157725559"],
+			"container": "root",
+			"sections": [
+				{
+					"id": "xy-edge__imported-llmtaskworker-LLMTaskWorker1-1747157454464output-DomainNames-taskworker-1747157725559input_s0",
+					"startPoint": {
+						"x": 1544,
+						"y": 597
+					},
+					"endPoint": {
+						"x": 1664,
+						"y": 597
+					},
+					"bendPoints": [
+						{
+							"x": 1544,
+							"y": 597
+						},
+						{
+							"x": 1604,
+							"y": 597
+						}
+					],
+					"incomingShape": "imported-llmtaskworker-LLMTaskWorker1-1747157454464",
+					"outgoingShape": "taskworker-1747157725559"
+				}
+			]
+		},
+		{
+			"type": "smoothstep",
+			"style": "stroke-width:3;stroke:#ff7f0e;",
+			"source": "taskworker-1747157725559",
+			"sourceHandle": "output-SingleDomainName",
+			"target": "taskworker-1747161014157",
+			"targetHandle": "input",
+			"id": "xy-edge__taskworker-1747157725559output-SingleDomainName-taskworker-1747161014157input",
+			"animated": false,
+			"selected": false,
+			"sources": ["taskworker-1747157725559"],
+			"targets": ["taskworker-1747161014157"],
+			"container": "root",
+			"sections": [
+				{
+					"id": "xy-edge__taskworker-1747157725559output-SingleDomainName-taskworker-1747161014157input_s0",
+					"startPoint": {
+						"x": 2360,
+						"y": 597
+					},
+					"endPoint": {
+						"x": 2480,
+						"y": 597
+					},
+					"bendPoints": [
+						{
+							"x": 2360,
+							"y": 597
+						},
+						{
+							"x": 2420,
+							"y": 597
+						}
+					],
+					"incomingShape": "taskworker-1747157725559",
+					"outgoingShape": "taskworker-1747161014157"
+				}
+			]
+		},
+		{
+			"type": "smoothstep",
+			"style": "stroke-width:3;stroke:#2ca02c;",
+			"source": "taskworker-1747161014157",
+			"sourceHandle": "output-DomainIsAvailable",
+			"target": "joinedtaskworker-1747161413751",
+			"targetHandle": "input",
+			"id": "xy-edge__taskworker-1747161014157output-DomainIsAvailable-joinedtaskworker-1747161413751input",
+			"animated": false,
+			"selected": false,
+			"sources": ["taskworker-1747161014157"],
+			"targets": ["joinedtaskworker-1747161413751"],
+			"container": "root",
+			"sections": [
+				{
+					"id": "xy-edge__taskworker-1747161014157output-DomainIsAvailable-joinedtaskworker-1747161413751input_s0",
+					"startPoint": {
+						"x": 3171,
+						"y": 597
+					},
+					"endPoint": {
+						"x": 3291,
+						"y": 597
+					},
+					"bendPoints": [
+						{
+							"x": 3171,
+							"y": 597
+						},
+						{
+							"x": 3231,
+							"y": 597
+						}
+					],
+					"incomingShape": "taskworker-1747161014157",
+					"outgoingShape": "joinedtaskworker-1747161413751"
+				}
+			]
+		},
+		{
+			"type": "smoothstep",
+			"style": "stroke-width:3;stroke:#d62728;",
+			"source": "joinedtaskworker-1747161413751",
+			"sourceHandle": "output-DomainResults",
+			"target": "taskworker-1747178115875",
+			"targetHandle": "input",
+			"id": "xy-edge__joinedtaskworker-1747161413751output-DomainResults-taskworker-1747178115875input",
+			"animated": false,
+			"selected": false,
+			"sources": ["joinedtaskworker-1747161413751"],
+			"targets": ["taskworker-1747178115875"],
+			"container": "root",
+			"sections": [
+				{
+					"id": "xy-edge__joinedtaskworker-1747161413751output-DomainResults-taskworker-1747178115875input_s0",
+					"startPoint": {
+						"x": 3952,
+						"y": 597
+					},
+					"endPoint": {
+						"x": 4072,
+						"y": 597
+					},
+					"bendPoints": [
+						{
+							"x": 3952,
+							"y": 597
+						},
+						{
+							"x": 4012,
+							"y": 597
+						}
+					],
+					"incomingShape": "joinedtaskworker-1747161413751",
+					"outgoingShape": "taskworker-1747178115875"
+				}
+			]
+		},
+		{
+			"type": "smoothstep",
+			"style": "stroke-width:3;stroke:#9467bd;",
+			"source": "taskworker-1747178115875",
+			"sourceHandle": "output-Result",
+			"target": "dataoutput-1747178416382",
+			"targetHandle": "input",
+			"id": "xy-edge__taskworker-1747178115875output-Result-dataoutput-1747178416382input",
+			"animated": false,
+			"selected": false,
+			"sources": ["taskworker-1747178115875"],
+			"targets": ["dataoutput-1747178416382"],
+			"container": "root",
+			"sections": [
+				{
+					"id": "xy-edge__taskworker-1747178115875output-Result-dataoutput-1747178416382input_s0",
+					"startPoint": {
+						"x": 4646,
+						"y": 597
+					},
+					"endPoint": {
+						"x": 4766,
+						"y": 597
+					},
+					"bendPoints": [
+						{
+							"x": 4646,
+							"y": 597
+						},
+						{
+							"x": 4706,
+							"y": 597
+						}
+					],
+					"incomingShape": "taskworker-1747178115875",
+					"outgoingShape": "dataoutput-1747178416382"
+				}
+			]
+		},
+		{
+			"type": "smoothstep",
+			"style": "stroke-width:3;stroke:#8c564b;",
+			"source": "datainput-1747157490533",
+			"sourceHandle": "output-ChatTask",
+			"target": "imported-llmtaskworker-LLMTaskWorker1-1747157454464",
+			"targetHandle": "input",
+			"id": "xy-edge__datainput-1747157490533output-ChatTask-imported-llmtaskworker-LLMTaskWorker1-1747157454464input",
+			"animated": true,
+			"selected": false,
+			"sources": ["datainput-1747157490533"],
+			"targets": ["imported-llmtaskworker-LLMTaskWorker1-1747157454464"],
+			"container": "root",
+			"sections": [
+				{
+					"id": "xy-edge__datainput-1747157490533output-ChatTask-imported-llmtaskworker-LLMTaskWorker1-1747157454464input_s0",
+					"startPoint": {
+						"x": 594,
+						"y": 597
+					},
+					"endPoint": {
+						"x": 714,
+						"y": 597
+					},
+					"bendPoints": [
+						{
+							"x": 594,
+							"y": 597
+						},
+						{
+							"x": 654,
+							"y": 597
+						}
+					],
+					"incomingShape": "datainput-1747157490533",
+					"outgoingShape": "imported-llmtaskworker-LLMTaskWorker1-1747157454464"
+				}
+			]
+		}
+	],
+	"llmConfigs": [
+		{
+			"json_mode": false,
+			"structured_outputs": false,
+			"provider": "openai",
+			"name": "O4 Mini",
+			"modelId": "o4-mini",
+			"id": "be57a531-b575-4c7e-8a5e-08fd5413a199",
+			"source": "user"
+		}
+	],
+	"llmConfigsFromCode": []
 }

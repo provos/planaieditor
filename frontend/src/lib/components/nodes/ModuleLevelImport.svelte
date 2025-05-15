@@ -115,7 +115,7 @@
 			onUpdate={handleCodeUpdate}
 		/>
 		<!-- Validation Status -->
-		<div class="absolute bottom-1 right-3 z-10">
+		<div class="absolute right-3 bottom-1 z-10">
 			{#if isLoading}
 				<div class="rounded-sm bg-white/50 px-1.5 py-1.5">
 					<Spinner size={12} class="animate-spin text-blue-500" />

@@ -47,7 +47,7 @@
 	style="left: {x}px; top: {y}px;"
 >
 	<div class="py-1">
-		{#each items as item}
+		{#each items as item (item.label)}
 			<button
 				class="flex w-full items-center px-4 py-2 text-left text-sm hover:bg-gray-100 {item.danger
 					? 'text-red-600 hover:text-red-700'

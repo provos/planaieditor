@@ -3,7 +3,7 @@
 
 	let {
 		open = false,
-		onSave = (name: string) => {},
+		onSave = () => {},
 		onClose = () => {},
 		initialName = ''
 	}: {
@@ -31,7 +31,7 @@
 	<Dialog.Portal>
 		<Dialog.Overlay class="fixed inset-0 bg-black/50 backdrop-blur-sm" />
 		<Dialog.Content
-			class="fixed left-1/2 top-1/2 w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white p-6 shadow-lg"
+			class="fixed top-1/2 left-1/2 w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white p-6 shadow-lg"
 		>
 			<Dialog.Title class="mb-4 text-lg font-semibold text-gray-900">Enter Graph Name</Dialog.Title>
 			<Dialog.Description class="mb-4 text-sm text-gray-600">
@@ -42,7 +42,7 @@
 					type="text"
 					bind:value={name}
 					placeholder="Enter graph name"
-					class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+					class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
 				/>
 				<div class="flex justify-end gap-2">
 					<button
@@ -54,7 +54,7 @@
 					</button>
 					<button
 						type="submit"
-						class="rounded-md bg-blue-500 px-3 py-2 text-sm font-medium text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+						class="rounded-md bg-blue-500 px-3 py-2 text-sm font-medium text-white hover:bg-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
 						disabled={!name.trim()}
 					>
 						Save

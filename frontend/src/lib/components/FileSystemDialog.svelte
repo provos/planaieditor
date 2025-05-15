@@ -148,9 +148,9 @@
 	<Dialog.Portal>
 		<Dialog.Overlay class="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" />
 		<Dialog.Content
-			class="fixed left-1/2 top-1/2 z-50 max-h-[85vh] w-[90vw] max-w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-md border bg-white p-6 shadow-lg focus:outline-none"
+			class="fixed top-1/2 left-1/2 z-50 max-h-[85vh] w-[90vw] max-w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-md border bg-white p-6 shadow-lg focus:outline-none"
 		>
-			<Dialog.Title class="text-lg font-semibold leading-none tracking-tight">{title}</Dialog.Title>
+			<Dialog.Title class="text-lg leading-none font-semibold tracking-tight">{title}</Dialog.Title>
 
 			<div class="mt-4 flex items-center space-x-2 border-b pb-2">
 				<Button.Root
@@ -223,7 +223,7 @@
 						type="text"
 						id="filename-input"
 						bind:value={fileNameInput}
-						class="bg-input focus:ring-ring w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2"
+						class="bg-input focus:ring-ring w-full rounded-md border px-3 py-2 text-sm focus:ring-2 focus:outline-none"
 						placeholder="Enter file name"
 						disabled={isLoading}
 					/>
@@ -233,7 +233,7 @@
 			<div class="mt-6 flex justify-end space-x-2">
 				<Dialog.Close>
 					<Button.Root
-						class="border-input bg-background ring-offset-background hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md border px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+						class="border-input bg-background ring-offset-background hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring inline-flex h-10 items-center justify-center rounded-md border px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
 						disabled={isLoading}>Cancel</Button.Root
 					>
 				</Dialog.Close>

@@ -91,7 +91,7 @@
 			<div class="w-6"><!-- Spacer to balance the layout --></div>
 			<div class="flex-grow">{data.workerName}</div>
 			<button
-				class="w-4 flex-none rounded mt-0.5 p-0.5 text-emerald-700 transition hover:bg-emerald-300/40 hover:text-emerald-900 focus:outline-none"
+				class="mt-0.5 w-4 flex-none rounded p-0.5 text-emerald-700 transition hover:bg-emerald-300/40 hover:text-emerald-900 focus:outline-none"
 				title="Clear received data"
 				onclick={clearReceivedData}
 				aria-label="Clear data"
@@ -105,7 +105,7 @@
 	<div class="flex-none border-b border-gray-100 p-1.5">
 		<h3 class="text-2xs mb-1 font-semibold text-gray-600">Input Types</h3>
 		{#if inferredInputTypes.length === 0}
-			<div class="text-2xs italic text-gray-400">Connect a node...</div>
+			<div class="text-2xs text-gray-400 italic">Connect a node...</div>
 		{:else}
 			<div class="space-y-1">
 				{#each inferredInputTypes as type (type)}
@@ -124,12 +124,12 @@
 	<!-- Display Area for Received Data -->
 	<div class="min-h-0 flex-grow overflow-auto p-1.5">
 		{#if !receivedData || receivedData.length === 0}
-			<div class="text-2xs italic text-gray-400">Waiting for data...</div>
+			<div class="text-2xs text-gray-400 italic">Waiting for data...</div>
 		{:else}
 			<div class="space-y-2">
 				{#each receivedData as item, index (index)}
 					<div class="rounded border border-gray-200 bg-gray-50 p-1">
-						<pre class="text-2xs whitespace-pre-wrap break-words font-mono">{JSON.stringify(
+						<pre class="text-2xs font-mono break-words whitespace-pre-wrap">{JSON.stringify(
 								item,
 								null,
 								2

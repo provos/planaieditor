@@ -2,7 +2,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { svelteTesting } from '@testing-library/svelte/vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
-import { sveltePhosphorOptimize } from "phosphor-svelte/vite";
+import { sveltePhosphorOptimize } from 'phosphor-svelte/vite';
 import importMetaUrlPlugin from '@codingame/esbuild-import-meta-url-plugin';
 
 export default defineConfig({
@@ -34,9 +34,7 @@ export default defineConfig({
 		]
 	},
 	optimizeDeps: {
-		exclude: [
-			'bits-ui', 'svelte', '@xyflow', 'phosphor-svelte'
-		],
+		exclude: ['bits-ui', 'svelte', '@xyflow', 'phosphor-svelte'],
 		esbuildOptions: {
 			plugins: [importMetaUrlPlugin]
 		}

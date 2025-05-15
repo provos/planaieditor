@@ -257,7 +257,7 @@
 		<div class="relative w-full max-w-3xl rounded-lg bg-white p-6 shadow-xl">
 			<!-- Close Button -->
 			<button
-				class="absolute right-4 top-4 text-gray-500 hover:text-red-800"
+				class="absolute top-4 right-4 text-gray-500 hover:text-red-800"
 				onclick={closeModal}
 				title="Close"
 			>
@@ -272,23 +272,23 @@
 					<thead class="sticky top-0 bg-gray-50">
 						<tr>
 							<th
-								class="w-8 px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+								class="w-8 px-3 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
 								title="Provider"
 							></th>
 							<th
-								class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+								class="px-4 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
 								>Name</th
 							>
 							<th
-								class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+								class="px-4 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
 								>Provider</th
 							>
 							<th
-								class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+								class="px-4 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
 								>Model ID</th
 							>
 							<th
-								class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+								class="px-4 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
 								>Actions</th
 							>
 						</tr>
@@ -304,15 +304,15 @@
 						{#each $llmConfigs as config (config.id)}
 							{@const visuals = getProviderVisuals(config.provider)}
 							<tr class:bg-blue-50={editingConfigId === config.id}>
-								<td class="whitespace-nowrap px-3 py-2 text-sm">
+								<td class="px-3 py-2 text-sm whitespace-nowrap">
 									<visuals.icon size={18} class={visuals.colorClass} />
 								</td>
-								<td class="whitespace-nowrap px-4 py-2 text-sm font-medium text-gray-900"
+								<td class="px-4 py-2 text-sm font-medium whitespace-nowrap text-gray-900"
 									>{config.name}</td
 								>
-								<td class="whitespace-nowrap px-4 py-2 text-sm text-gray-500">{config.provider}</td>
-								<td class="whitespace-nowrap px-4 py-2 text-sm text-gray-500">{config.modelId}</td>
-								<td class="whitespace-nowrap px-4 py-2 text-sm font-medium">
+								<td class="px-4 py-2 text-sm whitespace-nowrap text-gray-500">{config.provider}</td>
+								<td class="px-4 py-2 text-sm whitespace-nowrap text-gray-500">{config.modelId}</td>
+								<td class="px-4 py-2 text-sm font-medium whitespace-nowrap">
 									<button
 										class="mr-2 text-blue-600 hover:text-blue-800"
 										onclick={() => startEdit(config)}
@@ -347,15 +347,15 @@
 							<thead class="sticky top-0 bg-gray-100">
 								<tr>
 									<th
-										class="w-8 px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+										class="w-8 px-3 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
 										title="Imported"
 									></th>
 									<th
-										class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+										class="px-4 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
 										>Variable Name</th
 									>
 									<th
-										class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+										class="px-4 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
 										>Details</th
 									>
 								</tr>
@@ -363,10 +363,10 @@
 							<tbody class="divide-y divide-gray-200 bg-white">
 								{#each $llmConfigsFromCode as config (config.id)}
 									<tr>
-										<td class="whitespace-nowrap px-3 py-2 text-sm text-gray-400">
+										<td class="px-3 py-2 text-sm whitespace-nowrap text-gray-400">
 											<Code size={18} />
 										</td>
-										<td class="whitespace-nowrap px-4 py-2 text-sm font-medium text-gray-800"
+										<td class="px-4 py-2 text-sm font-medium whitespace-nowrap text-gray-800"
 											>{config.name}</td
 										>
 										<td class="px-4 py-2 text-sm text-gray-600">
@@ -430,7 +430,7 @@
 										placeholder="Search for a provider ..."
 										defaultValue={formState.provider}
 									/>
-									<Combobox.Trigger class="absolute right-2 top-1/2 -translate-y-1/2">
+									<Combobox.Trigger class="absolute top-1/2 right-2 -translate-y-1/2">
 										<CaretDown size={16} class="text-gray-500" />
 									</Combobox.Trigger>
 								</div>
@@ -444,12 +444,12 @@
 												<Combobox.Item
 													value={provider}
 													label={provider}
-													class="data-highlighted:bg-indigo-100 data-highlighted:text-indigo-900 relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 outline-none"
+													class="relative flex cursor-default items-center rounded-sm py-1.5 pr-2 pl-8 outline-none select-none data-highlighted:bg-indigo-100 data-highlighted:text-indigo-900"
 												>
 													{#snippet children({ selected })}
 														{provider}
 														{#if selected}
-															<div class="absolute left-2 top-1/2 -translate-y-1/2">
+															<div class="absolute top-1/2 left-2 -translate-y-1/2">
 																<Check size={16} class="text-indigo-600" />
 															</div>
 														{/if}
@@ -490,7 +490,7 @@
 										defaultValue={formState.modelId}
 									/>
 									<Combobox.Trigger
-										class="absolute right-2 top-1/2 -translate-y-1/2"
+										class="absolute top-1/2 right-2 -translate-y-1/2"
 										disabled={!formState.provider || modelLoading || !!modelError}
 									>
 										{#if modelLoading}
@@ -511,12 +511,12 @@
 													<Combobox.Item
 														value={modelName}
 														label={modelName}
-														class="data-highlighted:bg-indigo-100 data-highlighted:text-indigo-900 relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 outline-none"
+														class="relative flex cursor-default items-center rounded-sm py-1.5 pr-2 pl-8 outline-none select-none data-highlighted:bg-indigo-100 data-highlighted:text-indigo-900"
 													>
 														{#snippet children({ selected })}
 															{modelName}
 															{#if selected}
-																<div class="absolute left-2 top-1/2 -translate-y-1/2">
+																<div class="absolute top-1/2 left-2 -translate-y-1/2">
 																	<Check size={16} class="text-indigo-600" />
 																</div>
 															{/if}
@@ -675,17 +675,17 @@
 						{/if}
 						<button
 							type="button"
-							class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+							class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none"
 							onclick={cancelEdit}
 						>
 							Cancel
 						</button>
 						<button
 							type="button"
-							class="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+							class="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none"
 							onclick={saveConfig}
 						>
-							<FloppyDisk size={18} class="-ml-1 mr-2" />
+							<FloppyDisk size={18} class="mr-2 -ml-1" />
 							{editingConfigId ? 'Update' : 'Save'} Configuration
 						</button>
 					</div>
@@ -697,7 +697,7 @@
 				<div class="flex justify-end">
 					<button
 						type="button"
-						class="inline-flex items-center rounded-md border border-transparent bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+						class="inline-flex items-center rounded-md border border-transparent bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:outline-none"
 						onclick={startAddNew}
 					>
 						Add New Configuration

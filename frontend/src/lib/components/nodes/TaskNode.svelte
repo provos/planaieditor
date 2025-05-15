@@ -56,7 +56,9 @@
 		persistNodeDataDebounced(id, store.nodes, data);
 	}
 
-	let effectiveStyleClasses = $derived(styleClasses || 'rounded-md border border-gray-300 bg-white shadow-md');
+	let effectiveStyleClasses = $derived(
+		styleClasses || 'rounded-md border border-gray-300 bg-white shadow-md'
+	);
 
 	// State variables
 	let editingClassName = $state(false);
@@ -402,7 +404,7 @@
 	<!-- Fields list with compact styling -->
 	<div class="relative h-full min-h-0 flex-grow overflow-y-auto p-1.5">
 		{#if !currentFields.length && editingFieldIndex !== -1 && allowEditing}
-			<div class="text-2xs py-0.5 italic text-gray-400">No fields</div>
+			<div class="text-2xs py-0.5 text-gray-400 italic">No fields</div>
 		{/if}
 
 		<!-- Existing fields -->
@@ -424,7 +426,7 @@
 
 							<select
 								bind:value={editingFieldType}
-								class="text-2xs w-auto min-w-[4rem] max-w-xs rounded border border-gray-200 px-1 py-0.5"
+								class="text-2xs w-auto max-w-xs min-w-[4rem] rounded border border-gray-200 px-1 py-0.5"
 								disabled={!allowEditing}
 							>
 								{#each fieldTypeOptions as option}
@@ -483,7 +485,7 @@
 								</div>
 
 								{#if editingLiteralValues.length === 0}
-									<div class="text-2xs italic text-gray-400">No values added yet</div>
+									<div class="text-2xs text-gray-400 italic">No values added yet</div>
 								{:else}
 									<div class="flex flex-wrap gap-1">
 										{#each editingLiteralValues as value, idx}
@@ -556,7 +558,7 @@
 							<span class="text-gray-600">{formatFieldType(field)}</span>
 							{#if field.description}
 								<span
-									class="ml-1 truncate text-ellipsis italic text-gray-400"
+									class="ml-1 truncate text-ellipsis text-gray-400 italic"
 									title={field.description}
 								>
 									({field.description})
@@ -569,7 +571,7 @@
 						{#if allowEditing}
 							<div class="flex items-center">
 								<button
-									class="ml-1 flex h-3.5 w-3.5 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-gray-200 hover:text-blue-500 group-hover:opacity-100"
+									class="ml-1 flex h-3.5 w-3.5 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-gray-200 hover:text-blue-500"
 									onclick={(e) => {
 										e.stopPropagation();
 										startEditingField(index);
@@ -579,7 +581,7 @@
 									<PencilSimple size={8} weight="bold" />
 								</button>
 								<button
-									class="ml-1 flex h-3.5 w-3.5 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
+									class="ml-1 flex h-3.5 w-3.5 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-50 hover:text-red-500"
 									onclick={(e) => {
 										e.stopPropagation();
 										deleteField(index);
@@ -612,7 +614,7 @@
 
 						<select
 							bind:value={editingFieldType}
-							class="text-2xs w-auto min-w-[4rem] max-w-xs rounded border border-gray-200 px-1 py-0.5"
+							class="text-2xs w-auto max-w-xs min-w-[4rem] rounded border border-gray-200 px-1 py-0.5"
 							disabled={!allowEditing}
 						>
 							{#each fieldTypeOptions as option}
@@ -671,7 +673,7 @@
 							</div>
 
 							{#if editingLiteralValues.length === 0}
-								<div class="text-2xs italic text-gray-400">No values added yet</div>
+								<div class="text-2xs text-gray-400 italic">No values added yet</div>
 							{:else}
 								<div class="flex flex-wrap gap-1">
 									{#each editingLiteralValues as value, idx}

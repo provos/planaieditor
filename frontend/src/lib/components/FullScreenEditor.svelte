@@ -28,7 +28,7 @@
 		let moduleLevelImport: Node | undefined = undefined;
 		nodes.subscribe((nodes) => {
 			currentNode = nodes.find((node) => node.id === fullScreenEditorState.id);
-			moduleLevelImport = nodes.find((node) => node.type === "modulelevelimport");
+			moduleLevelImport = nodes.find((node) => node.type === 'modulelevelimport');
 		})();
 		if (!currentNode) {
 			console.error('Node not found');
@@ -38,7 +38,7 @@
 		let requestData = {
 			worker: convertNodeData(currentNode),
 			moduleLevelImport: moduleLevelImport ? convertNodeData(moduleLevelImport) : undefined
-		}
+		};
 
 		const response = await fetch(`${backendUrl}/api/get-node-code`, {
 			method: 'POST',

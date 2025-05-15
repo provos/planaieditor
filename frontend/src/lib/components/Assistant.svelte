@@ -15,24 +15,14 @@
 	import { tick } from 'svelte';
 	import { marked } from 'marked';
 	import { get } from 'svelte/store';
-
-	type MessageType = 'user' | 'assistant';
-
-	interface Message {
-		type: MessageType;
-		content: string;
-		timestamp: Date;
-	}
+	import { escapeHtml } from '$lib/utils/utils';
 
 	let inputMessage: string = $state('');
 	let chatContainer: HTMLElement;
 
 	let { getNodes, getEdges } = useSvelteFlow();
-	let dataInputNode = $state<Node | null>(null);
 
 	onMount(() => {
-		dataInputNode = findDataInputForAssistant(getNodes());
-
 		// validate that the messages follow the interface
 		assistantMessages.subscribe((currentMessages) => {
 			if (currentMessages.length) {
@@ -221,7 +211,7 @@
 						}`}
 					>
 						{#if message.type === 'assistant'}
-							{@html marked.parse(message.content)}
+							{@html marked.parse(escapeHtml(message.content))}
 						{:else}
 							<p class="whitespace-pre-wrap">{message.content}</p>
 						{/if}

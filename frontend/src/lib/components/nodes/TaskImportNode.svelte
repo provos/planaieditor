@@ -232,10 +232,10 @@
 				!availableClasses.length
 					? 'border-red-400'
 					: ''}"
-				disabled={loading || data.isImplicit || isEdgeConnected }
+				disabled={loading || data.isImplicit || isEdgeConnected}
 			/>
 			<button
-				class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded bg-blue-500 text-white hover:bg-blue-600 disabled:hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+				class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded bg-blue-500 text-white hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-blue-500"
 				onclick={fetchTaskClasses}
 				disabled={!internalModulePath || loading || data.isImplicit || isEdgeConnected}
 				title="Load classes from module"
@@ -280,7 +280,7 @@
 		<!-- Loading Indicator for Field Fetch -->
 		{#if loading && localSelectedClassName}
 			<div
-				class="absolute left-0 top-full z-10 mt-px flex w-full items-center justify-center bg-white/70 py-1"
+				class="absolute top-full left-0 z-10 mt-px flex w-full items-center justify-center bg-white/70 py-1"
 			>
 				<Spinner size={16} class="animate-spin text-blue-500" />
 			</div>

@@ -402,7 +402,7 @@
 	<div class="flex-none border-b border-gray-200 bg-gray-50 p-1">
 		<HeaderIcon workerType={workerType || 'default'} />
 		{#if showCachedOption}
-			<div class="absolute right-1 top-1 z-10 flex items-center justify-between">
+			<div class="absolute top-1 right-1 z-10 flex items-center justify-between">
 				{#if localIsCached}
 					<span
 						class="text-2xs rounded bg-yellow-400 px-1 py-0.5 font-bold text-yellow-900 shadow-sm"
@@ -465,7 +465,7 @@
 			{#if inferredInputTypes.length === 0}
 				<!-- Input Type Select Dropdown (only shown when no edges are connected) -->
 				{#if availableTaskClasses.length > 0}
-					<div class="mb-1 mt-1">
+					<div class="mt-1 mb-1">
 						<select
 							class="text-2xs w-full rounded border border-gray-200 px-1 py-0.5"
 							onchange={setInputTypeManually}
@@ -477,7 +477,7 @@
 						</select>
 					</div>
 				{:else}
-					<div class="text-2xs py-0.5 italic text-gray-400">Create Task nodes</div>
+					<div class="text-2xs py-0.5 text-gray-400 italic">Create Task nodes</div>
 				{/if}
 			{/if}
 			<div class="mt-1 space-y-1">
@@ -516,7 +516,7 @@
 						{#if manuallySelectedInputType === type && isEditable}
 							<!-- Delete button for manually selected input type -->
 							<button
-								class="ml-1 flex h-3 w-3 flex-shrink-0 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity duration-150 ease-in-out hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
+								class="ml-1 flex h-3 w-3 flex-shrink-0 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity duration-150 ease-in-out group-hover:opacity-100 hover:bg-red-50 hover:text-red-500"
 								onclick={(e) => {
 									e.stopPropagation(); // Prevent toggle when deleting
 									resetManualInputType();
@@ -528,7 +528,7 @@
 						{/if}
 					</div>
 					{#if node && taskNodeVisibility[type]}
-						<div class="ml-2 mt-0.5 border-l-2 border-gray-200 pl-2">
+						<div class="mt-0.5 ml-2 border-l-2 border-gray-200 pl-2">
 							<TaskNode
 								id={node.id}
 								data={node.data as unknown as NodeData}
@@ -561,7 +561,7 @@
 				</div>
 			{/if}
 			{#if currentOutputTypes.length === 0}
-				<div class="text-2xs py-0.5 italic text-gray-400">No output types defined</div>
+				<div class="text-2xs py-0.5 text-gray-400 italic">No output types defined</div>
 			{/if}
 			<div class="mt-1 space-y-1">
 				{#each currentOutputTypes as type, index (type)}
@@ -627,7 +627,7 @@
 							{#if isEditable}
 								<div class="flex">
 									<button
-										class="ml-1 flex h-3 w-3 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-gray-200 hover:text-blue-500 group-hover:opacity-100"
+										class="ml-1 flex h-3 w-3 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-gray-200 hover:text-blue-500"
 										onclick={(e) => {
 											e.stopPropagation(); // Prevent toggle when editing
 											startEditingOutputType(index);
@@ -635,7 +635,7 @@
 										title="Edit type"><PencilSimple size={8} weight="bold" /></button
 									>
 									<button
-										class="ml-1 flex h-3 w-3 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
+										class="ml-1 flex h-3 w-3 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-50 hover:text-red-500"
 										onclick={(e) => {
 											e.stopPropagation(); // Prevent toggle when deleting
 											deleteOutputType(index);
@@ -646,7 +646,7 @@
 							{/if}
 						</div>
 						{#if node && taskNodeVisibility[type]}
-							<div class="ml-2 mt-0.5 border-l-2 border-gray-200 pl-2">
+							<div class="mt-0.5 ml-2 border-l-2 border-gray-200 pl-2">
 								<TaskNode
 									id={node.id}
 									data={node.data as unknown as NodeData}

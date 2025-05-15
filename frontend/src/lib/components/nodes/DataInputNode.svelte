@@ -208,10 +208,15 @@
 	{/if}
 
 	<!-- Header with Task Type Selector -->
-	<div class="flex-none border-b bg-gray-50 {canBeUsedForAssistant
-		? 'bg-purple-100'
-		: 'bg-orange-100'} p-1">
-		<HeaderIcon workerType={'datainput'} extraText={canBeUsedForAssistant ? '(Assistant Ready)' : ''} />
+	<div
+		class="flex-none border-b bg-gray-50 {canBeUsedForAssistant
+			? 'bg-purple-100'
+			: 'bg-orange-100'} p-1"
+	>
+		<HeaderIcon
+			workerType={'datainput'}
+			extraText={canBeUsedForAssistant ? '(Assistant Ready)' : ''}
+		/>
 		<select
 			bind:value={selectedClassName}
 			class="w-full cursor-pointer rounded px-1 py-0.5 text-center text-xs font-medium hover:bg-gray-100"
@@ -234,7 +239,7 @@
 			initialCollapsed={false}
 			onUpdateSize={handleCollapse}
 		/>
-		<div class="absolute bottom-1 right-3 z-10">
+		<div class="absolute right-3 bottom-1 z-10">
 			{#if isLoading}
 				<div class="rounded-sm bg-white/50 px-1.5 py-1.5">
 					<Spinner size={12} class="animate-spin text-blue-500" />

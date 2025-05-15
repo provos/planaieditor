@@ -122,7 +122,7 @@
 	<button
 		id="interpreter-button"
 		type="button"
-		class="inline-flex items-center justify-center gap-x-1.5 rounded-md bg-white px-3 py-1.5 text-xs font-medium text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+		class="inline-flex items-center justify-center gap-x-1.5 rounded-md bg-white px-3 py-1.5 text-xs font-medium text-gray-900 shadow-sm ring-1 ring-gray-300 ring-inset hover:bg-gray-50"
 		class:ring-red-300={error}
 		class:ring-yellow-300={!selectedInterpreterPath.value}
 		class:bg-yellow-50={!selectedInterpreterPath.value}
@@ -145,7 +145,7 @@
 	{#if isOpen}
 		<div
 			id="interpreter-dropdown"
-			class="absolute right-0 z-50 mt-2 w-96 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+			class="ring-opacity-5 absolute right-0 z-50 mt-2 w-96 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black focus:outline-none"
 		>
 			<div class="p-2">
 				<div class="mb-2 flex items-center justify-between border-b border-gray-100 pb-2">
