@@ -242,10 +242,14 @@
 				// Update the export status
 				exportStatus = result.status;
 				if (assistantState.isOpen) {
-					assistantResponse.set(
-						"I did not get a response from the backend. Sorry, I'm not sure what happened."
-					);
-					assistantState.isRunning = false;
+					// if we get a planai debug event, we will have populated the assistantResponse store
+					// and set assistantState.isRunning to false. this is the fallback when something goes wrong
+					if (assistantState.isRunning) {
+						assistantResponse.set(
+							"I did not get a response from the backend. Sorry, I'm not sure what happened."
+						);
+						assistantState.isRunning = false;
+					}
 				}
 
 				// If there are updated nodes (with errors), update the store
