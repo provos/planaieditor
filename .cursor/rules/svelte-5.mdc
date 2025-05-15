@@ -14,10 +14,11 @@ alwaysApply: false
 - We use phosphor ui for icons
 - We are using tailwindcss v4 for styles
   - background opacity is now specified as follows: bg-gray-900/50 because bg-opacity-50 has been deprecated.
+- SvelteComponent, the base class from Svelte 4, is deprecated in favour of the new Component type which defines the function shape of a Svelte component.
 
 # UI Component Library
 - We are using the headless bits UI component library
-- When using a CSS framework like [TailwindCSS](mdc:planaieditor/planaieditor/planaieditor/planaieditor/planaieditor/planaieditor/planaieditor/planaieditor/planaieditor/planaieditor/planaieditor/https:/tailwindcss.com), simply pass the classes to the component:
+- When using a CSS framework like [TailwindCSS](mdc:planaieditor/planaieditor/planaieditor/planaieditor/planaieditor/planaieditor/planaieditor/planaieditor/planaieditor/planaieditor/planaieditor/planaieditor/planaieditor/https:/tailwindcss.com), simply pass the classes to the component:
 
 ```svelte
 <script lang="ts">
