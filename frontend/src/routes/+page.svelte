@@ -56,9 +56,9 @@
 	import { addAvailableMethod, nodeDataFromType, addNewNode } from '$lib/utils/nodeUtils';
 	import FullScreenEditor from '$lib/components/FullScreenEditor.svelte';
 	import { fullScreenEditorState } from '$lib/stores/fullScreenEditorStore.svelte';
-	import { assistantState, assistantResponse } from '$lib/stores/assistantStateStore.svelte';
+	import { assistantState, assistantResponse, clearAssistantMessages } from '$lib/stores/assistantStateStore.svelte';
 	import Assistant from '$lib/components/Assistant.svelte';
-	
+
 	// Import the LLM Config Modal
 	import LLMConfigModal from '$lib/components/LLMConfigModal.svelte';
 
@@ -640,6 +640,7 @@
 			llmConfigsFromCode.set([]); // Clear code LLM configs
 			graphName.set('');
 			clearLLMConfigsFromCode();
+			clearAssistantMessages();
 			console.log('Graph cleared.');
 			// Optionally reset status messages
 			exportStatus = { type: 'idle', message: '' };
@@ -949,7 +950,7 @@
 			edges.set([]);
 			llmConfigs.set([]);
 			llmConfigsFromCode.set([]);
-
+			clearAssistantMessages();
 			// Introduce a small delay before setting new data to ensure reactivity
 			await new Promise((resolve) => setTimeout(resolve, 10));
 
@@ -991,6 +992,7 @@
 			edges.set([]);
 			llmConfigs.set([]);
 			llmConfigsFromCode.set([]);
+			clearAssistantMessages();
 			graphName.set(''); // Reset graph name on error
 		}
 	}
