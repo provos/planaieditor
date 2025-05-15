@@ -191,10 +191,10 @@
 					class={`flex ${message.type === 'user' ? 'justify-end' : 'justify-center'} animate-in fade-in-50 slide-in-from-${message.type === 'user' ? 'right' : 'left'}-5 duration-200`}
 				>
 					<div
-						class={`max-w-[80%] rounded-lg p-3 ${
+						class={`rounded-lg p-3 ${
 							message.type === 'user'
-								? 'rounded-tr-none bg-blue-600 text-white'
-								: 'prose prose-invert prose-sm rounded-tl-none bg-gray-700 text-white'
+								? 'max-w-[80%] rounded-tr-none bg-blue-600 text-white'
+								: 'prose prose-invert prose-md w-full max-w-6xl rounded-tl-none bg-gray-700 text-white'
 						}`}
 					>
 						{#if message.type === 'assistant'}
