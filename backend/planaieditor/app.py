@@ -506,7 +506,10 @@ def handle_start_lsp():
     python_executable = app.config.get("SELECTED_VENV_PATH", sys.executable)
 
     # XXX - we need to restart the LSP process if the venv changes
-    success = lsp_handler.start_lsp_process(python_executable, sid, socketio.emit)
+    lsp_arguments = app.config.get("LSP_ARGS", [])
+    success = lsp_handler.start_lsp_process(
+        python_executable, sid, socketio.emit, *lsp_arguments
+    )
 
     if success:
         print(f"[{sid}] LSP process started successfully.")
@@ -1146,12 +1149,28 @@ if not is_development:
 # Main execution block - Refactored to be callable by entry point
 def main():
     parser = ArgumentParser()
-    parser.add_argument("--root-path", type=Path, default=None)
+    parser.add_argument(
+        "--root-path",
+        type=Path,
+        default=None,
+        help="Path to the root directory that the python process is allowed to read and write to.",
+    )
+    parser.add_argument(
+        "--lsp-args",
+        type=str,
+        default="",
+        help="Additional arguments to pass to the jedi-language-server.",
+    )
     args = parser.parse_args()
     if args.root_path:
         setup_filesystem(app, args.root_path)
     else:
         setup_filesystem(app, Path.cwd())
+
+    # Store LSP arguments in app.config
+    app.config["LSP_ARGS"] = [
+        arg.strip() for arg in args.lsp_args.split(" ") if arg.strip()
+    ]
 
     print(f"Starting Flask-SocketIO server in {FLASK_ENV} mode...")
     # Use different settings for development vs production
