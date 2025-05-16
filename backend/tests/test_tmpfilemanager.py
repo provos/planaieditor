@@ -205,13 +205,13 @@ class TestTempFileManager(unittest.TestCase):
             "params": {"textDocument": {"uri": original_uri}},
         }
         # With the fix, translate_message_to_server for didClose directly returns the translated URI string.
-        returned_uri_str = self.manager.translate_message_to_server(message)
+        returned_message = self.manager.translate_message_to_server(message)
 
         # The returned URI should be the file URI, and the temp file should be deleted.
         self.assertEqual(
-            returned_uri_str,
+            returned_message["params"]["textDocument"]["uri"],
             expected_file_uri_str,
-            f"The returned URI '{returned_uri_str}' should be the translated file URI '{expected_file_uri_str}'.",
+            f"The returned URI '{returned_message['params']['textDocument']['uri']}' should be the translated file URI '{expected_file_uri_str}'.",
         )
 
         self.assertFalse(

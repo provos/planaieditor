@@ -321,9 +321,6 @@ class TempFileManager:
             uri = doc_id.get("uri")
             if uri and uri.startswith("inmemory://"):
                 self.inmemory_documents.pop(uri, None)  # Remove from in-memory cache
-                temp_file_log.info(
-                    f"didClose: Handling URI {uri}. Translating to file URI for server, then deleting temp file."
-                )
 
                 # Directly get the file path and convert it to a file URI
                 temp_file_path_str = self._get_temp_file_path(uri)
@@ -331,22 +328,23 @@ class TempFileManager:
                 if temp_file_path_str:
                     translated_uri_for_server = Path(temp_file_path_str).as_uri()
 
+                temp_file_log.info(
+                    f"didClose: Handling URI {uri}. Translating to file URI for server, then deleting temp file: {translated_uri_for_server}"
+                )
+
                 # Now delete the temporary file and its mappings
                 self.delete_temp_file(uri)
 
-                # Return the translated file URI.
-                # If for some reason it wasn't found (e.g., file never existed),
-                # this would return None, or the original uri if we fall back.
-                # The test expects translated_uri_for_server to be valid.
                 if translated_uri_for_server:
-                    return translated_uri_for_server
+                    processed_message["params"]["textDocument"][
+                        "uri"
+                    ] = translated_uri_for_server
                 else:
-                    # Fallback or error: If the URI was inmemory but no temp file was found.
-                    # This case might indicate a logic error elsewhere if the test setup implies a file should exist.
+                    # Fallback to the original URI if the URI was inmemory but no temp file was found.
                     temp_file_log.warning(
                         f"didClose: No temp file path found for {uri}, returning original URI to server."
                     )
-                    return uri  # Return original URI if no translation found
+                    return processed_message
 
         return self._translate_uri_recursive(processed_message, "to_server")
 

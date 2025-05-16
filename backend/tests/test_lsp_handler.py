@@ -5,6 +5,7 @@ import time
 import unittest
 from pathlib import Path
 from queue import Empty, Queue
+from typing import Optional
 
 from planaieditor.lsp_handler import LSPHandler
 
@@ -34,6 +35,7 @@ class TestLSPHandlerIntegration(unittest.TestCase):
         self.current_id = 0
 
     def tearDown(self):
+        print("tearDown called")
         self.lsp_handler.stop_lsp_process()
 
     def mock_socketio_emit(self, event: str, data: dict, room: str):
@@ -48,7 +50,9 @@ class TestLSPHandlerIntegration(unittest.TestCase):
                 f"MOCK EMIT Warning: Message for unexpected room {room}, expected {self.session_id}"
             )
 
-    def get_next_emitted_message(self, timeout: float = 10.0) -> dict:
+    def get_next_emitted_message(
+        self, timeout: float = 10.0, fail_on_timeout: bool = True
+    ) -> Optional[dict]:
         try:
             # Drain any previous messages not consumed, useful if server is chatty
             while True:
@@ -62,8 +66,11 @@ class TestLSPHandlerIntegration(unittest.TestCase):
         try:
             return self.mock_emit_queue.get(timeout=timeout)
         except Empty:
-            self.fail(f"Timeout waiting for message from LSP server after {timeout}s")
-        return {}  # Should not be reached
+            if fail_on_timeout:
+                self.fail(
+                    f"Timeout waiting for message from LSP server after {timeout}s"
+                )
+        return None
 
     def send_and_assert_initialize(self):
         init_msg_id = self.current_id
@@ -97,6 +104,12 @@ class TestLSPHandlerIntegration(unittest.TestCase):
                                 }
                             }
                         }
+                    },
+                },
+                "initializationOptions": {
+                    "jediSettings": {
+                        "debug": True,  # Keep this for your original debugging purpose!
+                        "autoImportModules": ["planai"],
                     }
                 },
                 "trace": "verbose",  # As in example
@@ -138,6 +151,7 @@ class TestLSPHandlerIntegration(unittest.TestCase):
 
         # Expect textDocument/publishDiagnostics
         diag_response = self.get_next_emitted_message(timeout=5.0)
+
         self.assertEqual(
             diag_response["data"]["method"], "textDocument/publishDiagnostics"
         )
@@ -282,7 +296,10 @@ class TestLSPHandlerIntegration(unittest.TestCase):
     def test_end_to_end_workflow(self):
         self.assertTrue(
             self.lsp_handler.start_lsp_process(
-                self.python_executable, self.session_id, self.mock_socketio_emit
+                self.python_executable,
+                self.session_id,
+                self.mock_socketio_emit,
+                "-vv",
             ),
             "LSP process should start successfully.",
         )
@@ -297,6 +314,11 @@ class TestLSPHandlerIntegration(unittest.TestCase):
 
         # 3. textDocument/didOpen (matching the log's content and URI)
         file_content = "import os\n\ndef main_func():\n    print(os.getpid())\n    # A comment for action\n"
+
+        # file_uri = Path("/tmp/bad_text.py")
+        # file_uri.write_text(file_content)
+        # file_uri = file_uri.as_uri()
+
         file_uri = "inmemory://project/file1.py"  # URI from the log
         self.send_and_assert_open(file_uri, file_content)
 
@@ -306,6 +328,11 @@ class TestLSPHandlerIntegration(unittest.TestCase):
         self.send_and_assert_hover(file_uri)
 
         # 6. textDocument/didClose
+        self.send_close(file_uri)
+
+        # 7. textDocument/didOpen
+        self.send_and_assert_open(file_uri, file_content)
+        self.send_and_assert_hover(file_uri)
         self.send_close(file_uri)
 
         # 7. Shutdown
