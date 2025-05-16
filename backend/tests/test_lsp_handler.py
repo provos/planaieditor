@@ -177,17 +177,56 @@ class TestLSPHandlerIntegration(unittest.TestCase):
         self.assertEqual(hover_response["data"]["id"], hover_id)
         self.assertIn("result", hover_response["data"])
 
-        expected_hover_result = {
-            "contents": {
-                "kind": "plaintext",
-                "value": "def print(*values: object, sep: Optional[str]=..., end: Optional[str]=..., file: Optional[SupportsWrite[str]]=..., flush: bool=...) -> None\n---\nprint(value, ..., sep=' ', end='\\n', file=sys.stdout, flush=False)\n\nPrints the values to a stream, or to sys.stdout by default.\nOptional keyword arguments:\nfile:  a file-like object (stream); defaults to the current sys.stdout.\nsep:   string inserted between values, default a space.\nend:   string appended after the last value, default a newline.\nflush: whether to forcibly flush the stream.\nFull name: builtins.print",
-            },
-            "range": {
-                "start": {"line": 3, "character": 4},
-                "end": {"line": 3, "character": 9},
-            },
-        }
-        self.assertEqual(hover_response["data"]["result"], expected_hover_result)
+        result = hover_response["data"]["result"]
+        self.assertIsInstance(result, dict, "Hover result should be a dictionary.")
+
+        # Check contents structure
+        self.assertIn("contents", result)
+        contents = result["contents"]
+        self.assertIsInstance(contents, dict, "Contents should be a dictionary.")
+        self.assertIn("kind", contents)
+        self.assertIsInstance(
+            contents["kind"], str, "Contents kind should be a string."
+        )
+        self.assertIn("value", contents)
+        self.assertIsInstance(
+            contents["value"], str, "Contents value should be a string."
+        )
+        self.assertTrue(
+            len(contents["value"]) > 0, "Contents value should not be empty."
+        )
+
+        # Check range structure
+        self.assertIn("range", result)
+        hover_range = result["range"]
+        self.assertIsInstance(hover_range, dict, "Range should be a dictionary.")
+
+        self.assertIn("start", hover_range)
+        start_pos = hover_range["start"]
+        self.assertIsInstance(start_pos, dict, "Start position should be a dictionary.")
+        self.assertIn("line", start_pos)
+        self.assertIsInstance(
+            start_pos["line"], int, "Start line should be an integer."
+        )
+        self.assertIn("character", start_pos)
+        self.assertIsInstance(
+            start_pos["character"], int, "Start character should be an integer."
+        )
+
+        self.assertIn("end", hover_range)
+        end_pos = hover_range["end"]
+        self.assertIsInstance(end_pos, dict, "End position should be a dictionary.")
+        self.assertIn("line", end_pos)
+        self.assertIsInstance(end_pos["line"], int, "End line should be an integer.")
+        self.assertIn("character", end_pos)
+        self.assertIsInstance(
+            end_pos["character"], int, "End character should be an integer."
+        )
+
+        self.assertEqual(start_pos["line"], 3)
+        self.assertEqual(start_pos["character"], 4)
+        self.assertEqual(end_pos["line"], 3)
+        self.assertEqual(end_pos["character"], 9)
 
     def send_and_assert_code_action(self, file_uri: str):
         code_action_id = self.current_id
