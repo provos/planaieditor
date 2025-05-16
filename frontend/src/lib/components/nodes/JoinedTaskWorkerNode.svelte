@@ -151,7 +151,7 @@
 	</div>
 
 	<!-- Code Section for consume_work_joined -->
-	<div class="flex min-h-0 flex-grow flex-col overflow-hidden px-1 pb-1">
+	<div class="flex min-h-0 flex-grow flex-col px-1 pb-1">
 		<EditableCodeSection
 			title={consumeWorkJoinedTitle}
 			code={data.methods.consume_work_joined}
