@@ -232,7 +232,7 @@
 	>
 		<div
 			bind:this={editorContainer}
-			class="min-h-[3rem] w-full rounded border border-gray-300"
+			class="min-h-[3rem] w-full rounded border border-gray-300 nodrag"
 			style="height: {contentHeight ? Math.min(contentHeight, maxHeight) : 'auto'}px;"
 		></div>
 	</div>
