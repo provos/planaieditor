@@ -128,7 +128,12 @@ export class LspManager {
 				name: 'workspace',
 				index: 0
 			},
-			initializationOptions: {}
+			initializationOptions: {
+				"jediSettings": {
+					"debug": false,
+					"autoImportModules": ["planai"]
+				}
+}
 		};
 
 		return new ClientConstructor({
