@@ -42,14 +42,10 @@
 	let resizeObserver: ResizeObserver | undefined;
 
 	onDestroy(async () => {
-		console.log('[EditableCodeSection] Destroying component...');
-
 		// Dispose editor and models
 		editor?.dispose();
-		console.log('[EditableCodeSection] Monaco editor disposed.');
 
 		resizeObserver?.disconnect(); // Disconnect observer on destroy
-		console.log('[EditableCodeSection] Resize observer disconnected.');
 
 		// Clear other references
 		editor = undefined;
@@ -232,7 +228,7 @@
 	>
 		<div
 			bind:this={editorContainer}
-			class="min-h-[3rem] w-full rounded border border-gray-300 nodrag"
+			class="nodrag min-h-[3rem] w-full rounded border border-gray-300"
 			style="height: {contentHeight ? Math.min(contentHeight, maxHeight) : 'auto'}px;"
 		></div>
 	</div>

@@ -129,11 +129,11 @@ export class LspManager {
 				index: 0
 			},
 			initializationOptions: {
-				"jediSettings": {
-					"debug": false,
-					"autoImportModules": ["planai"]
+				jediSettings: {
+					debug: false,
+					autoImportModules: ['planai']
 				}
-}
+			}
 		};
 
 		return new ClientConstructor({
