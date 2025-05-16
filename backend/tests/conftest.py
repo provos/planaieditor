@@ -1,3 +1,4 @@
+import logging
 import os
 import sys
 
@@ -12,3 +13,8 @@ def pytest_addoption(parser):
         default=False,
         help="Write transformed JSON data to file for debugging",
     )
+
+
+def pytest_configure(config):
+    """Configures logging to stdout/stderr."""
+    logging.basicConfig(stream=sys.stdout, level=logging.INFO)
