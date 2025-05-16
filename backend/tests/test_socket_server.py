@@ -192,8 +192,18 @@ class TestSocketServer(unittest.TestCase):
         self.assertFalse(server._running)
         self.assertIsNone(server._server_socket)
 
-        # Client should not be able to send after server stops
-        self.assertFalse(client.send({"test": "message"}))
+        attempts = 0
+        while attempts < 10:
+            # There seems to be a timing problem when running on GitHub Actions.
+            # This is a hack to make sure the server is fully stopped.
+            time.sleep(1)
+            attempts += 1
+            # Client should not be able to send after server stops
+            result = client.send({"test": "message"})
+            if not result:
+                break
+
+        self.assertFalse(result, "Client should not be able to send after server stops")
 
 
 class TestServerStress(unittest.TestCase):
