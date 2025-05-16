@@ -69,7 +69,8 @@
 				scrollbar: {
 					vertical: 'auto',
 					horizontalScrollbarSize: 8,
-					verticalScrollbarSize: 8
+					verticalScrollbarSize: 8,
+					handleMouseWheel: false // Initially disable mouse wheel handling
 				},
 				theme: 'vs-light',
 				fixedOverflowWidgets: false
@@ -86,6 +87,15 @@
 			editor.onDidContentSizeChange((e) => {
 				contentHeight = e.contentHeight;
 				updateEditorHeight();
+			});
+
+			// Handle focus and blur to toggle mouse wheel scrolling
+			editor.onDidFocusEditorWidget(() => {
+				editor?.updateOptions({ scrollbar: { handleMouseWheel: true } });
+			});
+
+			editor.onDidBlurEditorWidget(() => {
+				editor?.updateOptions({ scrollbar: { handleMouseWheel: false } });
 			});
 
 			// Initial layout and height calculation
