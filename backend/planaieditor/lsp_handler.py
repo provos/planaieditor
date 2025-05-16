@@ -264,48 +264,67 @@ class LSPHandler:
         """Reads stderr from the LSP process for logging."""
         try:
             while self.lsp_process and not stream.closed:
-                # If self.lsp_process changes, this thread continues for the old proc until it ends.
-                ready_to_read, _, _ = select.select([stream], [], [], 0.5)
-                if not ready_to_read:
-                    current_process = self.lsp_process  # Sample self.lsp_process
-                    if not current_process or current_process.stderr != stream:
-                        # Process changed or stream invalid
-                        lsp_handler_log.info(
-                            "LSP stderr reader: process changed or stream invalid. Exiting."
-                        )
-                        break
-                    if current_process.poll() is not None:  # Process died
-                        lsp_handler_log.info(
-                            "LSP stderr reader: process died. Exiting."
-                        )
-                        break
-                    continue
-
-                # Read all available lines
-                lines_output = []
-                while select.select([stream], [], [], 0)[
-                    0
-                ]:  # Non-blocking check for more
-                    line_bytes = stream.readline()
-                    if not line_bytes:  # Stream ended
-                        lsp_handler_log.debug("LSP stderr stream ended during read.")
-                        return  # Exit thread
-                    lines_output.append(
-                        line_bytes.decode("utf-8", errors="ignore").strip()
-                    )
-
-                if lines_output:
+                current_proc_instance = self.lsp_process  # Capture for consistent check
+                if not current_proc_instance or current_proc_instance.stderr != stream:
                     lsp_handler_log.info(
-                        f"LSP stderr output:\n{os.linesep.join(lines_output)}"
+                        "LSP stderr reader: process changed or stream invalid. Exiting."
                     )
+                    break
+                if current_proc_instance.poll() is not None:
+                    lsp_handler_log.info("LSP stderr reader: process died. Exiting.")
+                    break
 
-            lsp_handler_log.info("LSP stderr stream processing stopped.")
+                # Wait for data, but with a timeout
+                ready_to_read, _, _ = select.select([stream], [], [], 0.1)
+
+                if ready_to_read:
+                    try:
+                        # Read a chunk of available data.
+                        # stream.read() on a pipe might block if not careful,
+                        # but select said it's ready.
+                        # Reading a fixed smallish chunk is safer than read() or readline()
+                        # if we suspect blocking writes from the other side.
+                        chunk = stream.read(4096)  # Read up to 4KB
+                        if not chunk:  # EOF
+                            lsp_handler_log.debug("LSP stderr stream ended (EOF).")
+                            break  # Exit thread
+
+                        # Log the raw chunk immediately for debugging this issue
+                        # You might want a more sophisticated way to buffer/decode later
+                        # but for now, to see if *anything* is there:
+                        try:
+                            lsp_handler_log.info(
+                                f"LSP stderr:\n{chunk.decode('utf-8', errors='backslashreplace')}"
+                            )
+                        except Exception as log_ex:
+                            lsp_handler_log.error(
+                                f"Error logging stderr chunk: {log_ex}"
+                            )
+
+                    except BlockingIOError:
+                        # This shouldn't happen if select() reported readable,
+                        # but good to handle if stream was set to non-blocking.
+                        lsp_handler_log.debug("LSP stderr: BlockingIOError, no data.")
+                        time.sleep(0.05)  # Brief pause if this happens unexpectedly
+                    except Exception as e:
+                        lsp_handler_log.error(
+                            f"Error during stderr read chunk: {e}", exc_info=True
+                        )
+                        # Potentially break or continue based on error
+                        break
+                # If not ready_to_read, the loop continues, checks process status, and re-selects
+
         except Exception as e:
-            if self.lsp_process:
-                lsp_handler_log.error(f"Error reading LSP stderr: {e}", exc_info=True)
+            # General exception for the whole thread
+            if (
+                self.lsp_process and self.lsp_process.poll() is None
+            ):  # Check if process was expected to be running
+                lsp_handler_log.error(
+                    f"Unhandled error in _read_stderr thread: {e}", exc_info=True
+                )
             else:
                 lsp_handler_log.info(
-                    f"Error reading LSP stderr after process termination: {e}"
+                    f"Error in _read_stderr after process stopped or changed: {e}"
                 )
         finally:
             lsp_handler_log.info("LSP stderr reader thread finished.")
@@ -367,9 +386,16 @@ class LSPHandler:
             )
 
     def start_lsp_process(
-        self, python_executable: str, sid: str, socketio_emit: Callable
+        self, python_executable: str, sid: str, socketio_emit: Callable, *args
     ) -> bool:
-        """Starts the jedi-language-server subprocess."""
+        """Starts the jedi-language-server subprocess.
+
+        Args:
+            python_executable: The path to the Python executable.
+            sid: The session ID.
+            socketio_emit: The socketio emit function.
+            *args: Additional arguments to pass to the jedi-language-server.
+        """
         with self.lsp_msg_lock:
             if self.lsp_process:
                 lsp_handler_log.warning(
@@ -390,7 +416,7 @@ class LSPHandler:
                 f"Starting LSP process using: {jedi_path_str} for SID: {sid}"
             )
             try:
-                cmd = [jedi_path_str]
+                cmd = [jedi_path_str] + list(args)
                 proc = subprocess.Popen(
                     cmd,
                     stdin=subprocess.PIPE,
@@ -613,8 +639,9 @@ class LSPHandler:
 # --- Global Instance of LSPHandler ---
 lsp_handler_instance = LSPHandler()
 
+
 # --- Main execution / Example Usage ---
-if __name__ == "__main__":
+def main():
     python_exe = "python"  # Adjust if jedi-language-server is not in PATH
     # or use /path/to/your/venv/bin/python
 
@@ -633,8 +660,6 @@ if __name__ == "__main__":
         lsp_handler_log.info(
             f"MOCK EMIT Event: {event}, SID: {room}, Data: {json.dumps(data, indent=2)}"
         )
-
-    sid_main_example = "main_test_session_456"
 
     init_msg = {
         "jsonrpc": "2.0",
@@ -709,3 +734,7 @@ if __name__ == "__main__":
 
     lsp_handler_instance.stop_lsp_process()
     lsp_handler_log.info("LSP Handler example finished.")
+
+
+if __name__ == "__main__":
+    main()
