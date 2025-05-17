@@ -101,7 +101,7 @@
 					language="python"
 					onUpdate={(newCode) => {
 						data.methods.consume_work = newCode;
-						persistNodeDataDebounced(id, store.nodes, data);
+						persistNodeDataDebounced();
 					}}
 					showReset={true}
 					onUpdateSize={handleCollapse}

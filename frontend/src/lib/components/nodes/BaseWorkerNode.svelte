@@ -68,7 +68,7 @@
 
 	if (!data.inputTypes) {
 		data.inputTypes = [];
-		persistNodeDataDebounced(id, store.nodes, data);
+		persistNodeDataDebounced();
 	}
 
 	// --- State Variables ---
@@ -175,7 +175,7 @@
 		$effect(() => {
 			if (data.isCached !== localIsCached) {
 				data.isCached = localIsCached;
-				persistNodeDataDebounced(id, store.nodes, data);
+				persistNodeDataDebounced();
 			}
 		});
 
@@ -208,7 +208,7 @@
 		if (!validateWorkerName(tempWorkerName)) return;
 		if (data.workerName !== tempWorkerName) {
 			data.workerName = tempWorkerName;
-			persistNodeDataDebounced(id, store.nodes, data);
+			persistNodeDataDebounced();
 		}
 		editingWorkerName = false;
 	}
@@ -254,7 +254,7 @@
 		}
 		data.output_types = tmpOutputTypes;
 		currentOutputTypes = tmpOutputTypes;
-		persistNodeDataDebounced(id, store.nodes, data);
+		persistNodeDataDebounced();
 		cancelTypeEditing();
 	}
 
@@ -263,7 +263,7 @@
 		tmpOutputTypes = tmpOutputTypes.filter((_: string, i: number) => i !== index);
 		data.output_types = tmpOutputTypes;
 		currentOutputTypes = tmpOutputTypes;
-		persistNodeDataDebounced(id, store.nodes, data);
+		persistNodeDataDebounced();
 		typeError = '';
 	}
 
@@ -297,7 +297,7 @@
 		data.inputTypes = [];
 		inferredInputTypes = [];
 		computeInputOutputTypes();
-		persistNodeDataDebounced(id, store.nodes, data);
+		persistNodeDataDebounced();
 	}
 
 	function addOutputTypeFromSelect(event: Event) {
@@ -307,7 +307,7 @@
 			if (!data.output_types.includes(newType)) {
 				data.output_types = [...data.output_types, newType];
 				currentOutputTypes = [...data.output_types];
-				persistNodeDataDebounced(id, store.nodes, data);
+				persistNodeDataDebounced();
 			}
 			select.value = ''; // Reset select
 		}
@@ -322,7 +322,7 @@
 			data.otherMembersSource = newCode;
 			otherMembersSource = newCode;
 		}
-		persistNodeDataDebounced(id, store.nodes, data);
+		persistNodeDataDebounced();
 		tick().then(() => {
 			updateNodeInternals(id);
 		});
@@ -338,7 +338,7 @@
 		} else {
 			data.methods[methodName] = newCode;
 		}
-		persistNodeDataDebounced(id, store.nodes, data);
+		persistNodeDataDebounced();
 		tick().then(() => {
 			updateNodeInternals(id);
 		});
@@ -357,7 +357,7 @@
 
 	function updateInferredInputTypes(updatedInputTypes: string[]) {
 		inferredInputTypes = updatedInputTypes;
-		persistNodeDataDebounced(id, store.nodes, data);
+		persistNodeDataDebounced();
 		computeInputOutputTypes();
 	}
 

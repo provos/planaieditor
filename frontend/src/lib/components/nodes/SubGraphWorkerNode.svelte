@@ -44,7 +44,7 @@
 
 	if (data.factoryInvocation === undefined) {
 		data.factoryInvocation = '';
-		persistNodeDataDebounced(id, store.nodes, data);
+		persistNodeDataDebounced();
 	}
 
 	function updateFactoryFunction(event: Event) {
@@ -62,7 +62,7 @@
 				data.workerName = selectedFactory.className;
 				// Also update our local tracking variable
 				selectedFactoryName = selectedFactory.name;
-				persistNodeDataDebounced(id, store.nodes, data);
+				persistNodeDataDebounced();
 			}
 			dataCopy = { ...data };
 			tick().then(() => updateNodeInternals(id));
@@ -75,14 +75,14 @@
 			data.workerName = undefined;
 			selectedFactoryName = '';
 			dataCopy = { ...data };
-			persistNodeDataDebounced(id, store.nodes, data);
+			persistNodeDataDebounced();
 			tick().then(() => updateNodeInternals(id));
 		}
 	}
 
 	function handleInvocationUpdate(newCode: string) {
 		data.factoryInvocation = newCode;
-		persistNodeDataDebounced(id, store.nodes, data);
+		persistNodeDataDebounced();
 	}
 
 	async function handleCollapse() {

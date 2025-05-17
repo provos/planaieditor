@@ -34,7 +34,7 @@
 	// Ensure jsonData is initialized
 	if (!data.jsonData) {
 		data.jsonData = '{}'; // Default to empty JSON object
-		persistNodeDataDebounced(id, nodes, data);
+		persistNodeDataDebounced();
 	}
 
 	// --- State Variables ---
@@ -54,7 +54,7 @@
 		if (selectedClassName && !taskClasses.has(selectedClassName)) {
 			selectedClassName = null;
 			data.className = null;
-			persistNodeDataDebounced(id, nodes, data);
+			persistNodeDataDebounced();
 			deleteExistingEdges();
 		}
 	});
@@ -95,7 +95,7 @@
 		if (data.className !== selectedClassName) {
 			data.className = selectedClassName;
 			checkCanBeUsedForAssistant(); // async function does not trigger reactivity
-			persistNodeDataDebounced(id, nodes, data);
+			persistNodeDataDebounced();
 			deleteExistingEdges();
 			if (selectedClassName) {
 				validateJsonData();
@@ -110,7 +110,7 @@
 	$effect(() => {
 		if (data.isJsonValid !== jsonIsValid) {
 			data.isJsonValid = jsonIsValid;
-			persistNodeDataDebounced(id, nodes, data);
+			persistNodeDataDebounced();
 		}
 	});
 
@@ -121,7 +121,7 @@
 		}
 
 		data.jsonData = newCode;
-		persistNodeDataDebounced(id, nodes, data);
+		persistNodeDataDebounced();
 		errorMessage = null;
 		jsonIsValid = false;
 		debounce(validateJsonData, 1000)();

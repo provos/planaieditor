@@ -39,6 +39,7 @@ export async function readFile(path: string): Promise<Blob> {
 				errorMessage = errorData.message || errorMessage;
 			} catch (jsonError) {
 				// Ignore if response wasn't JSON, use the status text
+				console.error(`readFile error for path "${path}": ${errorMessage}`);
 			}
 			console.error(`readFile error for path "${path}": ${errorMessage}`);
 			throw new Error(errorMessage);

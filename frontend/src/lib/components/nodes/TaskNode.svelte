@@ -53,7 +53,7 @@
 	// Ensure data.fields is initialized
 	if (allowEditing && !data.fields) {
 		data.fields = [];
-		persistNodeDataDebounced(id, store.nodes, data);
+		persistNodeDataDebounced();
 	}
 
 	let effectiveStyleClasses = $derived(
@@ -168,7 +168,7 @@
 		}
 
 		data.className = tempClassName;
-		persistNodeDataDebounced(id, store.nodes, data);
+		persistNodeDataDebounced();
 		editingClassName = false;
 	}
 
@@ -250,7 +250,7 @@
 			);
 		}
 
-		persistNodeDataDebounced(id, store.nodes, data);
+		persistNodeDataDebounced();
 
 		// Update our local tracking state
 		currentFields = [...data.fields];
@@ -271,7 +271,7 @@
 	function deleteField(index: number) {
 		if (!allowEditing) return;
 		data.fields = data.fields.filter((_: Field, i: number) => i !== index);
-		persistNodeDataDebounced(id, store.nodes, data);
+		persistNodeDataDebounced();
 		currentFields = [...data.fields];
 	}
 

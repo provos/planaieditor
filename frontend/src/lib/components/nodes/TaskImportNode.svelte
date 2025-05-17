@@ -23,16 +23,16 @@
 		data: TaskImportNodeData;
 	}>();
 
-	const { edges, nodes } = useStore();
+	const { edges } = useStore();
 
 	// Initialize data if needed
 	if (!data.modulePath) {
 		data.modulePath = '';
-		persistNodeDataDebounced(id, nodes, data);
+		persistNodeDataDebounced();
 	}
 	if (!data.className) {
 		data.className = null;
-		persistNodeDataDebounced(id, nodes, data);
+		persistNodeDataDebounced();
 	}
 
 	const updateNodeInternals = useUpdateNodeInternals();
@@ -47,7 +47,7 @@
 
 	if (!data.fields) {
 		data.fields = [];
-		persistNodeDataDebounced(id, nodes, data);
+		persistNodeDataDebounced();
 	}
 
 	let dataCopy = $state(data);
@@ -84,7 +84,7 @@
 				availableClasses = []; // Clear local state on error
 				data.availableClasses = []; // Clear data prop on error
 			}
-			persistNodeDataDebounced(id, nodes, data);
+			persistNodeDataDebounced();
 		} catch (err: any) {
 			error = err.message || 'Failed to fetch task classes.';
 		} finally {
@@ -114,7 +114,7 @@
 			if (response.ok && result.success) {
 				// Check response.ok too
 				data.fields = result.fields;
-				persistNodeDataDebounced(id, nodes, data);
+				persistNodeDataDebounced();
 				dataCopy = {
 					...dataCopy,
 					fields: result.fields
@@ -127,7 +127,7 @@
 				);
 				error = result.error || `HTTP error ${response.status}`;
 				data.fields = [];
-				persistNodeDataDebounced(id, nodes, data);
+				persistNodeDataDebounced();
 				dataCopy = {
 					...dataCopy,
 					fields: []
@@ -179,7 +179,7 @@
 	$effect(() => {
 		if (data.className !== localSelectedClassName) {
 			data.className = localSelectedClassName;
-			persistNodeDataDebounced(id, nodes, data);
+			persistNodeDataDebounced();
 			dataCopy = {
 				...dataCopy,
 				className: localSelectedClassName
