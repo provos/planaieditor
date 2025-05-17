@@ -29,11 +29,11 @@
 	// Ensure data fields are initialized
 	if (!data.receivedData) {
 		data.receivedData = [];
-		persistNodeDataDebounced(id, store.nodes, data);
+		persistNodeDataDebounced();
 	}
 	if (!data.inputTypes) {
 		data.inputTypes = [];
-		persistNodeDataDebounced(id, store.nodes, data);
+		persistNodeDataDebounced();
 	}
 
 	let receivedData = $derived<Record<string, any>[]>(data.receivedData || []);
@@ -58,7 +58,7 @@
 	function clearReceivedData() {
 		receivedData = [];
 		data.receivedData = [];
-		persistNodeDataDebounced(id, store.nodes, data);
+		persistNodeDataDebounced();
 		handleContentUpdate();
 	}
 </script>

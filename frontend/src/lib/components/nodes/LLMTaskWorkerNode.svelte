@@ -101,15 +101,15 @@
 	// Ensure all fields are initialized
 	if (!data.prompt) {
 		data.prompt = '';
-		persistNodeDataDebounced(id, nodes, data);
+		persistNodeDataDebounced();
 	}
 	if (!data.system_prompt) {
 		data.system_prompt = '';
-		persistNodeDataDebounced(id, nodes, data);
+		persistNodeDataDebounced();
 	}
 	if (!data.llm_output_type) {
 		data.llm_output_type = '';
-		persistNodeDataDebounced(id, nodes, data);
+		persistNodeDataDebounced();
 	}
 
 	// Initialize default function code
@@ -121,19 +121,19 @@
 	// Initialize function code
 	if (!data.extraValidation) {
 		data.extraValidation = defaultExtraValidation;
-		persistNodeDataDebounced(id, nodes, data);
+		persistNodeDataDebounced();
 	}
 	if (!data.formatPrompt) {
 		data.formatPrompt = defaultFormatPrompt;
-		persistNodeDataDebounced(id, nodes, data);
+		persistNodeDataDebounced();
 	}
 	if (!data.preProcess) {
 		data.preProcess = defaultPreProcess;
-		persistNodeDataDebounced(id, nodes, data);
+		persistNodeDataDebounced();
 	}
 	if (!data.postProcess) {
 		data.postProcess = defaultPostProcess;
-		persistNodeDataDebounced(id, nodes, data);
+		persistNodeDataDebounced();
 	}
 
 	// Initialize enabled functions
@@ -144,17 +144,17 @@
 			preProcess: false,
 			postProcess: false
 		};
-		persistNodeDataDebounced(id, nodes, data);
+		persistNodeDataDebounced();
 	}
 
 	// Initialize boolean flags if not present
 	if (data.use_xml === undefined) {
 		data.use_xml = false;
-		persistNodeDataDebounced(id, nodes, data);
+		persistNodeDataDebounced();
 	}
 	if (data.debug_mode === undefined) {
 		data.debug_mode = false;
-		persistNodeDataDebounced(id, nodes, data);
+		persistNodeDataDebounced();
 	}
 
 	// Subscribe to the taskClassNamesStore for output type selection
@@ -170,7 +170,7 @@
 		if (currentLLMOutputType && !availableTaskClasses.includes(currentLLMOutputType)) {
 			currentLLMOutputType = '';
 			data.llm_output_type = '';
-			persistNodeDataDebounced(id, nodes, data);
+			persistNodeDataDebounced();
 		}
 	});
 
@@ -178,14 +178,14 @@
 	$effect(() => {
 		if (data.use_xml !== useXml) {
 			data.use_xml = useXml;
-			persistNodeDataDebounced(id, nodes, data);
+			persistNodeDataDebounced();
 		}
 	});
 
 	$effect(() => {
 		if (data.debug_mode !== debugMode) {
 			data.debug_mode = debugMode;
-			persistNodeDataDebounced(id, nodes, data);
+			persistNodeDataDebounced();
 		}
 	});
 
@@ -198,18 +198,18 @@
 		data.llmConfigName = changes.configName;
 		data.llmConfigFromCode = changes.configFromCode;
 		data.llmConfigVar = changes.configVar;
-		persistNodeDataDebounced(id, nodes, data);
+		persistNodeDataDebounced();
 	}
 
 	// Handle code updates
 	function handlePromptUpdate(newCode: string) {
 		data.prompt = newCode;
-		persistNodeDataDebounced(id, nodes, data);
+		persistNodeDataDebounced();
 	}
 
 	function handleSystemPromptUpdate(newCode: string) {
 		data.system_prompt = newCode;
-		persistNodeDataDebounced(id, nodes, data);
+		persistNodeDataDebounced();
 	}
 
 	// LLM Output Type functions
@@ -221,13 +221,13 @@
 		data.llm_output_type = typeName;
 		currentLLMOutputType = typeName;
 		showLLMOutputTypeDropdown = false;
-		persistNodeDataDebounced(id, nodes, data);
+		persistNodeDataDebounced();
 	}
 
 	function deleteLLMOutputType() {
 		data.llm_output_type = '';
 		currentLLMOutputType = '';
-		persistNodeDataDebounced(id, nodes, data);
+		persistNodeDataDebounced();
 	}
 
 	async function handleCollapse() {
@@ -296,7 +296,6 @@
 			{#if availableTaskClasses.length > 0}
 				{#if currentLLMOutputType}
 					{@const color = getColorForType(currentLLMOutputType)}
-					<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
 					<div
 						class="text-2xs group flex cursor-pointer items-center justify-between rounded px-1 py-0.5"
 						style={`background-color: ${color}20; border-left: 3px solid ${color};`}

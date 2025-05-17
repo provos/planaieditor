@@ -6,7 +6,7 @@ import { get } from 'svelte/store';
 import ELK from 'elkjs/lib/elk.bundled.js';
 import { Position } from '@xyflow/svelte';
 import { getEdgeStyleProps } from '$lib/utils/edgeUtils';
-import { addLLMConfigFromCode, type LLMConfigFromCode } from '$lib/stores/llmConfigsStore';
+import { addLLMConfigFromCode } from '$lib/stores/llmConfigsStore';
 
 // Type for the structured error from the backend
 export interface BackendError {

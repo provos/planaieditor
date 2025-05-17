@@ -27,7 +27,7 @@
 		data.llmConfigName = changes.configName;
 		data.llmConfigFromCode = changes.configFromCode;
 		data.llmConfigVar = changes.configVar;
-		persistNodeDataDebounced(id, store.nodes, data);
+		persistNodeDataDebounced();
 	}
 </script>
 

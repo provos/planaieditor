@@ -20,8 +20,6 @@
 		data: ModuleLevelImportData;
 	}>();
 
-	const store = useStore();
-
 	let isLoading = $state<boolean>(false);
 	let errorMessage = $state<string | null>(null);
 	let isValid = $state<boolean | null>(null); // null = unchecked, true = valid, false = invalid
@@ -70,7 +68,7 @@
 		isValid = null; // Mark as unchecked when code changes
 		errorMessage = null;
 		debouncedValidate();
-		persistNodeDataDebounced(id, store.nodes, data);
+		persistNodeDataDebounced();
 	};
 
 	onMount(() => {

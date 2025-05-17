@@ -29,20 +29,20 @@
 
 	if (!data.requiredMembers) {
 		data.requiredMembers = ['consume_work_joined'];
-		persistNodeDataDebounced(id, nodes, data);
+		persistNodeDataDebounced();
 	}
 
 	if (!data.methods) {
 		data.methods = {};
-		persistNodeDataDebounced(id, nodes, data);
+		persistNodeDataDebounced();
 	}
 	if (!data.methods.consume_work_joined) {
 		data.methods.consume_work_joined = defaultConsumeWorkJoined;
-		persistNodeDataDebounced(id, nodes, data);
+		persistNodeDataDebounced();
 	}
 	if (!data.join_type) {
 		data.join_type = ''; // Initialize if not present
-		persistNodeDataDebounced(id, nodes, data);
+		persistNodeDataDebounced();
 	}
 
 	// State for editing join_type
@@ -109,14 +109,14 @@
 	$effect(() => {
 		if (data.join_type !== joinType) {
 			data.join_type = joinType;
-			persistNodeDataDebounced(id, nodes, data);
+			persistNodeDataDebounced();
 		}
 	});
 
 	// Update code in the data object
 	function handleCodeUpdate(newCode: string) {
 		data.methods.consume_work_joined = newCode;
-		persistNodeDataDebounced(id, nodes, data);
+		persistNodeDataDebounced();
 	}
 
 	// Compute the title for the code section
