@@ -7,7 +7,7 @@ import { socketStore } from './socketStore.svelte';
  * Reactive state holding the Monaco Editor API instance.
  * It's initialized to null and populated by initializeMonaco.
  */
-export let monacoInstance = $state({
+export const monacoInstance = $state({
 	instance: null as typeof Monaco | null
 });
 
