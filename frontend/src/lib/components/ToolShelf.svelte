@@ -238,10 +238,10 @@
 						</Tooltip.Root>
 					</Tabs.List>
 
-					<div class="min-h-[32px] overflow-x-auto pt-2">
+					<div class="min-h-[32px] pt-2">
 						<Tabs.Content
 							value="tasks"
-							class="animate-in fade-in-50 flex flex-wrap gap-2 transition-all duration-200 ease-in-out md:flex-nowrap"
+							class="animate-in fade-in-50 flex flex-wrap gap-2 transition-all duration-200 ease-in-out"
 						>
 							<!-- Task Node -->
 							{@const taskStyle = getNodeIconStyle('task')}
@@ -331,7 +331,7 @@
 
 						<Tabs.Content
 							value="data"
-							class="animate-in fade-in-50 flex flex-wrap gap-2 transition-all duration-200 ease-in-out md:flex-nowrap"
+							class="animate-in fade-in-50 flex flex-wrap gap-2 transition-all duration-200 ease-in-out"
 						>
 							<!-- DataInput Node -->
 							{@const dataInputStyle = getNodeIconStyle('datainput')}
@@ -417,7 +417,7 @@
 
 						<Tabs.Content
 							value="workers"
-							class="animate-in fade-in-50 flex flex-wrap gap-2 transition-all duration-200 ease-in-out md:flex-nowrap"
+							class="animate-in fade-in-50 flex flex-wrap gap-2 transition-all duration-200 ease-in-out"
 						>
 							<!-- TaskWorker Node -->
 							{@const taskWorkerStyle = getNodeIconStyle('taskworker')}
@@ -575,7 +575,7 @@
 	<div class="flex flex-col gap-2 border-r border-gray-300/70 pr-4">
 		<!-- Graph Name Input -->
 		<div class="flex items-center gap-2">
-			<label for="graph-name" class="text-xs tracking-wider text-gray-500 uppercase"
+			<label for="graph-name" class="text-xs uppercase tracking-wider text-gray-500"
 				>Graph Name</label
 			>
 			<input
@@ -583,7 +583,7 @@
 				type="text"
 				value={graphName}
 				placeholder="Unnamed Graph"
-				class="h-[34px] rounded-md border border-gray-300 px-3 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+				class="h-[34px] rounded-md border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
 				oninput={(e) => onGraphNameChange(e.currentTarget.value)}
 				onkeydown={handleGraphNameKeydown}
 			/>
@@ -675,7 +675,7 @@
 
 	<!-- Interpreter Section -->
 	<div class="flex items-center gap-2">
-		<span class="text-xs tracking-wider text-gray-500 uppercase">Interpreter</span>
+		<span class="text-xs uppercase tracking-wider text-gray-500">Interpreter</span>
 		<PythonInterpreterSelector />
 	</div>
 </div>
