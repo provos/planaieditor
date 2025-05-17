@@ -1,0 +1,13 @@
+# Random List of TODOs
+- patch existing file with the export
+- datainput should be draggable on the title - not immediately go to the drop dwon
+- support task renaming - requires edges to be not labeled by the type name
+- convert backend to produce frontend JSON
+- new directory in filesystem component and python backend
+- joined task worker lists only valid upstream components.
+- debug mode with break points
+- task worker invocations supported in patch.py
+- real sub-graph support. designated subgraph entry and exit. needs support in planai
+- market place for workflows - publish json/consume json - perhaps even with requirements.txt and kernel provisoning
+- tool support in the editor
+- migrate to svelteflow 1.0 which no longer uses stores for nodes and edges
