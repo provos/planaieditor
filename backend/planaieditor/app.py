@@ -1075,7 +1075,16 @@ def code_to_node():
 
     worker = workers[0]
 
-    return jsonify({"success": True, "worker": worker}), 200
+    return (
+        jsonify(
+            {
+                "success": True,
+                "worker": worker,
+                "module_imports": definitions.get("module_imports", ""),
+            }
+        ),
+        200,
+    )
 
 
 if is_development:

@@ -55,7 +55,6 @@
 	}
 
 	onMount(async () => {
-		console.log('FullScreenEditor mounted');
 		await handleLoad();
 	});
 
@@ -82,20 +81,51 @@
 			}
 			const updatedNodeData = convertWorkerToNodeData(data.worker, fullScreenEditorState.id);
 			updatedNodeData._lastUpdated = Date.now();
+			let updatedModuleImport: boolean = false;
+			const moduleLevelCode: string = data.module_imports || '';
 			nodes.update((nodes) => {
 				return nodes.map((node) => {
 					// there is a problem here with completely overwriting the node data; we lose some
 					// configuration information like llmConfig, etc.
-					let copiedData = { ...node.data };
-					delete copiedData?.otherMembersSource;
-					delete copiedData?.methods;
-					delete copiedData?.classVars;
 					if (node.id === fullScreenEditorState.id) {
+						let copiedData = { ...node.data };
+						delete copiedData?.otherMembersSource;
+						delete copiedData?.methods;
+						delete copiedData?.classVars;
 						return { ...node, data: { ...copiedData, ...updatedNodeData } };
+					} else if (node.type === 'modulelevelimport') {
+						updatedModuleImport = true;
+						return {
+							...node,
+							data: { ...node.data, code: moduleLevelCode, _lastUpdated: Date.now() }
+						};
 					}
 					return node;
 				});
 			});
+
+			// if there is no module level import node, create one
+			if (moduleLevelCode && !updatedModuleImport) {
+				const nodeData = {
+					code: moduleLevelCode
+				};
+				const moduleLevelImportNode: Node = {
+					id: `imported-module-level-${Date.now()}`,
+					type: 'modulelevelimport',
+					position: { x: 0, y: 0 },
+					draggable: true,
+					selectable: true,
+					deletable: true,
+					selected: false,
+					dragging: false,
+					zIndex: 0,
+					data: nodeData,
+					origin: [0, 0]
+				};
+				nodes.update((nodes) => {
+					return [...nodes, moduleLevelImportNode];
+				});
+			}
 
 			saveFullScreenEditor(currentCode);
 		} catch (e) {

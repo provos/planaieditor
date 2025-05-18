@@ -13,6 +13,7 @@
 	export interface ModuleLevelImportData {
 		code: string;
 		nodeId: string;
+		_lastUpdated: number;
 	}
 
 	let { id, data } = $props<{
@@ -23,6 +24,7 @@
 	let isLoading = $state<boolean>(false);
 	let errorMessage = $state<string | null>(null);
 	let isValid = $state<boolean | null>(null); // null = unchecked, true = valid, false = invalid
+	let nodeVersion = $derived(data._lastUpdated || 0); // Key for re-rendering on external update
 
 	async function validateImportCode() {
 		if (!data.code.trim()) {
@@ -106,12 +108,14 @@
 
 	<!-- JSON Data Editor -->
 	<div class="relative flex h-full min-h-0 flex-col p-1.5">
-		<EditableCodeSection
-			title="Module Level Import"
-			code={data.code}
-			language="python"
-			onUpdate={handleCodeUpdate}
-		/>
+		{#key nodeVersion}
+			<EditableCodeSection
+				title="Module Level Import"
+				code={data.code}
+				language="python"
+				onUpdate={handleCodeUpdate}
+			/>
+		{/key}
 		<!-- Validation Status -->
 		<div class="absolute right-3 bottom-1 z-10">
 			{#if isLoading}
