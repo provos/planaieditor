@@ -1,6 +1,6 @@
 # Random List of TODOs
 - patch existing file with the export
-- datainput should be draggable on the title - not immediately go to the drop dwon
+- DataInput should be draggable on the title - not immediately go to the drop down
 - support task renaming - requires edges to be not labeled by the type name
 - convert backend to produce frontend JSON
 - new directory in filesystem component and python backend
