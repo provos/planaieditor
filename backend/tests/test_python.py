@@ -729,8 +729,6 @@ def {tool_name}(param_x: str, param_y: int = 123) -> str:
         generated_module_code is not None
     ), "generate_python_module did not produce any code."
 
-    print(generated_module_code)
-
     # Verify that essential parts of the tool function definition are present in the generated module code.
     # This is more robust to minor full-module formatting changes by Black than an exact full string match.
     assert (
