@@ -1015,6 +1015,145 @@ except Exception as e:
     return jsonify(result), status_code
 
 
+@app.route("/api/validate-tool", methods=["POST"])
+def validate_tool_endpoint():
+    if not request.is_json:
+        return jsonify({"success": False, "error": "Request must be JSON"}), 400
+
+    data = request.get_json()
+    node_data = data.get("node", {}).get("data")
+
+    if not node_data:
+        return (
+            jsonify({"success": False, "error": "Missing 'node.data' in request"}),
+            400,
+        )
+
+    tool_code_str = node_data.get("code")
+    ui_tool_name = node_data.get("name")
+    ui_tool_description = node_data.get("description")
+
+    if not tool_code_str:
+        return jsonify({"success": False, "error": "Missing 'code' in node data"}), 400
+    if not ui_tool_name:
+        return jsonify({"success": False, "error": "Missing 'name' in node data"}), 400
+
+    match = re.search(r"def\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(", tool_code_str)
+    if not match:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": "Could not find function definition in the provided code.",
+                }
+            ),
+            400,
+        )
+    actual_func_name_in_code = match.group(1)
+
+    # The f-string for the script needs to be a raw string (r"""...""") to handle backslashes
+    # correctly, especially if tool_code_str could contain them.
+    # However, since we are injecting Python code and then specific string literals,
+    # being careful with escapes is key. The main issue was likely `\s` and `\(` in the regex search.
+    # Python's f-string evaluation will handle escapes within {expressions} as expected.
+    # The triple quotes themselves handle newlines correctly.
+
+    script = f"""
+import json
+import sys
+import traceback
+import inspect
+from typing import Any, Callable, Dict, Optional, get_type_hints, List
+
+from enum import Enum
+from pydantic import BaseModel
+
+# --- User's tool function code ---
+{tool_code_str}
+# --- End of user's tool function code ---
+
+from llm_interface.llm_tool import create_tool, Tool
+
+try:
+    user_function_obj = locals().get("{actual_func_name_in_code}")
+
+    if user_function_obj is None or not callable(user_function_obj):
+        raise ValueError(f"Function '{actual_func_name_in_code}' not found or not callable in the provided code.")
+
+    created_tool_instance = create_tool(
+        user_function_obj,
+        name="{ui_tool_name}",
+        description="{ui_tool_description}"
+    )
+
+    tool_data_dict = {{
+        "name": created_tool_instance.name,
+        "description": created_tool_instance.description,
+        "parameters": created_tool_instance.parameters
+    }}
+
+    output_payload = {{
+        "success": True,
+        "tool_data": tool_data_dict
+    }}
+    print("##SUCCESS_JSON_START##")
+    print(json.dumps(output_payload))
+    print("##SUCCESS_JSON_END##")
+
+except Exception as e:
+    error_message = str(e)
+    error_traceback = traceback.format_exc()
+    error_node_name = "{ui_tool_name}"
+
+    error_output_payload = {{
+        "success": False,
+        "error": {{
+            "message": error_message,
+            "nodeName": error_node_name,
+            "fullTraceback": error_traceback
+        }}
+    }}
+    print("##ERROR_JSON_START##")
+    print(json.dumps(error_output_payload))
+    print("##ERROR_JSON_END##")
+    sys.exit(1)
+"""
+
+    validation_result = validate_code_in_venv("tool_validation", script)
+
+    if validation_result.get("success"):
+        script_output_data = validation_result.get("tool_data")
+        if not script_output_data or not isinstance(script_output_data, dict):
+            validation_result["success"] = False
+            validation_result["error"] = {
+                {
+                    "message": "Tool validation script succeeded but did not return expected tool data.",
+                    "nodeName": ui_tool_name,
+                }
+            }
+            validation_result.pop("tool_data", None)
+        else:
+            warnings = []
+            final_description = script_output_data.get("description", "")
+            final_tool_name = script_output_data.get("name", "")
+
+            if not final_description:
+                warnings.append(
+                    "Tool description is missing. Provide a description in the node or add a docstring to the function."
+                )
+            elif final_description == final_tool_name:
+                warnings.append(
+                    "Tool description is generic (same as tool name). Add a detailed description or a function docstring."
+                )
+
+            validation_result["tool_data"] = script_output_data
+            if warnings:
+                validation_result["warnings"] = warnings
+
+    status_code = 200
+    return jsonify(validation_result), status_code
+
+
 @app.route("/api/get-node-code", methods=["POST"])
 def get_node_code():
     """Receives a node data, and returns the code of the node."""
