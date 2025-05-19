@@ -44,10 +44,14 @@ def custom_format(template: str, **kwargs) -> str:
     return re.sub(pattern, replace_match, template)
 
 
-def create_tool_function(tool: Dict[str, Any]) -> str:
+def create_tool_function(node: Dict[str, Any]) -> str:
     """
     Creates a Pydantic Tool class from a tool node.
     """
+    tool = node.get("data", {})
+    if "name" not in tool or "description" not in tool or "code" not in tool:
+        raise ValueError("Tool node is missing name, description, or code")
+
     code = []
     code.append(
         f"@tool(name=\"{tool.get('name')}\", description=\"{tool.get('description')}\")"
@@ -708,10 +712,10 @@ def generate_python_module(
         import_statements.append(node.get("data", {}).get("code"))
 
     # Tool Definitions
-    tools = graph_data.get("tools", [])
+    tool_nodes = [n for n in nodes if n.get("type") == "tool"]
     tool_definitions = []
-    for tool in tools:
-        tool_definitions.append(create_tool_function(tool))
+    for node in tool_nodes:
+        tool_definitions.append(create_tool_function(node))
 
     # We add them to the import statements for now
     import_statements.extend(tool_definitions)

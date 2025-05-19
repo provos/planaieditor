@@ -709,14 +709,17 @@ def {tool_name}(param_x: str, param_y: int = 123) -> str:
     tool_function_definition_str = tool_function_definition_str.replace("\\n", "\n")
 
     graph_data = {
-        "tools": [
+        "nodes": [
             {
-                "name": tool_name,  # Corresponds to tool_info['name'] from patch.py
-                "description": "A sample tool for testing generate_python_module.",  # Corresponds to tool_info['description']
-                "code": tool_function_definition_str,  # Corresponds to tool_info['code']
-            }
+                "id": "tool-1745544328318",
+                "type": "tool",
+                "data": {
+                    "name": tool_name,
+                    "description": "A sample tool for testing generate_python_module.",
+                    "code": tool_function_definition_str,
+                },
+            },
         ],
-        "nodes": [],
         "edges": [],
         # Assuming module_imports might be needed or can be empty
         "module_imports": "import os\nfrom typing import List, Dict",
