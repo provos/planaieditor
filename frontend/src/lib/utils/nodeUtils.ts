@@ -31,8 +31,7 @@ export function addAvailableMethod(nodes: Writable<Node[]>, id: string, methodNa
 	});
 }
 
-// Persists the given data for the node with the given id - overwrites the existing data
-// The 'id' parameter is now first to be compatible with debounceWithID
+// Persists the data for all nodes
 function persistNodeData() {
 	nodes.update((currentNodes) => currentNodes);
 }
