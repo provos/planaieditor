@@ -27,7 +27,7 @@ from flask_socketio import SocketIO, emit
 from planaieditor.filesystem import setup_filesystem
 from planaieditor.llm_interface_utils import list_models_for_provider
 from planaieditor.lsp_handler import lsp_handler_instance as lsp_handler
-from planaieditor.patch import get_definitions_from_file
+from planaieditor.patch import get_definitions_from_python
 from planaieditor.python import (
     add_to_task_import_state,
     create_task_class,
@@ -630,7 +630,7 @@ def import_python_module():
             temp_filename = tmp_file.name
 
         # Call the function from patch.py using the temporary file path
-        definitions = get_definitions_from_file(temp_filename)
+        definitions = get_definitions_from_python(temp_filename)
 
         # TODO: Add parsing for Worker definitions and graph structure later
 
@@ -1063,7 +1063,7 @@ def code_to_node():
     if not code:
         return jsonify({"success": False, "error": "Missing 'code' in request"}), 400
 
-    definitions = get_definitions_from_file(code_string=code)
+    definitions = get_definitions_from_python(code_string=code)
     print(definitions)
 
     if "error" in definitions:

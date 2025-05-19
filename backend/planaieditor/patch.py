@@ -1,4 +1,5 @@
 import ast
+import copy
 import re
 from textwrap import dedent
 from typing import Any, Dict, List, Optional, Set, Tuple
@@ -72,6 +73,8 @@ SUBGRAPH_FACTORIES: Dict[str, Dict[str, Any]] = {
         "defaultClassName": "SearchFetchWorker",
     },
 }
+
+TOOL_DECORATOR_NAME = "tool"
 
 
 def get_ast_from_file(filename: str) -> ast.Module:
@@ -1238,7 +1241,59 @@ def get_imported_tasks_and_module_imports(
     return imported_tasks, module_import_strings
 
 
-def get_definitions_from_file(
+def _extract_decorator_args(decorator_call_node: ast.Call) -> Dict[str, Any]:
+    """Extracts arguments from a decorator call node."""
+    args = {}
+    for kw in decorator_call_node.keywords:
+        if kw.arg and isinstance(kw.value, ast.Constant):
+            args[kw.arg] = kw.value.value
+        # Add more types if needed, e.g., ast.NameConstant for True/False/None in older Pythons
+    return args
+
+
+def extract_tool_functions(parsed_ast: ast.Module) -> List[Dict[str, Any]]:
+    """Extracts functions decorated with @tool."""
+    tools = []
+    for node in parsed_ast.body:
+        if isinstance(node, ast.FunctionDef):
+            func_name = node.name
+            tool_info = {
+                "name": func_name,  # Default to function name
+                "description": None,
+                "code": "",
+            }
+            is_tool_function = False
+
+            for decorator in node.decorator_list:
+                # Decorator is a Call, e.g., @tool(name="foo")
+                if isinstance(decorator, ast.Call):
+                    decorator_func = decorator.func
+                    # Check if decorator is 'tool' or 'module.tool'
+                    if (
+                        isinstance(decorator_func, ast.Name)
+                        and decorator_func.id == TOOL_DECORATOR_NAME
+                    ) or (
+                        isinstance(decorator_func, ast.Attribute)
+                        and decorator_func.attr == TOOL_DECORATOR_NAME
+                    ):
+                        is_tool_function = True
+                        decorator_args = _extract_decorator_args(decorator)
+                        if "name" in decorator_args:
+                            tool_info["name"] = decorator_args["name"]
+                        if "description" in decorator_args:
+                            tool_info["description"] = decorator_args["description"]
+                        break  # Found the @tool decorator
+
+            if is_tool_function:
+                # Extract function function definition without the decorator and body code
+                copied_node = copy.deepcopy(node)
+                copied_node.decorator_list = []
+                tool_info["code"] = ast.unparse(copied_node)
+                tools.append(tool_info)
+    return tools
+
+
+def get_definitions_from_python(
     filename: Optional[str] = None, code_string: Optional[str] = None
 ) -> Dict[str, List[Dict[str, Any]]]:
     """
@@ -1494,12 +1549,15 @@ def get_definitions_from_file(
         print(f"Error: Could not format module imports: {e}")
         module_imports_str = "\n".join(module_imports)
 
+    tool_function_defs = extract_tool_functions(parsed_ast)
+
     return {
         "tasks": task_results,
         "workers": all_worker_defs,
         "edges": edges,
         "imported_tasks": imported_tasks,
         "module_imports": module_imports_str,
+        "tools": tool_function_defs,
     }
 
 
@@ -1538,7 +1596,7 @@ def main():
         print("Please provide a filename.")
         return
 
-    definitions = get_definitions_from_file(filename)
+    definitions = get_definitions_from_python(filename)
 
     if definitions["tasks"] or definitions["workers"] or definitions["edges"]:
         import json

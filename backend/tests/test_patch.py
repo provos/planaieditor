@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from planaieditor.patch import (  # noqa: E402
     _get_consume_work_input_type,
-    get_definitions_from_file,
+    get_definitions_from_python,
 )
 
 # --- Fixtures ---
@@ -43,7 +43,7 @@ class MyTask(Task):
     count: int = 10
 """
     file_path = temp_python_file(code)
-    definitions = get_definitions_from_file(str(file_path))
+    definitions = get_definitions_from_python(str(file_path))
 
     assert "tasks" in definitions
     assert "workers" in definitions
@@ -75,7 +75,7 @@ class WorkerNoHint(TaskWorker):
         # self.publish_work(...)
 """
     file_path = temp_python_file(code)
-    definitions = get_definitions_from_file(str(file_path))
+    definitions = get_definitions_from_python(str(file_path))
 
     assert len(definitions["tasks"]) == 1
     assert len(definitions["workers"]) == 1
@@ -104,7 +104,7 @@ class WorkerWithHint(TaskWorker):
         # self.publish_work(...)
 """
     file_path = temp_python_file(code)
-    definitions = get_definitions_from_file(str(file_path))
+    definitions = get_definitions_from_python(str(file_path))
 
     assert len(definitions["tasks"]) == 1
     assert len(definitions["workers"]) == 1
@@ -137,7 +137,7 @@ class MyLLMWorker(LLMTaskWorker):
     system_prompt: str = "You are helpful."
 """
     file_path = temp_python_file(code)
-    definitions = get_definitions_from_file(str(file_path))
+    definitions = get_definitions_from_python(str(file_path))
 
     assert len(definitions["tasks"]) == 2
     assert len(definitions["workers"]) == 1
@@ -169,7 +169,7 @@ class MyLLMWorkerWithDedent(LLMTaskWorker):
     \""")
 """
     file_path = temp_python_file(code)
-    definitions = get_definitions_from_file(str(file_path))
+    definitions = get_definitions_from_python(str(file_path))
 
     assert len(definitions["workers"]) == 1
     worker = definitions["workers"][0]
@@ -203,7 +203,7 @@ class MyLLMWorkerWithDedent(LLMTaskWorker):
     \""").strip()
 """
     file_path = temp_python_file(code)
-    definitions = get_definitions_from_file(str(file_path))
+    definitions = get_definitions_from_python(str(file_path))
 
     assert len(definitions["workers"]) == 1  # 1 for the LLM worker
     worker = definitions["workers"][0]
@@ -246,7 +246,7 @@ class WorkerWithOtherStuff(TaskWorker):
     another_var: str = "hello"
 """
     file_path = temp_python_file(code)
-    definitions = get_definitions_from_file(str(file_path))
+    definitions = get_definitions_from_python(str(file_path))
 
     assert len(definitions["workers"]) == 1
     worker = definitions["workers"][0]
@@ -335,7 +335,7 @@ class PrecedenceWorker(LLMTaskWorker):
         pass # Required for some workers
 """
     file_path = temp_python_file(code)
-    definitions = get_definitions_from_file(str(file_path))
+    definitions = get_definitions_from_python(str(file_path))
 
     assert len(definitions["workers"]) == 1
     worker = definitions["workers"][0]
@@ -366,7 +366,7 @@ class MyJoinedWorker(JoinedTaskWorker):
         print(f"Joined tasks: {tasks}")
 """
     file_path = temp_python_file(code)
-    definitions = get_definitions_from_file(str(file_path))
+    definitions = get_definitions_from_python(str(file_path))
 
     assert len(definitions["workers"]) == 1
     worker = definitions["workers"][0]
@@ -407,7 +407,7 @@ class ChangeCollector(JoinedTaskWorker):
         self.publish_work(ChangeCollection(changes=[t.final_data for t in tasks]), input_task=tasks[0])
 """
     file_path = temp_python_file(code)
-    definitions = get_definitions_from_file(str(file_path))
+    definitions = get_definitions_from_python(str(file_path))
 
     assert len(definitions["workers"]) == 2
     # Find the JoinedTaskWorker
@@ -486,7 +486,7 @@ def build_my_graph():
     return graph
 """
     file_path = temp_python_file(code)
-    definitions = get_definitions_from_file(str(file_path))
+    definitions = get_definitions_from_python(str(file_path))
 
     assert "edges" in definitions
     edges = definitions["edges"]
@@ -542,7 +542,7 @@ def build_graph_with_entry():
     return graph
 """
     file_path = temp_python_file(code)
-    definitions = get_definitions_from_file(str(file_path))
+    definitions = get_definitions_from_python(str(file_path))
 
     entry_worker = next(
         (w for w in definitions["workers"] if w["className"] == "EntryWorker"), None
@@ -586,7 +586,7 @@ def build_graph_with_entry():
     return graph
 """
     file_path = temp_python_file(code)
-    definitions = get_definitions_from_file(str(file_path))
+    definitions = get_definitions_from_python(str(file_path))
 
     entry_worker = next(
         (w for w in definitions["workers"] if w["className"] == "EntryWorker"), None
@@ -623,8 +623,8 @@ class PlanFinalizer(TaskWorker):
         pass
 """
     file_path = temp_python_file(code)
-    # Note: get_definitions_from_file uses the ALLOWED_TASK_IMPORTS defined in patch.py
-    definitions = get_definitions_from_file(str(file_path))
+    # Note: get_definitions_from_python uses the ALLOWED_TASK_IMPORTS defined in patch.py
+    definitions = get_definitions_from_python(str(file_path))
 
     assert "imported_tasks" in definitions
     imported_tasks = definitions["imported_tasks"]
@@ -722,7 +722,7 @@ def build_graph_with_factory():
     return graph
 """
     file_path = temp_python_file(code)
-    definitions = get_definitions_from_file(str(file_path))
+    definitions = get_definitions_from_python(str(file_path))
 
     # Check if workers were correctly extracted
     workers = definitions["workers"]
@@ -927,7 +927,7 @@ def build_graph():
     return graph
 """
     file_path = temp_python_file(code)
-    definitions = get_definitions_from_file(str(file_path))
+    definitions = get_definitions_from_python(str(file_path))
 
     assert "workers" in definitions
     workers = definitions["workers"]
@@ -1051,7 +1051,7 @@ def build_chat_graph():
     return graph
 """
     file_path = temp_python_file(code)
-    definitions = get_definitions_from_file(str(file_path))
+    definitions = get_definitions_from_python(str(file_path))
 
     assert "workers" in definitions
     assert len(definitions["workers"]) == 1
@@ -1100,7 +1100,7 @@ def build_chat_graph():
     return graph
 """
     file_path = temp_python_file(code)
-    definitions = get_definitions_from_file(str(file_path))
+    definitions = get_definitions_from_python(str(file_path))
 
     assert "workers" in definitions
     assert len(definitions["workers"]) == 1
@@ -1142,3 +1142,60 @@ def build_chat_graph():
     assert not any(
         imp.get("isImplicit") for imp in imported_tasks
     ), f"Found unexpected isImplicit=True flag in imports: {imported_tasks}"
+
+
+def test_extract_tool_function():
+    """Test where we can parse a tool function."""
+    code = '''
+from llm_interface import tool
+
+@tool(name="multiply", description="Multiply two numbers")
+def multiply(x: float, y: float = 1.0) -> float:
+    """Multiply two floating point numbers.
+
+    Args:
+        x: First number
+        y: Second number (default: 1.0)
+    """
+    return x * y
+'''
+
+    definitions = get_definitions_from_python(code_string=code)
+
+    assert "tools" in definitions
+    assert len(definitions["tools"]) == 1
+    tool = definitions["tools"][0]
+
+    assert tool["name"] == "multiply"
+    assert tool["description"] == "Multiply two numbers"
+    assert "def multiply" in tool["code"]
+    assert "Args:" in tool["code"]
+    assert "return x * y" in tool["code"]
+
+
+def test_extract_tool_function_without_importing_tool():
+    """Test where we can parse a tool function."""
+    code = '''
+import llm_interface
+
+@llm_interface.tool(name="multiply", description="Multiply two numbers")
+def multiply(x: float, y: float = 1.0) -> float:
+    """Multiply two floating point numbers.
+
+    Args:
+        x: First number
+        y: Second number (default: 1.0)
+    """
+    return x * y
+'''
+
+    definitions = get_definitions_from_python(code_string=code)
+
+    assert "tools" in definitions
+    assert len(definitions["tools"]) == 1
+    tool = definitions["tools"][0]
+
+    assert tool["name"] == "multiply"
+    assert tool["description"] == "Multiply two numbers"
+    assert "Args:" in tool["code"]
+    assert "return x * y" in tool["code"]

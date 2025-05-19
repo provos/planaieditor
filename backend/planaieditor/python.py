@@ -44,6 +44,18 @@ def custom_format(template: str, **kwargs) -> str:
     return re.sub(pattern, replace_match, template)
 
 
+def create_tool_function(tool: Dict[str, Any]) -> str:
+    """
+    Creates a Pydantic Tool class from a tool node.
+    """
+    code = []
+    code.append(
+        f"@tool(name=\"{tool.get('name')}\", description=\"{tool.get('description')}\")"
+    )
+    code.append(tool.get("code"))
+    return "\n".join(code)
+
+
 def create_worker_to_instance_mapping(
     worker_nodes: List[Dict[str, Any]],
 ) -> Dict[str, str]:
@@ -667,12 +679,12 @@ def generate_python_module(
 
     # --- Code Generation Start ---
 
-    # 1. Imports
     mode = graph_data.get("mode", "export")
     code_to_format = return_code_snippet(
         "export_execute" if mode == "execute" else "export_clean"
     )
 
+    # 1. Imports
     imported_tasks = {}  # Store details of imported tasks: {className: modulePath}
     task_import_nodes = [n for n in nodes if n.get("type") == "taskimport"]
 
@@ -694,6 +706,15 @@ def generate_python_module(
     ]
     for node in module_level_import_nodes:
         import_statements.append(node.get("data", {}).get("code"))
+
+    # Tool Definitions
+    tools = graph_data.get("tools", [])
+    tool_definitions = []
+    for tool in tools:
+        tool_definitions.append(create_tool_function(tool))
+
+    # We add them to the import statements for now
+    import_statements.extend(tool_definitions)
 
     # 2. Task Definitions (from 'task' nodes)
     tasks_code = []

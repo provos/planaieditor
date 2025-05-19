@@ -14,7 +14,7 @@ if os.environ.get("SKIP_E2E_TESTS") == "true":
 # Ensure planaieditor can be imported (adjust if your structure differs)
 # This might be handled by running pytest from the 'backend' dir
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-from planaieditor.patch import get_definitions_from_file  # noqa: E402
+from planaieditor.patch import get_definitions_from_python  # noqa: E402
 
 # --- Configuration ---
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
@@ -171,7 +171,7 @@ def compare_dicts(dict1: dict, dict2: dict) -> bool:
 
 def compare_definitions(defs1: dict, defs2: dict) -> bool:
     """
-    Compares the dictionaries produced by get_definitions_from_file.
+    Compares the dictionaries produced by get_definitions_from_python.
     Focuses on comparing names, types, fields, classVars, edges, entries.
     Ignores method bodies and otherMembersSource for flexibility.
     Handles expected differences (e.g., llmConfig presence).
@@ -381,13 +381,13 @@ def compare_definitions(defs1: dict, defs2: dict) -> bool:
 def verify_functional_equivalence(original_code: str, exported_code: str) -> bool:
     """
     Verifies functional equivalence by parsing both code strings using
-    get_definitions_from_file and comparing the resulting structures.
+    get_definitions_from_python and comparing the resulting structures.
     """
     print("Verifying functional equivalence using AST parsing...")
 
     # Parse original code
     print("Parsing original code...")
-    original_defs = get_definitions_from_file(code_string=original_code)
+    original_defs = get_definitions_from_python(code_string=original_code)
     if not original_defs or (
         not original_defs.get("tasks") and not original_defs.get("workers")
     ):
@@ -396,7 +396,7 @@ def verify_functional_equivalence(original_code: str, exported_code: str) -> boo
 
     # Parse exported code
     print("Parsing exported code...")
-    exported_defs = get_definitions_from_file(code_string=exported_code)
+    exported_defs = get_definitions_from_python(code_string=exported_code)
     if not exported_defs or (
         not exported_defs.get("tasks") and not exported_defs.get("workers")
     ):
@@ -427,7 +427,7 @@ def test_import_export_roundtrip(page: Page, test_fixture_path: Path, request):
 
     # Pre-parse the fixture to get expected node count
     print(f"Pre-parsing fixture {test_fixture_path.name} for node count...")
-    original_defs = get_definitions_from_file(code_string=original_code)
+    original_defs = get_definitions_from_python(code_string=original_code)
     assert (
         original_defs is not None
     ), f"Failed to pre-parse fixture: {test_fixture_path}"

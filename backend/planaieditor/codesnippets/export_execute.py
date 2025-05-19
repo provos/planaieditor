@@ -14,9 +14,11 @@ from typing import (  # noqa: F401
     Type,
 )
 
+from llm_interface import tool  # noqa: F401
 from planai import (  # noqa: F401
     CachedLLMTaskWorker,
     CachedTaskWorker,
+    ChatTaskWorker,
     Graph,
     InitialTaskWorker,
     JoinedTaskWorker,
@@ -24,7 +26,6 @@ from planai import (  # noqa: F401
     LLMTaskWorker,
     Task,
     TaskWorker,
-    ChatTaskWorker,
     llm_from_config,
 )
 from pydantic import ConfigDict, Field, PrivateAttr  # noqa: F401

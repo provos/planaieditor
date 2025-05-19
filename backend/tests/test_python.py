@@ -1,3 +1,4 @@
+import ast  # Added for ast.parse in the new test
 import json
 import os
 
@@ -433,7 +434,7 @@ def test_roundtrip_fixture_conversion():
     import tempfile
     from pathlib import Path
 
-    from planaieditor.patch import get_definitions_from_file
+    from planaieditor.patch import get_definitions_from_python
 
     # Load the fixture data
     fixture_path = os.path.join(
@@ -456,7 +457,7 @@ def test_roundtrip_fixture_conversion():
 
     try:
         # Step 3: Parse Python code back to JSON
-        parsed_data = get_definitions_from_file(temp_file_path)
+        parsed_data = get_definitions_from_python(temp_file_path)
 
         # Step 4: Compare the original and parsed data
 
@@ -682,3 +683,78 @@ def test_input_types():
     assert (
         "llm_input_type: Type[Task] = Task1" in llmtaskworker_code
     ), f"LLMTaskWorker llm_input_type not correctly set in generated code: {llmtaskworker_code}"
+
+
+def test_tool_code_generation_in_module():
+    """Tests that tool function code (from patch.py's 'code' field) is correctly included in the generated module."""
+    tool_name = "my_sample_tool_for_generation"
+    # This simulates the 'code' field from patch.py for a tool: a full function definition string.
+    tool_function_definition_str = f'''
+def {tool_name}(param_x: str, param_y: int = 123) -> str:
+    """Docstring for {tool_name}.
+
+    Args:
+        param_x: A string parameter.
+        param_y: An integer parameter with a default value of 123.
+
+    Returns:
+        A string representing the result of the calculation.
+    """
+    upper_param_x = param_x.upper()
+    calculation = f'Result is {{upper_param_x}} with value {{param_y * 3}}'
+    return calculation
+'''
+
+    # Ensure real newlines for the string as ast.unparse would produce
+    tool_function_definition_str = tool_function_definition_str.replace("\\n", "\n")
+
+    graph_data = {
+        "tools": [
+            {
+                "name": tool_name,  # Corresponds to tool_info['name'] from patch.py
+                "description": "A sample tool for testing generate_python_module.",  # Corresponds to tool_info['description']
+                "code": tool_function_definition_str,  # Corresponds to tool_info['code']
+            }
+        ],
+        "nodes": [],
+        "edges": [],
+        # Assuming module_imports might be needed or can be empty
+        "module_imports": "import os\nfrom typing import List, Dict",
+    }
+
+    generated_module_code, module_name, error = generate_python_module(graph_data)
+
+    assert error is None, f"generate_python_module failed with an error: {error}"
+    assert (
+        generated_module_code is not None
+    ), "generate_python_module did not produce any code."
+
+    print(generated_module_code)
+
+    # Verify that essential parts of the tool function definition are present in the generated module code.
+    # This is more robust to minor full-module formatting changes by Black than an exact full string match.
+    assert (
+        f"def {tool_name}(param_x: str, param_y: int = 123) -> str:"
+        in generated_module_code
+    ), "Tool function signature missing."
+    assert (
+        f'"""Docstring for {tool_name}.' in generated_module_code
+    ), "Tool docstring missing."
+    assert (
+        "upper_param_x = param_x.upper()" in generated_module_code
+    ), "First line of tool body missing."
+    assert (
+        'calculation = f"Result is {upper_param_x} with value {param_y * 3}"'
+        in generated_module_code
+    ), "Second line of tool body missing."
+    assert (
+        "return calculation" in generated_module_code
+    ), "Return statement of tool missing."
+
+    # Optionally, verify the generated code is syntactically valid Python
+    try:
+        ast.parse(generated_module_code)
+    except SyntaxError as e:
+        assert (
+            False
+        ), f"The generated module code has syntax errors: {e}\n--- Generated Code ---:\n{generated_module_code}"

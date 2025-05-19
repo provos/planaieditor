@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 import pytest
-from planaieditor.patch import get_definitions_from_file  # noqa: E402
+from planaieditor.patch import get_definitions_from_python  # noqa: E402
 from planaieditor.python import generate_python_module  # noqa: E402
 
 
@@ -12,7 +12,7 @@ from planaieditor.python import generate_python_module  # noqa: E402
 def parse_python_file(file_path: str) -> Dict[str, Any]:
     """Parse a Python file and return the extracted definitions."""
     print(f"\nParsing file: {file_path}")
-    definitions = get_definitions_from_file(file_path)
+    definitions = get_definitions_from_python(file_path)
     print_definitions_summary(definitions)
     return definitions
 
@@ -100,7 +100,7 @@ def generate_and_parse(
 
     # Write to file and parse again
     regen_file = temp_file_func(python_code)
-    regen_definitions = get_definitions_from_file(regen_file)
+    regen_definitions = get_definitions_from_python(regen_file)
 
     print("\nRe-parsed definitions summary:")
     print_definitions_summary(regen_definitions)
@@ -232,7 +232,7 @@ def test_task_roundtrip(sample_planai_module, temp_file):
     original_file = temp_file(sample_planai_module)
 
     # Step 2: Use patch.py to parse the Tasks into JSON
-    definitions = get_definitions_from_file(original_file)
+    definitions = get_definitions_from_python(original_file)
     task_definitions = definitions["tasks"]  # Extract tasks from the dictionary
 
     # Print for debugging if needed
@@ -268,7 +268,7 @@ def test_task_roundtrip(sample_planai_module, temp_file):
     regen_file = temp_file(python_code)
 
     # Step 6: Parse the regenerated file to validate Task definitions
-    regen_definitions = get_definitions_from_file(regen_file)
+    regen_definitions = get_definitions_from_python(regen_file)
     regen_task_definitions = regen_definitions["tasks"]  # Extract tasks
 
     # Print for debugging if needed
@@ -403,7 +403,7 @@ class DataCollectorWorker(JoinedTaskWorker):
     original_file = temp_file(original_code)
 
     # Step 1: Parse original file
-    definitions = get_definitions_from_file(original_file)
+    definitions = get_definitions_from_python(original_file)
     task_defs = definitions["tasks"]
     worker_defs = definitions["workers"]
 
@@ -437,7 +437,7 @@ class DataCollectorWorker(JoinedTaskWorker):
 
     # Step 4: Write and parse regenerated code
     regen_file = temp_file(python_code)
-    regen_definitions = get_definitions_from_file(regen_file)
+    regen_definitions = get_definitions_from_python(regen_file)
     regen_worker_defs = regen_definitions["workers"]
 
     print("\nRegenerated Worker definitions:")
@@ -601,7 +601,7 @@ def setup_graph():
 
     # Step 1: Parse original file
     print(f"\nParsing original file for imported task roundtrip: {original_file}")
-    definitions = get_definitions_from_file(original_file)
+    definitions = get_definitions_from_python(original_file)
     orig_task_defs = definitions.get("tasks", [])
     orig_worker_defs = definitions.get("workers", [])
     orig_edges = definitions.get("edges", [])
@@ -667,7 +667,7 @@ def setup_graph():
     # Step 4: Write and parse regenerated code
     regen_file = temp_file(python_code)
     print(f"Parsing regenerated file: {regen_file}")
-    regen_definitions = get_definitions_from_file(regen_file)
+    regen_definitions = get_definitions_from_python(regen_file)
     regen_task_defs = regen_definitions.get("tasks", [])
     regen_worker_defs = regen_definitions.get("workers", [])
     regen_edges = regen_definitions.get("edges", [])
@@ -789,7 +789,7 @@ def get_llm():
     original_file = temp_file(original_code)
 
     # Step 1: Parse original file
-    definitions = get_definitions_from_file(original_file)
+    definitions = get_definitions_from_python(original_file)
     task_defs = definitions["tasks"]
     worker_defs = definitions["workers"]
     edges = definitions["edges"]
@@ -959,7 +959,7 @@ def get_llm():
 
     # Step 4: Write and parse the regenerated code
     regen_file = temp_file(python_code)
-    regen_definitions = get_definitions_from_file(regen_file)
+    regen_definitions = get_definitions_from_python(regen_file)
     regen_worker_defs = regen_definitions["workers"]
     regen_edges = regen_definitions["edges"]
     regen_imported_tasks = regen_definitions.get("imported_tasks", [])
@@ -1075,7 +1075,7 @@ def build_graph():
     original_file = temp_file(original_code)
 
     # Step 1: Parse original file
-    definitions = get_definitions_from_file(original_file)
+    definitions = get_definitions_from_python(original_file)
     task_defs = definitions["tasks"]
     worker_defs = definitions["workers"]
 
@@ -1169,7 +1169,7 @@ def build_graph():
 
     # Step 4: Write and parse regenerated code
     regen_file = temp_file(python_code)
-    regen_definitions = get_definitions_from_file(regen_file)
+    regen_definitions = get_definitions_from_python(regen_file)
     regen_worker_defs = regen_definitions["workers"]
 
     print("\nRegenerated Worker definitions:")
