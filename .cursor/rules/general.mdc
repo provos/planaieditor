@@ -26,7 +26,7 @@ This document outlines best practices for using PlanAI, a Python framework for b
 * **Concept:** Workflows are defined as `planai.Graph` objects. A graph consists of nodes (`TaskWorker` subclasses) connected by dependencies, defining the data flow. Execution is parallel, constrained only by these data dependencies.
 * **Best Practice:** Design workflows modularly. Break down complex processes into distinct `TaskWorker` units representing logical steps.
 * **Instantiation:** Always instantiate a graph using `graph = Graph(name="YourWorkflowName")`.
-* **Strict Mode:** Consider setting `strict=True` during graph initialization (`Graph(name="...", strict=True)`) to enforce stricter validation, like preventing the publishing of tasks that still hold provenance data, which can help catch bugs related to task reuse[cite: 4333, 4684].
+* **Strict Mode:** Consider setting `strict=True` during graph initialization (`Graph(name="...", strict=True)`) to enforce stricter validation, like preventing the publishing of tasks that still hold provenance data, which can help catch bugs related to task reuse.
 
 ### 2. TaskWorkers: The Building Blocks
 
@@ -37,12 +37,12 @@ This document outlines best practices for using PlanAI, a Python framework for b
 * **Output Type Declaration:** Explicitly declare output types using `output_types: List[Type[Task]] = [YourOutputTask1, YourOutputTask2]`. This enables type-aware routing.
 * **Logging/Printing:** Use `self.print("Log message")` within workers instead of `print()`. This integrates with the graph's logging and dashboard.
 * **Status Notifications:** Use `self.notify_status(task, "Descriptive status message")` to provide real-time updates visible in the dashboard or via callbacks.
-* **Error Handling:** Implement `try...except` blocks within `consume_work` for robust error handling. Failed tasks are automatically tracked by the dispatcher[cite: 2888, 4266].
+* **Error Handling:** Implement `try...except` blocks within `consume_work` for robust error handling. Failed tasks are automatically tracked by the dispatcher.
 * **Retries:** Set `num_retries: int = N` on a worker class to automatically retry failed tasks `N` times.
 
 ### 3. Tasks: Data Flow Units
 
-* **Concept:** Data moves through the graph encapsulated in `planai.Task` objects, typically defined as Pydantic models[cite: 2865, 2887].
+* **Concept:** Data moves through the graph encapsulated in `planai.Task` objects, typically defined as Pydantic models.
 * **Best Practice:** Define specific Pydantic models for each distinct data structure flowing between workers. This enforces type safety and improves code readability.
     ```python
     from planai import Task
@@ -57,7 +57,7 @@ This document outlines best practices for using PlanAI, a Python framework for b
         query: str
         results: List[str] = Field(description="List of URLs")
     ```
-* **Provenance:** Tasks automatically carry their execution history (`_provenance`) and the chain of tasks that led to them (`_input_provenance`)[cite: 2866, 4650].
+* **Provenance:** Tasks automatically carry their execution history (`_provenance`) and the chain of tasks that led to them (`_input_provenance`).
 
 ### 4. Type Safety with Pydantic
 
@@ -71,11 +71,12 @@ This document outlines best practices for using PlanAI, a Python framework for b
     1.  Instantiate `Graph()`.
     2.  Instantiate all necessary `TaskWorker` subclasses.
     3.  Add workers using `graph.add_workers(worker1, worker2, ...)`.
-    4.  Define dependencies using `graph.set_dependency(upstream_worker, downstream_worker)`. Chain dependencies using `.next(another_worker)`[cite: 2870, 4349].
+    4.  Define dependencies using `graph.set_dependency(upstream_worker, downstream_worker)`. Chain dependencies using `.next(another_worker)`.
     5.  Identify entry points using `graph.set_entry(entry_worker1, entry_worker2, ...)`. These workers receive the initial tasks.
     6.  Optionally define sinks using `graph.set_sink(exit_worker, OutputTaskType, notify=callback_func)` to collect final results or trigger notifications.
     7.  Finalize graph structure analysis (optional but recommended for complex graphs): `graph.finalize()`.
-    8.  Run the workflow using `graph.run(initial_tasks=[(entry_worker, initial_task_data)], ...)` or `graph.prepare(...)` followed by `graph.execute(...)`[cite: 2870, 4386].
+    8.  Run the workflow using `graph.run(initial_tasks=[(entry_worker, initial_task_data)], ...)` or `graph.prepare(...)` followed by `graph.execute(...)`.
+    9.  If a sink was specified without a callback, the results can be collected from the graph via `graph.get_output_tasks()`.
 
 * **Example Graph Setup:**
     ```python
@@ -95,7 +96,8 @@ This document outlines best practices for using PlanAI, a Python framework for b
     graph.set_sink(final_output, FinalResult) # Define sink
 
     initial_work = [(fetcher, FetchRequest(url="...") )]
-    graph.run(initial_tasks=initial_work, run_dashboard=True)
+    graph.run(initial_tasks=initial_work, display_terminal=False)
+    results = graph.get_output_tasks() # Collect results
     ```
 
 ### 6. LLM Integration (`LLMTaskWorker`)
