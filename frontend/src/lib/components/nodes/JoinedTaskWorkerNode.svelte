@@ -9,8 +9,9 @@
 	import { tick, onMount } from 'svelte';
 	import { persistNodeDataDebounced, isWorkerTypeNode } from '$lib/utils/nodeUtils';
 	import { openFullScreenEditor } from '$lib/stores/fullScreenEditorStore.svelte';
+
 	// Extend the base data interface
-	interface JoinedWorkerData extends BaseWorkerData {
+	export interface JoinedWorkerData extends BaseWorkerData {
 		join_type: string; // Class name of the worker to join on
 	}
 

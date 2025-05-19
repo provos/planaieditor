@@ -7,7 +7,6 @@
 	import Spinner from 'phosphor-svelte/lib/Spinner';
 	import { onMount, untrack } from 'svelte';
 	import { selectedInterpreterPath } from '$lib/stores/pythonInterpreterStore.svelte';
-	import { useStore } from '@xyflow/svelte';
 	import { persistNodeDataDebounced } from '$lib/utils/nodeUtils';
 
 	export interface ModuleLevelImportData {

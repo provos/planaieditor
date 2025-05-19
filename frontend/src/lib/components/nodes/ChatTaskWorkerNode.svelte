@@ -5,7 +5,7 @@
 	import { useStore } from '@xyflow/svelte';
 	import { persistNodeDataDebounced } from '$lib/utils/nodeUtils';
 
-	interface ChatWorkerData extends BaseWorkerData {
+	export interface ChatWorkerData extends BaseWorkerData {
 		llmConfigName?: string;
 		llmConfigFromCode?: Record<string, any>;
 		llmConfigVar?: string;

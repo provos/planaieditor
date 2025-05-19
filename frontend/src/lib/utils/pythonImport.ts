@@ -434,9 +434,40 @@ export async function importPythonCode(
 			return new Set(existingNames); // Create a new set to trigger reactivity
 		});
 
+		// --- Create Tool Nodes --- //
+		const importedToolsDefinition: { name: string; description: string | null; code: string }[] =
+			result.tools || [];
+		importedToolsDefinition.forEach((toolDef) => {
+			const id = `imported-tool-${toolDef.name.replace(/\s+/g, '_')}-${Date.now()}`;
+			// classNameToNodeId[toolDef.name] = id; // Tools don't typically connect via edges by name like workers/tasks
+
+			const nodeData = {
+				name: toolDef.name,
+				description: toolDef.description,
+				code: toolDef.code,
+				nodeId: id
+			};
+
+			const newNode: Node = {
+				id,
+				type: 'tool',
+				position: { x: startX + 800, y: nextY }, // Position tools further to the right
+				draggable: true,
+				selectable: true,
+				deletable: true,
+				selected: false,
+				dragging: false,
+				zIndex: 0,
+				data: nodeData,
+				origin: [0, 0]
+			};
+			newNodes.push(newNode);
+			nextY += 280; // Adjust vertical spacing for tool nodes (they can be taller)
+		});
+
 		return {
 			success: true,
-			message: `Imported ${importedTasks.length} Task(s), ${importedTaskReferences.length} TaskImport(s), and ${importedWorkers.length} Worker(s).`,
+			message: `Imported ${importedTasks.length} Task(s), ${importedTaskReferences.length} TaskImport(s), ${importedWorkers.length} Worker(s), and ${importedToolsDefinition.length} Tool(s).`,
 			nodes: newNodes, // Return original nodes (without layout positions yet)
 			edges: styledEdges // Return styled edges
 		};

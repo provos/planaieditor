@@ -1,13 +1,21 @@
 import type { Writable } from 'svelte/store';
-import type { Node } from '@xyflow/svelte';
+import type { Node, XYPosition } from '@xyflow/svelte';
 import { getDefaultMethodBody } from './defaults';
 import { debounce } from './utils';
 import type { DataInputNodeData } from '$lib/components/nodes/DataInputNode.svelte';
-import type { NodeData } from '$lib/components/nodes/TaskNode.svelte';
+import type { NodeData as TaskNodeData } from '$lib/components/nodes/TaskNode.svelte';
 import { generateUniqueName } from '$lib/utils/utils';
 import { allClassNames } from '$lib/stores/classNameStore';
-import type { XYPosition } from '@xyflow/svelte';
 import { nodes } from '$lib/stores/graphStore';
+import type { ModuleLevelImportData } from '$lib/components/nodes/ModuleLevelImport.svelte';
+import type { TaskImportNodeData } from '$lib/components/nodes/TaskImportNode.svelte';
+import type { BaseWorkerData } from '$lib/components/nodes/BaseWorkerNode.svelte';
+import type { LLMWorkerData as LLMTaskWorkerData } from '$lib/components/nodes/LLMTaskWorkerNode.svelte';
+import type { JoinedWorkerData } from '$lib/components/nodes/JoinedTaskWorkerNode.svelte';
+import type { SubGraphWorkerData } from '$lib/components/nodes/SubGraphWorkerNode.svelte';
+import type { ChatWorkerData } from '$lib/components/nodes/ChatTaskWorkerNode.svelte';
+import type { DataOutputNodeData } from '$lib/components/nodes/DataOutputNode.svelte';
+import type { ToolNodeData } from '$lib/components/nodes/ToolNode.svelte';
 
 // Adds a method to the node with the given id
 export function addAvailableMethod(nodes: Writable<Node[]>, id: string, methodName: string) {
@@ -49,10 +57,10 @@ export function findDataInputForAssistant(nodes: Node[]): Node | null {
 	const taskNodes: Node[] = nodes.filter(
 		(node) =>
 			node.type === 'taskimport' &&
-			(node.data as unknown as NodeData)?.className === 'ChatTask' &&
-			(node.data as unknown as NodeData)?.fields.length == 1 &&
-			(node.data as unknown as NodeData)?.fields[0].type === 'ChatMessage' &&
-			(node.data as unknown as NodeData)?.fields[0].isList
+			(node.data as unknown as TaskNodeData)?.className === 'ChatTask' &&
+			(node.data as unknown as TaskNodeData)?.fields.length == 1 &&
+			(node.data as unknown as TaskNodeData)?.fields[0].type === 'ChatMessage' &&
+			(node.data as unknown as TaskNodeData)?.fields[0].isList
 	);
 
 	if (taskNodes.length != 1) {
@@ -72,7 +80,22 @@ export function isWorkerTypeNode(node: Node): boolean {
 	);
 }
 
-export function nodeDataFromType(id: string, nodeType: string): any {
+export function nodeDataFromType(
+	id: string,
+	nodeType: string
+):
+	| ModuleLevelImportData
+	| TaskNodeData
+	| TaskImportNodeData
+	| BaseWorkerData
+	| LLMTaskWorkerData
+	| JoinedWorkerData
+	| SubGraphWorkerData
+	| ChatWorkerData
+	| DataInputNodeData
+	| DataOutputNodeData
+	| ToolNodeData
+	| undefined {
 	// Configure node data based on node type
 	let nodeData: any = {};
 
@@ -207,6 +230,15 @@ Analyze the following information and provide a response.`,
 				nodeId: id,
 				receivedData: [],
 				inputTypes: []
+			};
+			break;
+		}
+		case 'tool': {
+			nodeData = {
+				nodeId: id,
+				name: 'new_tool_function',
+				description: '',
+				code: 'def new_tool_function():\n    pass'
 			};
 			break;
 		}

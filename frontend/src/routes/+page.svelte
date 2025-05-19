@@ -25,6 +25,7 @@
 	import ChatTaskWorkerNode from '$lib/components/nodes/ChatTaskWorkerNode.svelte';
 	import DataInputNode from '$lib/components/nodes/DataInputNode.svelte';
 	import DataOutputNode from '$lib/components/nodes/DataOutputNode.svelte';
+	import ToolNode from '$lib/components/nodes/ToolNode.svelte';
 	import type { BaseWorkerData } from '$lib/components/nodes/BaseWorkerNode.svelte';
 	import type { NodeData } from '$lib/components/nodes/TaskNode.svelte';
 	import type { TaskImportNodeData } from '$lib/components/nodes/TaskImportNode.svelte';
@@ -110,7 +111,8 @@
 		subgraphworker: SubGraphWorkerNode,
 		chattaskworker: ChatTaskWorkerNode,
 		datainput: DataInputNode,
-		dataoutput: DataOutputNode
+		dataoutput: DataOutputNode,
+		tool: ToolNode
 	};
 
 	// Use SvelteFlow hook

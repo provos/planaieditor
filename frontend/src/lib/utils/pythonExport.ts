@@ -30,7 +30,6 @@ export function exportPythonCode(
 	}
 
 	// --- Transformation Step ---
-	// Create a map from nodeId to className/workerName
 	const graphData = convertGraphtoJSON(nodes, edges, mode);
 
 	console.log('Exporting transformed graph:', graphData);
