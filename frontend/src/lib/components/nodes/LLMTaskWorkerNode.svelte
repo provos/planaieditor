@@ -486,7 +486,7 @@
 					>
 						<span class="font-mono">{toolName}</span>
 						<button
-							class="ml-1 flex h-3 w-3 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
+							class="ml-1 flex h-3 w-3 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-50 hover:text-red-500"
 							onclick={() => deselectTool(toolId)}
 							title={`Remove ${toolName}`}
 						>
@@ -495,7 +495,7 @@
 					</div>
 				{/each}
 				{#if selectedToolIds.length === 0}
-					<div class="text-2xs py-0.5 italic text-gray-400">No tools selected</div>
+					<div class="text-2xs py-0.5 text-gray-400 italic">No tools selected</div>
 				{/if}
 			</div>
 		</div>
