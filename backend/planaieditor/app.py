@@ -34,6 +34,7 @@ from planaieditor.python import (
     create_worker_class,
     format_python_code,
     generate_python_module,
+    extract_tool_calls,
 )
 from planaieditor.socket_server import SocketServer
 from planaieditor.utils import parse_traceback
@@ -1163,9 +1164,11 @@ def get_node_code():
     node_data = request.get_json()
 
     module_level_import = node_data.get("moduleLevelImport")
+    tool_to_name, _ = extract_tool_calls(node_data.get("toolNodes"))
 
     worker = node_data.get("worker")
     preamble = """
+from llm_interface import tool,Tool
 from planai import Task, TaskWorker, CachedTaskWorker, JoinedTaskWorker
 from planai import LLMTaskWorker, CachedLLMTaskWorker
 from typing import Optional, List, Dict, Any, Type
@@ -1181,7 +1184,7 @@ from typing import Optional, List, Dict, Any, Type
 
     preamble += "\n# Please, make changes to your worker class below. The code above is just for auto-completion purposes.\n"
 
-    python_code = create_worker_class(worker, add_comment=False)
+    python_code = create_worker_class(worker, tool_to_name=tool_to_name, add_comment=False)
     formatted_code = format_python_code(preamble + python_code)
 
     return (

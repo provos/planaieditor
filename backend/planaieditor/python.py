@@ -735,11 +735,7 @@ def generate_python_module(
         import_statements.append(node.get("data", {}).get("code"))
 
     # Tool Definitions
-    tool_nodes = [n for n in nodes if n.get("type") == "tool"]
-    tool_to_name = {n["id"]: n.get("data", {}).get("name") for n in tool_nodes}
-    tool_definitions = []
-    for node in tool_nodes:
-        tool_definitions.append(create_tool_function(node))
+    tool_to_name, tool_definitions = extract_tool_calls(nodes)
 
     # We add them to the import statements for now
     import_statements.extend(tool_definitions)
@@ -915,6 +911,24 @@ def generate_python_module(
                 },
             },
         )
+
+
+def extract_tool_calls(nodes):
+    """
+    Extracts tool calls from the nodes and returns a dictionary of tool names and their definitions.
+
+    Args:
+        nodes (List[Dict[str, Any]]): The nodes to extract tool calls from.
+
+    Returns:
+        Tuple[Dict[str, str], List[str]]: A tuple containing a dictionary of tool names and their definitions.
+    """
+    tool_nodes = [n for n in nodes if n.get("type") == "tool"]
+    tool_to_name = {n["id"]: n.get("data", {}).get("name") for n in tool_nodes}
+    tool_definitions = []
+    for node in tool_nodes:
+        tool_definitions.append(create_tool_function(node))
+    return tool_to_name, tool_definitions
 
 
 def worker_to_instance_name(node: Dict[str, Any]) -> str:

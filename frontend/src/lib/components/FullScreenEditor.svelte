@@ -26,9 +26,11 @@
 		// Get the node with the id from the store
 		let currentNode: Node | undefined = undefined;
 		let moduleLevelImport: Node | undefined = undefined;
+		let toolNodes: Node[] = [];
 		nodes.subscribe((nodes) => {
 			currentNode = nodes.find((node) => node.id === fullScreenEditorState.id);
 			moduleLevelImport = nodes.find((node) => node.type === 'modulelevelimport');
+			toolNodes = nodes.filter((node) => node.type === 'tool');
 		})();
 		if (!currentNode) {
 			console.error('Node not found');
@@ -37,7 +39,8 @@
 
 		let requestData = {
 			worker: convertNodeData(currentNode),
-			moduleLevelImport: moduleLevelImport ? convertNodeData(moduleLevelImport) : undefined
+			moduleLevelImport: moduleLevelImport ? convertNodeData(moduleLevelImport) : undefined,
+			toolNodes: toolNodes.map((node) => convertNodeData(node))
 		};
 
 		const response = await fetch(`${backendUrl}/api/get-node-code`, {
