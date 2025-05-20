@@ -1,6 +1,6 @@
 import { backendUrl } from '$lib/utils/backendUrl';
 import type { Node, Edge } from '@xyflow/svelte';
-import { taskClassNamesStore } from '$lib/stores/taskClassNamesStore';
+import { taskClassNamesStore } from '$lib/stores/classNameStore';
 import { allClassNames } from '$lib/stores/classNameStore';
 import { get } from 'svelte/store';
 import ELK from 'elkjs/lib/elk.bundled.js';

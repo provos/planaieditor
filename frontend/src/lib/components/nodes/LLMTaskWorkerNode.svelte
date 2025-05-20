@@ -3,7 +3,7 @@
 	import EditableCodeSection from '$lib/components/EditableCodeSection.svelte';
 	import LLMConfigSelector from '$lib/components/LLMConfigSelector.svelte';
 	import type { BaseWorkerData } from '$lib/components/nodes/BaseWorkerNode.svelte';
-	import { taskClassNamesStore } from '$lib/stores/taskClassNamesStore';
+	import { taskClassNamesStore } from '$lib/stores/classNameStore';
 	import { getColorForType } from '$lib/utils/colorUtils';
 	import Trash from 'phosphor-svelte/lib/Trash';
 	import { useUpdateNodeInternals, useStore } from '@xyflow/svelte';

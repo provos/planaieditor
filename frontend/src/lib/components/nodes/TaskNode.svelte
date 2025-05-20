@@ -3,7 +3,7 @@
 	import { persistNodeDataDebounced } from '$lib/utils/nodeUtils';
 	import { isValidPythonClassName, isValidPythonIdentifier } from '$lib/utils/validation';
 	import { allClassNames } from '$lib/stores/classNameStore';
-	import { taskClassNamesStore } from '$lib/stores/taskClassNamesStore';
+	import { taskClassNamesStore } from '$lib/stores/classNameStore';
 	import Plus from 'phosphor-svelte/lib/Plus';
 	import Trash from 'phosphor-svelte/lib/Trash';
 	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';

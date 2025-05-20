@@ -8,6 +8,8 @@
 	import { backendUrl } from '$lib/utils/backendUrl';
 	import { formatErrorMessage, debounce } from '$lib/utils/utils';
 	import { selectedInterpreterPath } from '$lib/stores/pythonInterpreterStore.svelte';
+	import { toolNamesStore } from '$lib/stores/classNameStore';
+	import { get } from 'svelte/store';
 	import Spinner from 'phosphor-svelte/lib/Spinner';
 
 	export interface ToolNodeData {
@@ -60,6 +62,19 @@
 			toolNameError = 'Invalid name. Use alphanumeric, _, -';
 			return;
 		}
+
+		// check if the name is already in the store
+		if (get(toolNamesStore).has(tempToolName)) {
+			toolNameError = 'Name already exists.';
+			return;
+		}
+
+		// remove old name and add new name
+		toolNamesStore.update((names) => {
+			names.delete(toolName);
+			names.add(tempToolName);
+			return names;
+		});
 
 		toolName = tempToolName;
 		data.name = tempToolName;
@@ -203,14 +218,13 @@
 					onblur={submitNameChange}
 					onkeydown={handleNameKeydown}
 					placeholder="Tool Name"
-					class="nodrag w-full cursor-text rounded px-1 py-0.5 text-center text-xs font-medium hover:bg-yellow-50 focus:border-yellow-400 focus:ring-1 {toolNameError
+					class="w-full cursor-text rounded px-1 py-0.5 text-center text-xs font-medium hover:bg-yellow-50 focus:border-yellow-400 focus:ring-1 {toolNameError
 						? 'border-red-500 ring-red-500'
 						: 'focus:ring-yellow-400'}"
 					title="Enter the name of the tool function (alphanumeric, _, -)"
-					autofocus
 				/>
 				{#if toolNameError}
-					<div class="nodrag mt-0.5 text-center text-xs text-red-500">{toolNameError}</div>
+					<div class="mt-0.5 text-center text-xs text-red-500">{toolNameError}</div>
 				{/if}
 			</div>
 		{:else}
@@ -253,7 +267,7 @@
 			onUpdateSize={handleCollapse}
 		/>
 		<!-- Validation Status Overlay -->
-		<div class="absolute bottom-1 right-3 z-10">
+		<div class="absolute right-3 bottom-1 z-10">
 			{#if isValidatingTool}
 				<div class="rounded-sm bg-white/50 px-1.5 py-1.5">
 					<Spinner size={12} class="animate-spin text-blue-500" weight="bold" />

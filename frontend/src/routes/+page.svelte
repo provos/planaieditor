@@ -31,9 +31,9 @@
 	import type { TaskImportNodeData } from '$lib/components/nodes/TaskImportNode.svelte';
 	import type { DataOutputNodeData } from '$lib/components/nodes/DataOutputNode.svelte';
 	import type { DataInputNodeData } from '$lib/components/nodes/DataInputNode.svelte';
+	import type { ToolNodeData } from '$lib/components/nodes/ToolNode.svelte';
 	import { get } from 'svelte/store';
-	import { allClassNames } from '$lib/stores/classNameStore';
-	import { taskClassNamesStore } from '$lib/stores/taskClassNamesStore';
+	import { allClassNames, taskClassNamesStore, toolNamesStore } from '$lib/stores/classNameStore';
 	import { socketStore } from '$lib/stores/socketStore.svelte';
 	import { startLspManager, stopLspManager } from '$lib/stores/monacoStore.svelte';
 	import {
@@ -375,13 +375,13 @@
 
 		let nameMap = new Map<string, string>();
 		let taskNameSet = new Set<string>(); // Set for task class names
-
+		let toolNameSet = new Set<string>(); // Set for tool names
 		// Subscribe to get current nodes
 		const unsubNodes = nodes.subscribe((currentNodes) => {
 			// Reset the map and set
 			nameMap = new Map();
 			taskNameSet = new Set<string>();
-
+			toolNameSet = new Set<string>();
 			// Add each node's class name or worker name with its ID
 			currentNodes.forEach((node) => {
 				const name = node.data?.className || node.data?.workerName;
@@ -393,12 +393,16 @@
 					// Cast to any first to avoid TypeScript error
 					const nodeData = node.data as any as NodeData;
 					taskNameSet.add(nodeData.className);
+				} else if (node.type === 'tool' && node.data?.name) {
+					const nodeData = node.data as unknown as ToolNodeData;
+					toolNameSet.add(nodeData.name);
 				}
 			});
 
 			// Update the stores
 			allClassNames.set(nameMap);
 			taskClassNamesStore.set(taskNameSet);
+			toolNamesStore.set(toolNameSet);
 		});
 
 		return unsubNodes;
