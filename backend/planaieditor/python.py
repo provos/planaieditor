@@ -342,8 +342,23 @@ def create_task_class(node: Dict[str, Any]) -> Optional[str]:
 
 
 def create_worker_class(
-    node: Dict[str, Any], add_comment: bool = True
+    node: Dict[str, Any], tool_to_name: Dict[str, str] = {}, add_comment: bool = True
 ) -> Optional[str]:
+    """Creates a worker class from a node.
+
+    Args:
+        node (Dict[str, Any]): The node to create the worker class from.
+        tool_to_name (Dict[str, str], optional): A dictionary of tool names. Defaults to {}.
+        add_comment (bool, optional): Whether to add a comment to the worker class. Defaults to True.
+
+    Raises:
+        ValueError: If the node type is invalid.
+        ValueError: If the worker class name is invalid.
+        ValueError: If the worker class cannot be created.
+
+    Returns:
+        Optional[str]: The worker class code.
+    """
     # Determine base class based on node type, including cached variants
     node_type = node.get("type")
     data = node.get("data", {})
@@ -384,6 +399,7 @@ def create_worker_class(
     # Retrieve specific class variables from the classVars dict
     llm_input_type = class_vars.get("llm_input_type")
     llm_output_type = class_vars.get("llm_output_type")
+    tool_ids = class_vars.get("tool_ids", [])
     join_type = class_vars.get("join_type")
     prompt = class_vars.get("prompt")
     system_prompt = class_vars.get("system_prompt")
@@ -419,6 +435,13 @@ def create_worker_class(
     if system_prompt:
         dedented_sys_prompt = dedent(system_prompt).strip()
         class_body.append(f'    system_prompt: str = """{dedented_sys_prompt}"""')
+
+    # Handle Tool IDs
+    if tool_ids:
+        tool_names = [tool_to_name.get(tool_id) for tool_id in tool_ids]
+        if None in tool_names:
+            raise ValueError(f"Invalid tool ID: {tool_ids}")
+        class_body.append(f"    tools: List[str] = [{', '.join(tool_names)}]")
 
     # Handle Boolean Flags (use_xml, debug_mode)
     if class_vars.get("use_xml") is True:
@@ -713,6 +736,7 @@ def generate_python_module(
 
     # Tool Definitions
     tool_nodes = [n for n in nodes if n.get("type") == "tool"]
+    tool_to_name = {n["id"]: n.get("data", {}).get("name") for n in tool_nodes}
     tool_definitions = []
     for node in tool_nodes:
         tool_definitions.append(create_tool_function(node))
@@ -749,7 +773,7 @@ def generate_python_module(
     # Instance names will be generated later
     workers = []
     for node in worker_nodes:
-        code = create_worker_class(node)
+        code = create_worker_class(node, tool_to_name)
         if code:
             workers.append(code)
 

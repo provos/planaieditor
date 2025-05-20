@@ -49,6 +49,7 @@ function convertLLMConfigToBackendFormat(config: LLMConfig): Record<string, any>
 
 	// Process each property in the config object
 	Object.entries(config).forEach(([key, value]) => {
+		console.log('key:', key, 'value:', value);
 		// Skip name and source properties
 		if (key !== 'name' && key !== 'source' && key !== 'id') {
 			convertedConfig[key] = { value: value, is_literal: true };
@@ -198,7 +199,8 @@ export function convertNodeData(node: Node) {
 		'debug_mode',
 		'llm_output_type',
 		'join_type',
-		'output_types'
+		'output_types',
+		'tool_ids'
 	];
 	if (node.type?.endsWith('worker')) {
 		// Apply only to worker node types
