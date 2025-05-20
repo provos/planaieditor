@@ -4,9 +4,11 @@
 	import LLMConfigSelector from '$lib/components/LLMConfigSelector.svelte';
 	import type { BaseWorkerData } from '$lib/components/nodes/BaseWorkerNode.svelte';
 	import { taskClassNamesStore } from '$lib/stores/classNameStore';
+	import { nodes as svelteFlowNodes } from '$lib/stores/graphStore';
+	import type { ToolNodeData } from '$lib/components/nodes/ToolNode.svelte';
 	import { getColorForType } from '$lib/utils/colorUtils';
 	import Trash from 'phosphor-svelte/lib/Trash';
-	import { useUpdateNodeInternals, useStore } from '@xyflow/svelte';
+	import { useUpdateNodeInternals, useStore, type Node } from '@xyflow/svelte';
 	import { tick } from 'svelte';
 	import type { Action } from 'svelte/action';
 	import { addAvailableMethod } from '$lib/utils/nodeUtils';
@@ -36,6 +38,7 @@
 		llmConfigName?: string;
 		llmConfigFromCode?: Record<string, any>;
 		llmConfigVar?: string;
+		tool_ids?: string[];
 	}
 
 	let { id, data } = $props<{
@@ -53,6 +56,26 @@
 	let currentLLMOutputType = $state(data.llm_output_type || '');
 	let nodeOutputTypes = $state<string[]>([]);
 	let nodeUnsubscribe: Unsubscriber | null = null;
+
+	let availableTools = $derived<Array<{ id: string; name: string }>>(
+		($svelteFlowNodes || [])
+			.filter((node) => node.type === 'tool' && node.data?.name)
+			.map((node) => ({
+				id: node.id,
+				name: (node.data as unknown as ToolNodeData).name
+			}))
+	);
+	let selectedToolIds = $derived<string[]>(data.tool_ids || []);
+	let showToolsDropdown = $state(false);
+
+	$effect(() => {
+		const currentSelectedIds = $state.snapshot(selectedToolIds);
+		for (const idInLoop of currentSelectedIds) {
+			if (!availableTools.find((tool) => tool.id === idInLoop)) {
+				selectedToolIds = currentSelectedIds.filter((filterId) => filterId !== idInLoop);
+			}
+		}
+	});
 
 	// Ensures that we create a post_process if the llm output type does not match the node output types
 	$effect(() => {
@@ -156,6 +179,10 @@
 		data.debug_mode = false;
 		persistNodeDataDebounced();
 	}
+	if (!data.tool_ids) {
+		data.tool_ids = [];
+		persistNodeDataDebounced();
+	}
 
 	// Subscribe to the taskClassNamesStore for output type selection
 	$effect(() => {
@@ -185,6 +212,14 @@
 	$effect(() => {
 		if (data.debug_mode !== debugMode) {
 			data.debug_mode = debugMode;
+			persistNodeDataDebounced();
+		}
+	});
+
+	// Sync selectedToolIds back to data.tool_ids
+	$effect(() => {
+		if (data.tool_ids !== selectedToolIds) {
+			data.tool_ids = selectedToolIds;
 			persistNodeDataDebounced();
 		}
 	});
@@ -240,7 +275,7 @@
 		const handleClick = (event: MouseEvent) => {
 			if (
 				node &&
-				!node.contains(event.target as Node) &&
+				!node.contains(event.target as globalThis.Node) &&
 				!event.defaultPrevented &&
 				callback // Ensure callback exists
 			) {
@@ -264,6 +299,45 @@
 		if (event.key === 'Escape' && showLLMOutputTypeDropdown) {
 			showLLMOutputTypeDropdown = false;
 			event.stopPropagation();
+		}
+	}
+
+	function handleToolsTriggerKeydown(event: KeyboardEvent) {
+		if (event.key === 'Escape' && showToolsDropdown) {
+			showToolsDropdown = false;
+			event.stopPropagation();
+		}
+	}
+
+	function toggleToolsDropdown() {
+		showToolsDropdown = !showToolsDropdown;
+	}
+
+	function selectTool(toolId: string) {
+		if (!selectedToolIds.includes(toolId)) {
+			selectedToolIds = [...selectedToolIds, toolId];
+		}
+		// Do not close dropdown, allow multiple selections
+	}
+
+	function deselectTool(toolId: string) {
+		selectedToolIds = selectedToolIds.filter((id: string) => id !== toolId);
+	}
+
+	function getToolNameById(toolId: string): string {
+		const tool = ($svelteFlowNodes || []).find(
+			(node) => node.id === toolId && node.type === 'tool'
+		);
+		return tool && tool.data ? (tool.data as unknown as ToolNodeData).name : 'Unknown Tool';
+	}
+
+	function handleToolItemKeydown(event: KeyboardEvent, toolId: string) {
+		if (event.key === 'Enter') {
+			event.preventDefault();
+			selectTool(toolId);
+		} else if (event.key === 'Escape') {
+			event.preventDefault();
+			showToolsDropdown = false;
 		}
 	}
 
@@ -325,7 +399,7 @@
 						tabindex="0"
 						onkeydown={handleTriggerKeydown}
 					>
-						Select LLM output type
+						Select LLM output type if it should be different from the output type of the worker
 					</div>
 				{/if}
 			{:else}
@@ -358,15 +432,90 @@
 		</div>
 	</div>
 
+	<!-- Tool Selection Section -->
+	{#if availableTools.length > 0}
+		<div class="mb-2 flex-none border-t border-gray-200 pt-2">
+			<h3 class="text-2xs mb-1 font-semibold text-gray-600">Selected Tools</h3>
+			<div class="relative">
+				<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
+				<div
+					class="text-2xs cursor-pointer rounded border border-gray-200 px-1 py-0.5"
+					onclick={toggleToolsDropdown}
+					role="button"
+					tabindex="0"
+					onkeydown={handleToolsTriggerKeydown}
+				>
+					Add tool...
+				</div>
+				{#if showToolsDropdown && availableTools.length > 0}
+					<div
+						class="absolute z-20 mt-1 max-h-40 w-full overflow-y-auto rounded border border-gray-200 bg-white shadow-md"
+						use:clickOutside={() => (showToolsDropdown = false)}
+					>
+						{#each availableTools as tool (tool.id)}
+							{@const isSelected = selectedToolIds.includes(tool.id)}
+							<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
+							<div
+								class="text-2xs flex items-center justify-between p-1 hover:bg-gray-100 {isSelected
+									? 'bg-blue-50 text-blue-700'
+									: 'cursor-pointer'}"
+								onclick={() => selectTool(tool.id)}
+								onkeydown={(e) => handleToolItemKeydown(e, tool.id)}
+								role="option"
+								aria-selected={isSelected}
+								tabindex="0"
+							>
+								<span>{tool.name}</span>
+								{#if isSelected}
+									<span class="text-xs">✓</span>
+								{/if}
+							</div>
+						{/each}
+					</div>
+				{/if}
+			</div>
+
+			<!-- Display selected tools -->
+			<div class="mt-1 space-y-1">
+				{#each selectedToolIds as toolId (toolId)}
+					{@const toolName = getToolNameById(toolId)}
+					{@const color = getColorForType(toolName)}
+					<div
+						class="text-2xs group flex items-center justify-between rounded px-1 py-0.5"
+						style={`background-color: ${color}20; border-left: 3px solid ${color};`}
+					>
+						<span class="font-mono">{toolName}</span>
+						<button
+							class="ml-1 flex h-3 w-3 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
+							onclick={() => deselectTool(toolId)}
+							title={`Remove ${toolName}`}
+						>
+							<Trash size={8} weight="bold" />
+						</button>
+					</div>
+				{/each}
+				{#if selectedToolIds.length === 0}
+					<div class="text-2xs py-0.5 italic text-gray-400">No tools selected</div>
+				{/if}
+			</div>
+		</div>
+	{/if}
+
 	<!-- New Settings Section -->
 	<div class="mb-2 flex-none border-t border-gray-200 pt-2">
 		<h3 class="text-2xs mb-1 font-semibold text-gray-600">Settings</h3>
 		<div class="flex items-center space-x-4">
-			<label class="text-2xs flex items-center">
+			<label
+				class="text-2xs flex items-center"
+				title="When enabled, this worker will output XML instead of JSON to the LLM."
+			>
 				<input type="checkbox" class="mr-1 h-2.5 w-2.5" bind:checked={useXml} />
 				Use XML Output
 			</label>
-			<label class="text-2xs flex items-center">
+			<label
+				class="text-2xs flex items-center"
+				title="When enabled, this worker will write full input traces into a debug log."
+			>
 				<input type="checkbox" class="mr-1 h-2.5 w-2.5" bind:checked={debugMode} />
 				Debug Mode
 			</label>
