@@ -11,7 +11,7 @@ from typing import (  # noqa: F401
     Type,
 )
 
-from llm_interface import tool  # noqa: F401
+from llm_interface import tool, Tool  # noqa: F401
 from planai import (  # noqa: F401
     CachedLLMTaskWorker,
     CachedTaskWorker,

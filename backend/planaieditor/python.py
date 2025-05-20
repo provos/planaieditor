@@ -441,7 +441,7 @@ def create_worker_class(
         tool_names = [tool_to_name.get(tool_id) for tool_id in tool_ids]
         if None in tool_names:
             raise ValueError(f"Invalid tool ID: {tool_ids}")
-        class_body.append(f"    tools: List[str] = [{', '.join(tool_names)}]")
+        class_body.append(f"    tools: List[Tool] = [{', '.join(tool_names)}]")
 
     # Handle Boolean Flags (use_xml, debug_mode)
     if class_vars.get("use_xml") is True:

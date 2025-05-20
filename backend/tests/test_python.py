@@ -759,3 +759,121 @@ def {tool_name}(param_x: str, param_y: int = 123) -> str:
         assert (
             False
         ), f"The generated module code has syntax errors: {e}\n--- Generated Code ---:\n{generated_module_code}"
+
+
+def test_llm_task_worker_with_tool_generation():
+    """Tests that LLMTaskWorkers correctly include tool definitions and references."""
+    tool_node_id = "tool-12345"
+    tool_name = "custom_calculator_tool"
+    tool_function_code = '''
+def custom_calculator_tool(operation: str, val1: float, val2: float) -> float:
+    """Performs a calculation based on the operation.
+    
+    Args:
+        operation: The operation to perform ('add', 'subtract').
+        val1: The first value.
+        val2: The second value.
+
+    Returns:
+        The result of the calculation.
+    """
+    if operation == "add":
+        return val1 + val2
+    elif operation == "subtract":
+        return val1 - val2
+    else:
+        raise ValueError("Unsupported operation")
+'''
+
+    graph_data = {
+        "nodes": [
+            {
+                "id": tool_node_id,
+                "type": "tool",
+                "data": {
+                    "name": tool_name,
+                    "description": "A custom calculator tool.",
+                    "code": tool_function_code,
+                },
+            },
+            {
+                "id": "llmworker-67890",
+                "type": "llmtaskworker",
+                "data": {
+                    "className": "MathSolverLLM",
+                    "classVars": {
+                        "llm_input_type": "MathProblemTask",
+                        "output_types": ["MathSolutionTask"],
+                        "prompt": "Solve the math problem using the available tools.",
+                        "tool_ids": [tool_node_id],  # Reference the tool by its ID
+                    },
+                    "llmConfig": {  # Dummy config, not central to this test
+                        "provider": {"value": "openai", "is_literal": True},
+                        "modelId": {"value": "gpt-4", "is_literal": True},
+                    },
+                    "inputTypes": [
+                        "MathProblemTask"
+                    ],  # Added for consume_work signature
+                },
+            },
+            # Minimal Task definitions to make the generated code valid
+            {
+                "id": "task-mathproblem",
+                "type": "task",
+                "data": {
+                    "className": "MathProblemTask",
+                    "fields": [{"name": "problem", "type": "string"}],
+                },
+            },
+            {
+                "id": "task-mathsolution",
+                "type": "task",
+                "data": {
+                    "className": "MathSolutionTask",
+                    "fields": [{"name": "solution", "type": "string"}],
+                },
+            },
+        ],
+        "edges": [],
+        "module_imports": "from planai.tools import tool",  # Ensure @tool is available
+    }
+
+    generated_module_code, _, error = generate_python_module(graph_data)
+
+    assert error is None, f"generate_python_module failed with an error: {error}"
+    assert (
+        generated_module_code is not None
+    ), "generate_python_module did not produce any code."
+
+    # 1. Check for the @tool decorator and the tool function definition
+    expected_tool_decorator = (
+        f'@tool(name="{tool_name}", description="A custom calculator tool.")'
+    )
+    assert (
+        expected_tool_decorator in generated_module_code
+    ), f"Tool decorator missing or incorrect. Expected: {expected_tool_decorator}"
+
+    # Check for the presence of the core tool function signature and body elements
+    # Normalizing whitespace in the provided tool_function_code for comparison
+    normalized_tool_function_code_lines = [
+        line.strip() for line in tool_function_code.split("\n") if line.strip()
+    ]
+    for line in normalized_tool_function_code_lines:
+        assert line in generated_module_code, f"Tool function line missing: '{line}'"
+
+    # 2. Check for the LLMTaskWorker class and its 'tools' attribute
+    assert (
+        "class MathSolverLLM(LLMTaskWorker):" in generated_module_code
+    ), "LLMTaskWorker class definition missing."
+    expected_tools_attribute = f"tools: List[Tool] = [{tool_name}]"  # Tool name, not id
+    assert (
+        expected_tools_attribute in generated_module_code
+    ), f"LLMTaskWorker 'tools' attribute missing or incorrect. Expected: {expected_tools_attribute}"
+
+    # 3. Verify the generated code is syntactically valid Python
+    try:
+        ast.parse(generated_module_code)
+    except SyntaxError as e:
+        assert (
+            False
+        ), f"The generated module code has syntax errors: {e}\\n--- Generated Code ---:\\n{generated_module_code}"
