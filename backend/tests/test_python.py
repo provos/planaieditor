@@ -805,7 +805,7 @@ def custom_calculator_tool(operation: str, val1: float, val2: float) -> float:
                         "llm_input_type": "MathProblemTask",
                         "output_types": ["MathSolutionTask"],
                         "prompt": "Solve the math problem using the available tools.",
-                        "tool_ids": [tool_node_id],  # Reference the tool by its ID
+                        "tools": [tool_node_id],  # Reference the tool by its ID
                     },
                     "llmConfig": {  # Dummy config, not central to this test
                         "provider": {"value": "openai", "is_literal": True},

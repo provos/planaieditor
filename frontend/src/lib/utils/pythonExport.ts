@@ -200,7 +200,7 @@ export function convertNodeData(node: Node) {
 		'llm_output_type',
 		'join_type',
 		'output_types',
-		'tool_ids'
+		'tools'
 	];
 	if (node.type?.endsWith('worker')) {
 		// Apply only to worker node types

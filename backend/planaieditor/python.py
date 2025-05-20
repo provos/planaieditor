@@ -399,7 +399,7 @@ def create_worker_class(
     # Retrieve specific class variables from the classVars dict
     llm_input_type = class_vars.get("llm_input_type")
     llm_output_type = class_vars.get("llm_output_type")
-    tool_ids = class_vars.get("tool_ids", [])
+    tools = class_vars.get("tools", [])
     join_type = class_vars.get("join_type")
     prompt = class_vars.get("prompt")
     system_prompt = class_vars.get("system_prompt")
@@ -437,10 +437,10 @@ def create_worker_class(
         class_body.append(f'    system_prompt: str = """{dedented_sys_prompt}"""')
 
     # Handle Tool IDs
-    if tool_ids:
-        tool_names = [tool_to_name.get(tool_id) for tool_id in tool_ids]
+    if tools:
+        tool_names = [tool_to_name.get(tool_id) for tool_id in tools]
         if None in tool_names:
-            raise ValueError(f"Invalid tool ID: {tool_ids}")
+            raise ValueError(f"Invalid tool ID: {tools}")
         class_body.append(f"    tools: List[Tool] = [{', '.join(tool_names)}]")
 
     # Handle Boolean Flags (use_xml, debug_mode)

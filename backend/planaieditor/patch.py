@@ -478,6 +478,7 @@ def extract_worker_details(
         "debug_mode",
         "use_xml",
         "join_type",
+        "tools"
     }
 
     # Helper function to parse potentially complex value assignments

@@ -38,7 +38,7 @@
 		llmConfigName?: string;
 		llmConfigFromCode?: Record<string, any>;
 		llmConfigVar?: string;
-		tool_ids?: string[];
+		tools?: string[];
 	}
 
 	let { id, data } = $props<{
@@ -65,7 +65,7 @@
 				name: (node.data as unknown as ToolNodeData).name
 			}))
 	);
-	let selectedToolIds = $derived<string[]>(data.tool_ids || []);
+	let selectedToolIds = $derived<string[]>(data.tools || []);
 	let showToolsDropdown = $state(false);
 
 	$effect(() => {
@@ -179,8 +179,8 @@
 		data.debug_mode = false;
 		persistNodeDataDebounced();
 	}
-	if (!data.tool_ids) {
-		data.tool_ids = [];
+	if (!data.tools) {
+		data.tools = [];
 		persistNodeDataDebounced();
 	}
 
@@ -216,10 +216,10 @@
 		}
 	});
 
-	// Sync selectedToolIds back to data.tool_ids
+	// Sync selectedToolIds back to data.tools
 	$effect(() => {
-		if (data.tool_ids !== selectedToolIds) {
-			data.tool_ids = selectedToolIds;
+		if (data.tools !== selectedToolIds) {
+			data.tools = selectedToolIds;
 			persistNodeDataDebounced();
 		}
 	});
@@ -380,7 +380,7 @@
 					>
 						<span class="font-mono">{currentLLMOutputType}</span>
 						<button
-							class="ml-1 flex h-3 w-3 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-50 hover:text-red-500"
+							class="ml-1 flex h-3 w-3 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
 							onclick={(e) => {
 								e.stopPropagation();
 								deleteLLMOutputType();
@@ -393,7 +393,7 @@
 				{:else}
 					<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
 					<div
-						class="text-2xs cursor-pointer py-0.5 text-gray-400 italic"
+						class="text-2xs cursor-pointer py-0.5 italic text-gray-400"
 						onclick={toggleLLMOutputTypeDropdown}
 						role="button"
 						tabindex="0"
@@ -403,7 +403,7 @@
 					</div>
 				{/if}
 			{:else}
-				<div class="text-2xs cursor-pointer py-0.5 text-gray-400 italic">
+				<div class="text-2xs cursor-pointer py-0.5 italic text-gray-400">
 					No output types defined
 				</div>
 			{/if}
@@ -486,7 +486,7 @@
 					>
 						<span class="font-mono">{toolName}</span>
 						<button
-							class="ml-1 flex h-3 w-3 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-50 hover:text-red-500"
+							class="ml-1 flex h-3 w-3 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
 							onclick={() => deselectTool(toolId)}
 							title={`Remove ${toolName}`}
 						>
@@ -495,7 +495,7 @@
 					</div>
 				{/each}
 				{#if selectedToolIds.length === 0}
-					<div class="text-2xs py-0.5 text-gray-400 italic">No tools selected</div>
+					<div class="text-2xs py-0.5 italic text-gray-400">No tools selected</div>
 				{/if}
 			</div>
 		</div>
