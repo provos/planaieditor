@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
-	import { useStore } from '@xyflow/svelte';
+	import { useStore, useSvelteFlow } from '@xyflow/svelte';
 	import type { Node } from '@xyflow/svelte';
 	import EditableCodeSection from '$lib/components/EditableCodeSection.svelte';
 	import FloppyDisk from 'phosphor-svelte/lib/FloppyDisk';
@@ -19,6 +19,7 @@
 	let editorContainerRef: HTMLDivElement | undefined = $state();
 	let error = $state<string | undefined>(undefined);
 	const { nodes } = useStore();
+	const { getNodes } = useSvelteFlow();
 
 	async function handleLoad() {
 		isLoading = true;
@@ -38,9 +39,9 @@
 		}
 
 		let requestData = {
-			worker: convertNodeData(currentNode),
-			moduleLevelImport: moduleLevelImport ? convertNodeData(moduleLevelImport) : undefined,
-			toolNodes: toolNodes.map((node) => convertNodeData(node))
+			worker: convertNodeData(currentNode, getNodes()),
+			moduleLevelImport: moduleLevelImport ? convertNodeData(moduleLevelImport, getNodes()) : undefined,
+			toolNodes: toolNodes.map((node) => convertNodeData(node, getNodes()))
 		};
 
 		const response = await fetch(`${backendUrl}/api/get-node-code`, {
@@ -82,7 +83,7 @@
 				error = data.error;
 				return;
 			}
-			const updatedNodeData = convertWorkerToNodeData(data.worker, fullScreenEditorState.id);
+			const updatedNodeData = convertWorkerToNodeData(data.worker, fullScreenEditorState.id, getNodes());
 			updatedNodeData._lastUpdated = Date.now();
 			let updatedModuleImport: boolean = false;
 			const moduleLevelCode: string = data.module_imports || '';

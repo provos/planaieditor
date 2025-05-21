@@ -478,7 +478,7 @@ def extract_worker_details(
         "debug_mode",
         "use_xml",
         "join_type",
-        "tools"
+        "tools",
     }
 
     # Helper function to parse potentially complex value assignments
@@ -515,6 +515,15 @@ def extract_worker_details(
         # List of types (e.g., output_types)
         if isinstance(value_node, ast.List) and var_name == "output_types":
             return _parse_list_of_types(value_node)
+        # List of tool names (e.g., tools: List[Tool] = [tool1, tool2])
+        if isinstance(value_node, ast.List) and var_name == "tools":
+            tool_names = []
+            for elt in value_node.elts:
+                if isinstance(elt, ast.Name):
+                    tool_names.append(elt.id)
+                else:
+                    raise ValueError(f"Unexpected tool type: {type(elt)}")
+            return tool_names
         # Simple type name (e.g., llm_input_type)
         if isinstance(value_node, ast.Name) and var_name in (
             "llm_input_type",

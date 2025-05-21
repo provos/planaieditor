@@ -1164,7 +1164,6 @@ def get_node_code():
     node_data = request.get_json()
 
     module_level_import = node_data.get("moduleLevelImport")
-    tool_to_name, _ = extract_tool_calls(node_data.get("toolNodes"))
 
     worker = node_data.get("worker")
     preamble = """
@@ -1184,7 +1183,7 @@ from typing import Optional, List, Dict, Any, Type
 
     preamble += "\n# Please, make changes to your worker class below. The code above is just for auto-completion purposes.\n"
 
-    python_code = create_worker_class(worker, tool_to_name=tool_to_name, add_comment=False)
+    python_code = create_worker_class(worker, add_comment=False)
     formatted_code = format_python_code(preamble + python_code)
 
     return (

@@ -325,6 +325,37 @@ export async function importPythonCode(
 			nextY += 180; // Basic vertical spacing
 		});
 
+		// --- Create Tool Nodes --- //
+		const importedToolsDefinition: { name: string; description: string | null; code: string }[] =
+			result.tools || [];
+		importedToolsDefinition.forEach((toolDef) => {
+			const id = `imported-tool-${toolDef.name.replace(/\s+/g, '_')}-${Date.now()}`;
+
+			const nodeData = {
+				name: toolDef.name,
+				description: toolDef.description,
+				code: toolDef.code,
+				nodeId: id
+			};
+
+			const newNode: Node = {
+				id,
+				type: 'tool',
+				position: { x: startX + 800, y: nextY }, // Position tools further to the right
+				draggable: true,
+				selectable: true,
+				deletable: true,
+				selected: false,
+				dragging: false,
+				zIndex: 0,
+				data: nodeData,
+				origin: [0, 0]
+			};
+			newNodes.push(newNode);
+			nextY += 280; // Adjust vertical spacing for tool nodes (they can be taller)
+		});
+
+
 		// --- Create Worker Nodes ---
 		nextY = 0;
 
@@ -346,7 +377,7 @@ export async function importPythonCode(
 			}
 
 			// Map backend data to frontend node data structure
-			const nodeData: any = convertWorkerToNodeData(worker, id);
+			const nodeData: any = convertWorkerToNodeData(worker, id, newNodes);
 
 			const newNode: Node = {
 				id,
@@ -434,36 +465,6 @@ export async function importPythonCode(
 			return new Set(existingNames); // Create a new set to trigger reactivity
 		});
 
-		// --- Create Tool Nodes --- //
-		const importedToolsDefinition: { name: string; description: string | null; code: string }[] =
-			result.tools || [];
-		importedToolsDefinition.forEach((toolDef) => {
-			const id = `imported-tool-${toolDef.name.replace(/\s+/g, '_')}-${Date.now()}`;
-			// classNameToNodeId[toolDef.name] = id; // Tools don't typically connect via edges by name like workers/tasks
-
-			const nodeData = {
-				name: toolDef.name,
-				description: toolDef.description,
-				code: toolDef.code,
-				nodeId: id
-			};
-
-			const newNode: Node = {
-				id,
-				type: 'tool',
-				position: { x: startX + 800, y: nextY }, // Position tools further to the right
-				draggable: true,
-				selectable: true,
-				deletable: true,
-				selected: false,
-				dragging: false,
-				zIndex: 0,
-				data: nodeData,
-				origin: [0, 0]
-			};
-			newNodes.push(newNode);
-			nextY += 280; // Adjust vertical spacing for tool nodes (they can be taller)
-		});
 
 		return {
 			success: true,
@@ -480,7 +481,7 @@ export async function importPythonCode(
 	}
 }
 
-export function convertWorkerToNodeData(worker: ImportedWorker, id: string) {
+export function convertWorkerToNodeData(worker: ImportedWorker, id: string, nodes: Node[] = []) {
 	const nodeData: any = {
 		isCached: worker.isCached || false,
 		entryPoint: worker.entryPoint || false,
@@ -525,6 +526,11 @@ export function convertWorkerToNodeData(worker: ImportedWorker, id: string) {
 			nodeData.requiredMembers = ['consume_work'];
 			nodeData.isCached = worker.isCached;
 			break;
+		case 'chattaskworker':
+			nodeData.isCached = worker.isCached;
+			nodeData.prompt = worker.classVars?.prompt || '# No prompt found';
+			nodeData.system_prompt = worker.classVars?.system_prompt || worker.classVars?.system || '';
+			break;
 		case 'llmtaskworker':
 			nodeData.isCached = worker.isCached;
 			nodeData.requiredMembers = ['prompt', 'system_prompt'];
@@ -551,5 +557,22 @@ export function convertWorkerToNodeData(worker: ImportedWorker, id: string) {
 			break;
 		// Add other worker types if needed
 	}
+
+	if (worker.workerType === 'llmtaskworker' || worker.workerType === 'chattaskworker') {
+		// Map the tools from class variables
+		const tools = worker.classVars?.tools || [];
+		// Map to tool ids
+		const toolIds = tools.map((tool: Record<string, string>) => {
+			const toolNode = nodes.find((node) => node.type === 'tool' && node.data.name === tool);
+			if (toolNode) {
+				return toolNode.id;
+			} else {
+				console.warn(`Tool node not found for ${tool}`);
+			}
+			return undefined;
+		}).filter((id: string | undefined) => id !== undefined);
+		nodeData.tools = toolIds;
+	}
+
 	return nodeData;
 }

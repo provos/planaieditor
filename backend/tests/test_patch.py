@@ -1199,3 +1199,63 @@ def multiply(x: float, y: float = 1.0) -> float:
     assert tool["description"] == "Multiply two numbers"
     assert "Args:" in tool["code"]
     assert "return x * y" in tool["code"]
+
+
+def test_extract_llm_worker_with_tools(temp_python_file):
+    """Test extraction of an LLMTaskWorker with a 'tools' attribute."""
+    code = """
+from planai import Task, LLMTaskWorker
+from planai.tools import tool, Tool
+from typing import List
+
+# Assume these tool functions are defined elsewhere or imported
+# For this test, we only care about their names in the list.
+@tool(name="my_calculator_tool", description="A tool for basic calculations")
+def my_calculator_tool(): pass
+
+@tool(name="my_search_tool", description="A tool for searching the web")
+def my_search_tool(): pass
+
+class QueryTask(Task):
+    query: str
+
+class ResultTask(Task):
+    result: str
+
+class SmartAgentWorker(LLMTaskWorker):
+    llm_input_type = QueryTask
+    output_types = [ResultTask]
+    prompt = "Use tools to answer the query."
+    tools: List[Tool] = [my_calculator_tool, my_search_tool] # Note: direct function references
+"""
+    file_path = temp_python_file(code)
+    definitions = get_definitions_from_python(str(file_path))
+
+    assert "workers" in definitions
+    assert len(definitions["workers"]) == 1
+    worker = definitions["workers"][0]
+
+    assert worker["className"] == "SmartAgentWorker"
+    assert worker["workerType"] == "llmtaskworker"
+    assert "classVars" in worker
+    assert "tools" in worker["classVars"]
+
+    # The tools should be extracted as a list of their names
+    expected_tool_names = ["my_calculator_tool", "my_search_tool"]
+    actual_tool_names = worker["classVars"]["tools"]
+
+    assert isinstance(actual_tool_names, list), "Tools attribute should be a list"
+    assert all(
+        isinstance(name, str) for name in actual_tool_names
+    ), "Tool names should be strings"
+    assert sorted(actual_tool_names) == sorted(
+        expected_tool_names
+    ), f"Tool names mismatch. Expected: {expected_tool_names}, Got: {actual_tool_names}"
+
+    assert "tools" in definitions
+    assert len(definitions["tools"]) == 2
+    tool1 = definitions["tools"][0]
+    tool2 = definitions["tools"][1]
+
+    assert tool1["name"] == "my_calculator_tool"
+    assert tool2["name"] == "my_search_tool"

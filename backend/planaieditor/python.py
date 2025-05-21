@@ -342,13 +342,12 @@ def create_task_class(node: Dict[str, Any]) -> Optional[str]:
 
 
 def create_worker_class(
-    node: Dict[str, Any], tool_to_name: Dict[str, str] = {}, add_comment: bool = True
+    node: Dict[str, Any], add_comment: bool = True
 ) -> Optional[str]:
     """Creates a worker class from a node.
 
     Args:
         node (Dict[str, Any]): The node to create the worker class from.
-        tool_to_name (Dict[str, str], optional): A dictionary of tool names. Defaults to {}.
         add_comment (bool, optional): Whether to add a comment to the worker class. Defaults to True.
 
     Raises:
@@ -438,10 +437,9 @@ def create_worker_class(
 
     # Handle Tool IDs
     if tools:
-        tool_names = [tool_to_name.get(tool_id) for tool_id in tools]
-        if None in tool_names:
-            raise ValueError(f"Invalid tool ID: {tools}")
-        class_body.append(f"    tools: List[Tool] = [{', '.join(tool_names)}]")
+        # Frontend sends a list of tool names
+        tool_names_str = ", ".join(tools)
+        class_body.append(f"    tools: List[Tool] = [{tool_names_str}]")
 
     # Handle Boolean Flags (use_xml, debug_mode)
     if class_vars.get("use_xml") is True:
@@ -735,7 +733,7 @@ def generate_python_module(
         import_statements.append(node.get("data", {}).get("code"))
 
     # Tool Definitions
-    tool_to_name, tool_definitions = extract_tool_calls(nodes)
+    tool_definitions = extract_tool_calls(nodes)
 
     # We add them to the import statements for now
     import_statements.extend(tool_definitions)
@@ -769,7 +767,7 @@ def generate_python_module(
     # Instance names will be generated later
     workers = []
     for node in worker_nodes:
-        code = create_worker_class(node, tool_to_name)
+        code = create_worker_class(node)
         if code:
             workers.append(code)
 
@@ -924,11 +922,10 @@ def extract_tool_calls(nodes):
         Tuple[Dict[str, str], List[str]]: A tuple containing a dictionary of tool names and their definitions.
     """
     tool_nodes = [n for n in nodes if n.get("type") == "tool"]
-    tool_to_name = {n["id"]: n.get("data", {}).get("name") for n in tool_nodes}
     tool_definitions = []
     for node in tool_nodes:
         tool_definitions.append(create_tool_function(node))
-    return tool_to_name, tool_definitions
+    return tool_definitions
 
 
 def worker_to_instance_name(node: Dict[str, Any]) -> str:

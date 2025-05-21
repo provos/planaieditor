@@ -75,7 +75,7 @@ export function convertGraphtoJSON(
 
 	// replace workerName with className for worker nodes
 	const exportedNodes = nodes.map((node) => {
-		return convertNodeData(node);
+		return convertNodeData(node, nodes);
 	});
 
 	// Transform edges to use class names instead of node IDs
@@ -117,7 +117,7 @@ export function convertGraphtoJSON(
  * @param node The node to process, containing type and data properties
  * @returns A new node object with transformed data
  */
-export function convertNodeData(node: Node) {
+export function convertNodeData(node: Node, allNodes: Node[]) {
 	const data = node.data as any; // Use any for easier manipulation
 	let processedData = { ...data };
 
@@ -200,7 +200,7 @@ export function convertNodeData(node: Node) {
 		'llm_output_type',
 		'join_type',
 		'output_types',
-		'tools'
+		'tool_ids'
 	];
 	if (node.type?.endsWith('worker')) {
 		// Apply only to worker node types
@@ -212,6 +212,21 @@ export function convertNodeData(node: Node) {
 				(processedData.classVars as Record<string, any>)[key] = processedData[key];
 				delete processedData[key];
 			}
+		}
+
+		// If tool_ids were captured, convert them to tool names
+		if (processedData.classVars.tool_ids && Array.isArray(processedData.classVars.tool_ids)) {
+			const toolNames = processedData.classVars.tool_ids
+				.map((toolId: string) => {
+					const toolNode = allNodes.find((n: Node) => n.id === toolId && n.type === 'tool');
+					return toolNode ? (toolNode.data as any)?.name : null;
+				})
+				.filter((name: string | null) => name !== null);
+
+			if (toolNames.length > 0) {
+				processedData.classVars.tools = toolNames;
+			}
+			delete processedData.classVars.tool_ids; // Remove the original tool_ids
 		}
 	}
 

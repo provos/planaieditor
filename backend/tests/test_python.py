@@ -763,7 +763,6 @@ def {tool_name}(param_x: str, param_y: int = 123) -> str:
 
 def test_llm_task_worker_with_tool_generation():
     """Tests that LLMTaskWorkers correctly include tool definitions and references."""
-    tool_node_id = "tool-12345"
     tool_name = "custom_calculator_tool"
     tool_function_code = '''
 def custom_calculator_tool(operation: str, val1: float, val2: float) -> float:
@@ -788,7 +787,7 @@ def custom_calculator_tool(operation: str, val1: float, val2: float) -> float:
     graph_data = {
         "nodes": [
             {
-                "id": tool_node_id,
+                "id": "tool-1745544328318",
                 "type": "tool",
                 "data": {
                     "name": tool_name,
@@ -805,15 +804,13 @@ def custom_calculator_tool(operation: str, val1: float, val2: float) -> float:
                         "llm_input_type": "MathProblemTask",
                         "output_types": ["MathSolutionTask"],
                         "prompt": "Solve the math problem using the available tools.",
-                        "tools": [tool_node_id],  # Reference the tool by its ID
+                        "tools": [tool_name],
                     },
-                    "llmConfig": {  # Dummy config, not central to this test
+                    "llmConfig": {
                         "provider": {"value": "openai", "is_literal": True},
                         "modelId": {"value": "gpt-4", "is_literal": True},
                     },
-                    "inputTypes": [
-                        "MathProblemTask"
-                    ],  # Added for consume_work signature
+                    "inputTypes": ["MathProblemTask"],
                 },
             },
             # Minimal Task definitions to make the generated code valid
@@ -835,7 +832,6 @@ def custom_calculator_tool(operation: str, val1: float, val2: float) -> float:
             },
         ],
         "edges": [],
-        "module_imports": "from planai.tools import tool",  # Ensure @tool is available
     }
 
     generated_module_code, _, error = generate_python_module(graph_data)
@@ -865,7 +861,8 @@ def custom_calculator_tool(operation: str, val1: float, val2: float) -> float:
     assert (
         "class MathSolverLLM(LLMTaskWorker):" in generated_module_code
     ), "LLMTaskWorker class definition missing."
-    expected_tools_attribute = f"tools: List[Tool] = [{tool_name}]"  # Tool name, not id
+    # Backend generation creates List[Tool] with the tool *name* which refers to the function
+    expected_tools_attribute = f"tools: List[Tool] = [{tool_name}]"
     assert (
         expected_tools_attribute in generated_module_code
     ), f"LLMTaskWorker 'tools' attribute missing or incorrect. Expected: {expected_tools_attribute}"
