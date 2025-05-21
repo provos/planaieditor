@@ -30,7 +30,7 @@ export class LspManager {
 
 	public async start(): Promise<void> {
 		if (this.isStarted || this.startPromise) {
-			console.log(`[LSP Manager] Start already in progress or completed.`);
+			console.debug(`[LSP Manager] Start already in progress or completed.`);
 			return this.startPromise;
 		}
 
@@ -39,13 +39,13 @@ export class LspManager {
 		this.continue = ErrorAction.Continue;
 		this.doNotRestart = CloseAction.DoNotRestart;
 
-		console.log(`[LSP Manager] Starting LSP connection...`);
+		console.debug(`[LSP Manager] Starting LSP connection...`);
 		this.startPromise = this._initializeAndStart();
 
 		try {
 			await this.startPromise;
 			this.isStarted = true;
-			console.log(`[LSP Manager] LSP connection started successfully.`);
+			console.debug(`[LSP Manager] LSP connection started successfully.`);
 		} catch (error) {
 			console.error(`[LSP Manager] Failed to start LSP connection:`, error);
 			this.startPromise = undefined; // Reset promise on failure
@@ -58,7 +58,7 @@ export class LspManager {
 	private async _initializeAndStart(): Promise<void> {
 		// 1. Dynamically import MonacoLanguageClient if needed
 		if (!this.MonacoLanguageClientConstructor) {
-			console.log(`[LSP Manager] Dynamically importing MonacoLanguageClient...`);
+			console.debug(`[LSP Manager] Dynamically importing MonacoLanguageClient...`);
 			try {
 				// Ensure MonacoLanguageClient is correctly imported
 				const clientModule = await import('monaco-languageclient');
@@ -68,7 +68,7 @@ export class LspManager {
 				if (!this.MonacoLanguageClientConstructor) {
 					throw new Error('MonacoLanguageClient constructor not found in the imported module.');
 				}
-				console.log(`[LSP Manager] MonacoLanguageClient imported successfully.`);
+				console.debug(`[LSP Manager] MonacoLanguageClient imported successfully.`);
 			} catch (err) {
 				console.error(`[LSP Manager] Failed to dynamically import MonacoLanguageClient:`, err);
 				throw err; // Propagate error
@@ -80,19 +80,19 @@ export class LspManager {
 		this.writer?.dispose();
 
 		// 3. Create new reader/writer
-		console.log(`[LSP Manager] Creating SocketIO reader/writer...`);
+		console.debug(`[LSP Manager] Creating SocketIO reader/writer...`);
 		this.reader = new SocketIOReader(this.socket);
 		this.writer = new SocketIOWriter(this.socket);
 		const transports: MessageTransports = { reader: this.reader, writer: this.writer };
 
 		// 4. Create Language Client
-		console.log(`[LSP Manager] Creating language client...`);
+		console.debug(`[LSP Manager] Creating language client...`);
 		try {
 			this.languageClient = this._createLanguageClient(
 				transports,
 				this.MonacoLanguageClientConstructor
 			);
-			console.log(`[LSP Manager] Language client created.`);
+			console.debug(`[LSP Manager] Language client created.`);
 		} catch (error) {
 			console.error(`[LSP Manager] Error creating language client:`, error);
 			this.reader?.dispose(); // Clean up transports if client creation fails
@@ -103,7 +103,7 @@ export class LspManager {
 		}
 
 		// 5. Start the client
-		console.log(`[LSP Manager] Starting language client...`);
+		console.debug(`[LSP Manager] Starting language client...`);
 		await this.languageClient.start(); // Wait for the start promise to resolve
 
 		// 6. Handle reader closure (e.g., socket disconnect)
@@ -145,10 +145,10 @@ export class LspManager {
 
 	public async stop(): Promise<void> {
 		if (!this.isStarted && !this.startPromise) {
-			console.log(`[LSP Manager] LSP Manager already stopped or never started.`);
+			console.debug(`[LSP Manager] LSP Manager already stopped or never started.`);
 			return;
 		}
-		console.log(`[LSP Manager] Stopping LSP connection...`);
+		console.debug(`[LSP Manager] Stopping LSP connection...`);
 
 		// Ensure any ongoing start process is awaited before stopping
 		if (this.startPromise) {
@@ -163,9 +163,9 @@ export class LspManager {
 		// Stop the language client first, allowing it to use transports for shutdown
 		if (this.languageClient) {
 			try {
-				console.log(`[LSP Manager] Attempting to stop the language client...`);
+				console.debug(`[LSP Manager] Attempting to stop the language client...`);
 				await this.languageClient.stop();
-				console.log(`[LSP Manager] Language client stopped.`);
+				console.debug(`[LSP Manager] Language client stopped.`);
 			} catch (e) {
 				console.error(`[LSP Manager] Error stopping language client:`, e);
 			}
@@ -175,7 +175,7 @@ export class LspManager {
 		if (this.reader) {
 			try {
 				this.reader.dispose();
-				console.log(`[LSP Manager] SocketIOReader disposed.`);
+				console.debug(`[LSP Manager] SocketIOReader disposed.`);
 			} catch (e) {
 				console.error(`[LSP Manager] Error disposing SocketIOReader:`, e);
 			}
@@ -183,13 +183,13 @@ export class LspManager {
 		if (this.writer) {
 			try {
 				this.writer.dispose();
-				console.log(`[LSP Manager] SocketIOWriter disposed.`);
+				console.debug(`[LSP Manager] SocketIOWriter disposed.`);
 			} catch (e) {
 				console.error(`[LSP Manager] Error disposing SocketIOWriter:`, e);
 			}
 		}
 
-		console.log(`[LSP Manager] LSP connection resources released.`);
+		console.debug(`[LSP Manager] LSP connection resources released.`);
 
 		// Reset state
 		this.languageClient = undefined;
