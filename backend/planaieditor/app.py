@@ -34,7 +34,6 @@ from planaieditor.python import (
     create_worker_class,
     format_python_code,
     generate_python_module,
-    extract_tool_calls,
 )
 from planaieditor.socket_server import SocketServer
 from planaieditor.utils import parse_traceback
