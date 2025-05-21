@@ -57,12 +57,13 @@
 	let nodeOutputTypes = $state<string[]>([]);
 	let nodeUnsubscribe: Unsubscriber | null = null;
 
-	let availableTools = $derived<Array<{ id: string; name: string }>>(
+	let availableTools = $derived<Array<{ id: string; name: string; description: string }>>(
 		($svelteFlowNodes || [])
 			.filter((node) => node.type === 'tool' && node.data?.name)
 			.map((node) => ({
 				id: node.id,
-				name: (node.data as unknown as ToolNodeData).name
+				name: (node.data as unknown as ToolNodeData).name,
+				description: (node.data as unknown as ToolNodeData).description || ''
 			}))
 	);
 	let selectedToolIds = $derived<string[]>(data.tools || []);
@@ -324,11 +325,16 @@
 		selectedToolIds = selectedToolIds.filter((id: string) => id !== toolId);
 	}
 
-	function getToolNameById(toolId: string): string {
+	function getToolInfoById(toolId: string): { name: string; description: string } {
 		const tool = ($svelteFlowNodes || []).find(
 			(node) => node.id === toolId && node.type === 'tool'
 		);
-		return tool && tool.data ? (tool.data as unknown as ToolNodeData).name : 'Unknown Tool';
+		return tool && tool.data
+			? {
+					name: (tool.data as unknown as ToolNodeData).name,
+					description: (tool.data as unknown as ToolNodeData).description || ''
+			  }
+			: { name: 'Unknown Tool', description: '' };
 	}
 
 	function handleToolItemKeydown(event: KeyboardEvent, toolId: string) {
@@ -465,7 +471,7 @@
 								aria-selected={isSelected}
 								tabindex="0"
 							>
-								<span>{tool.name}</span>
+								<span>{tool.name} - {tool?.description}</span>
 								{#if isSelected}
 									<span class="text-xs">✓</span>
 								{/if}
@@ -478,17 +484,17 @@
 			<!-- Display selected tools -->
 			<div class="mt-1 space-y-1">
 				{#each selectedToolIds as toolId (toolId)}
-					{@const toolName = getToolNameById(toolId)}
-					{@const color = getColorForType(toolName)}
+					{@const toolInfo = getToolInfoById(toolId)}
+					{@const color = getColorForType(toolInfo.name)}
 					<div
 						class="text-2xs group flex items-center justify-between rounded px-1 py-0.5"
 						style={`background-color: ${color}20; border-left: 3px solid ${color};`}
 					>
-						<span class="font-mono">{toolName}</span>
+						<span class="font-mono">{toolInfo.name} - {toolInfo.description}</span>
 						<button
 							class="ml-1 flex h-3 w-3 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
 							onclick={() => deselectTool(toolId)}
-							title={`Remove ${toolName}`}
+							title={`Remove ${toolInfo.name}`}
 						>
 							<Trash size={8} weight="bold" />
 						</button>
