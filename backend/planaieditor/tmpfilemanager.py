@@ -50,7 +50,7 @@ class TempFileManager:
     ) -> Optional[str]:
         if not original_uri.startswith("inmemory://"):
             temp_file_log.warning(
-                f"Attempted to create temp file for non-inmemory URI: {original_uri}"
+                "Attempted to create temp file for non-inmemory URI: %s", original_uri
             )
             return None  # Or original_uri if it should pass through
 
@@ -61,7 +61,9 @@ class TempFileManager:
                     with open(temp_path_str, "w", encoding="utf-8") as f:
                         f.write(content)
                     temp_file_log.debug(
-                        f"Updated temporary file {temp_path_str} for URI {original_uri}"
+                        "Updated temporary file %s for URI %s",
+                        temp_path_str,
+                        original_uri,
                     )
                 else:  # Create new
                     sanitized_part = self._sanitize_uri_for_filename(original_uri)
@@ -72,17 +74,21 @@ class TempFileManager:
                     with open(temp_path_str, "w", encoding="utf-8") as f:
                         f.write(content)
 
-                    normalized_path = str(Path(temp_path_str).resolve())
-                    self.inmemory_to_temp_path[original_uri] = normalized_path
-                    self.temp_path_to_inmemory_uri[normalized_path] = original_uri
+                    temp_path_str = str(Path(temp_path_str).resolve())
+                    self.inmemory_to_temp_path[original_uri] = temp_path_str
+                    self.temp_path_to_inmemory_uri[temp_path_str] = original_uri
                     temp_file_log.info(
-                        f"Created temporary file {normalized_path} for in-memory URI {original_uri}"
+                        "Created temporary file %s for in-memory URI %s",
+                        temp_path_str,
+                        original_uri,
                     )
 
                 return Path(temp_path_str).as_uri()  # Returns "file:///tmp/..."
             except Exception as e:
                 temp_file_log.error(
-                    f"Error creating/updating temp file for {original_uri}: {e}",
+                    "Error creating/updating temp file for %s: %s",
+                    original_uri,
+                    e,
                     exc_info=True,
                 )
                 if (
