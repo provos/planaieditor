@@ -163,7 +163,7 @@
 </script>
 
 <div
-	class="mb-1 flex flex-wrap items-stretch gap-4 rounded-md p-0 md:gap-6"
+	class="mb-1 flex items-stretch gap-4 rounded-md p-0 md:gap-6"
 	data-testid="toolshelf-container"
 >
 	<!-- Examples Dropdown -->
@@ -171,537 +171,553 @@
 		<SideDropdownMenu {onLoadJSON} />
 	</div>
 
-	<!-- Draggable Nodes Section -->
-	<div class="flex min-w-[300px] flex-1 items-center gap-2 border-r border-gray-300/70 pr-4">
-		<div class="w-full md:w-auto">
-			<Tooltip.Provider>
-				<Tabs.Root value={selectedTab} class="w-full">
-					<Tabs.List class="flex w-[300px] rounded-md bg-gray-300/80 p-1">
-						<Tooltip.Root delayDuration={800}>
-							<Tooltip.Trigger class="flex-1">
-								<Tabs.Trigger
-									value="tasks"
-									class="flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-150 data-[state=active]:bg-white data-[state=active]:shadow-sm"
+	<div class="flex min-w-[300px] flex-1 items-center gap-4">
+		<!-- Draggable Nodes Section -->
+		<div class="flex min-w-0 items-center gap-2 border-r border-gray-300/70 pr-4">
+			<div class="w-full md:w-auto">
+				<Tooltip.Provider>
+					<Tabs.Root value={selectedTab} class="w-full">
+						<Tabs.List class="w-fullrounded-md flex bg-gray-300/80 p-0.5 xl:p-1">
+							<Tooltip.Root delayDuration={800}>
+								<Tooltip.Trigger class="flex-1">
+									<Tabs.Trigger
+										value="tasks"
+										class="flex-1 rounded-md px-2 py-1 text-xs font-medium transition-colors duration-150 data-[state=active]:bg-white data-[state=active]:shadow-sm xl:px-3 xl:py-1.5 xl:text-sm"
+									>
+										{#snippet child({ props }: { props: Record<string, unknown> })}
+											<div {...props}>Tasks</div>
+										{/snippet}
+									</Tabs.Trigger>
+								</Tooltip.Trigger>
+								<Tooltip.Content
+									class="z-50 max-w-xs rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 shadow-md"
+									side="bottom"
 								>
-									{#snippet child({ props }: { props: Record<string, unknown> })}
-										<div {...props}>Tasks</div>
-									{/snippet}
-								</Tabs.Trigger>
-							</Tooltip.Trigger>
-							<Tooltip.Content
-								class="z-50 max-w-xs rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 shadow-md"
-								side="bottom"
+									These nodes allow you to define PlanAI Task Types that can be used as the input
+									and output types for workers.
+								</Tooltip.Content>
+							</Tooltip.Root>
+
+							<Tooltip.Root delayDuration={800}>
+								<Tooltip.Trigger class="flex-1">
+									<Tabs.Trigger
+										value="data"
+										class="flex-1 rounded-md px-2 py-1 text-xs font-medium transition-colors duration-150 data-[state=active]:bg-white data-[state=active]:shadow-sm xl:px-3 xl:py-1.5 xl:text-sm"
+									>
+										{#snippet child({ props }: { props: Record<string, unknown> })}
+											<div {...props}>Data</div>
+										{/snippet}
+									</Tabs.Trigger>
+								</Tooltip.Trigger>
+								<Tooltip.Content
+									class="z-50 max-w-xs rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 shadow-md"
+									side="bottom"
+								>
+									These nodes allow you to inject data into a PlanAI Graph and retrieve its output.
+								</Tooltip.Content>
+							</Tooltip.Root>
+
+							<Tooltip.Root delayDuration={800}>
+								<Tooltip.Trigger class="flex-1">
+									<Tabs.Trigger
+										value="workers"
+										class="flex-1 rounded-md px-2 py-1 text-xs font-medium transition-colors duration-150 data-[state=active]:bg-white data-[state=active]:shadow-sm xl:px-3 xl:py-1.5 xl:text-sm"
+									>
+										{#snippet child({ props }: { props: Record<string, unknown> })}
+											<div {...props}>Workers</div>
+										{/snippet}
+									</Tabs.Trigger>
+								</Tooltip.Trigger>
+								<Tooltip.Content
+									class="z-50 max-w-xs rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 shadow-md"
+									side="bottom"
+								>
+									Worker nodes process tasks and form the backbone of PlanAI. They include
+									TaskWorkers for custom logic, LLMTaskWorkers for AI processing, JoinedTaskWorkers
+									for combining multiple tasks, and more.
+								</Tooltip.Content>
+							</Tooltip.Root>
+						</Tabs.List>
+
+						<div class="min-h-[32px] pt-2">
+							<Tabs.Content
+								value="tasks"
+								class="animate-in fade-in-50 flex flex-wrap gap-2 transition-all duration-200 ease-in-out"
 							>
-								These nodes allow you to define PlanAI Task Types that can be used as the input and
-								output types for workers.
-							</Tooltip.Content>
-						</Tooltip.Root>
+								<!-- Task Node -->
+								{@const taskStyle = getNodeIconStyle('task')}
+								<Tooltip.Root delayDuration={400}>
+									<Tooltip.Trigger>
+										<div
+											class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-white p-1.5 shadow-sm transition-shadow hover:shadow-md xl:p-2"
+											role="button"
+											tabindex="0"
+											draggable="true"
+											ondragstart={(e) => onDragStart(e, 'task')}
+										>
+											<div class="flex items-center gap-1 xl:gap-1.5">
+												<taskStyle.icon size={14} weight="fill" class={taskStyle.color} />
+												<div class="text-xs font-semibold xl:text-sm">Task</div>
+											</div>
+										</div>
+									</Tooltip.Trigger>
+									<Tooltip.Content
+										class="z-50 max-w-xs rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 shadow-md"
+										side="bottom"
+									>
+										Define a PlanAI Task class that represents a specific data structure. Tasks are
+										Pydantic models that flow through the graph as inputs and outputs.
+									</Tooltip.Content>
+								</Tooltip.Root>
 
-						<Tooltip.Root delayDuration={800}>
-							<Tooltip.Trigger class="flex-1">
-								<Tabs.Trigger
-									value="data"
-									class="flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-150 data-[state=active]:bg-white data-[state=active]:shadow-sm"
-								>
-									{#snippet child({ props }: { props: Record<string, unknown> })}
-										<div {...props}>Data</div>
-									{/snippet}
-								</Tabs.Trigger>
-							</Tooltip.Trigger>
-							<Tooltip.Content
-								class="z-50 max-w-xs rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 shadow-md"
-								side="bottom"
+								<!-- Task Import Node -->
+								{@const taskImportStyle = getNodeIconStyle('taskimport')}
+								<Tooltip.Root delayDuration={400}>
+									<Tooltip.Trigger>
+										<div
+											class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-white p-1.5 shadow-sm transition-shadow hover:shadow-md xl:p-2"
+											role="button"
+											tabindex="0"
+											draggable="true"
+											ondragstart={(e) => onDragStart(e, 'taskimport')}
+										>
+											<div class="flex items-center gap-1 xl:gap-1.5">
+												<taskImportStyle.icon
+													size={14}
+													weight="fill"
+													class={taskImportStyle.color}
+												/>
+												<div class="text-xs font-semibold xl:text-sm">TaskImport</div>
+											</div>
+										</div>
+									</Tooltip.Trigger>
+									<Tooltip.Content
+										class="z-50 max-w-xs rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 shadow-md"
+										side="bottom"
+									>
+										Import existing Task classes from Python modules to use in your workflow.
+									</Tooltip.Content>
+								</Tooltip.Root>
+
+								<!-- Module Level Import Node -->
+								{@const moduleLevelImportStyle = getNodeIconStyle('modulelevelimport')}
+								<Tooltip.Root delayDuration={400}>
+									<Tooltip.Trigger>
+										<div
+											class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 p-1.5 shadow-sm transition-shadow hover:shadow-md xl:p-2 {canAddModuleLevelImport
+												? 'cursor-grab bg-white'
+												: 'cursor-not-allowed opacity-50'}"
+											role="button"
+											tabindex="0"
+											draggable={canAddModuleLevelImport}
+											ondragstart={(e) => onDragStart(e, 'modulelevelimport')}
+										>
+											<div class="flex items-center gap-1 xl:gap-1.5">
+												<moduleLevelImportStyle.icon
+													size={14}
+													weight="fill"
+													class={moduleLevelImportStyle.color}
+												/>
+												<div class="text-xs font-semibold xl:text-sm">ModuleLevelImport</div>
+											</div>
+										</div>
+									</Tooltip.Trigger>
+									<Tooltip.Content
+										class="z-50 max-w-xs rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 shadow-md"
+										side="bottom"
+									>
+										Import existing Python modules to use in your workflow.
+										{#if moduleLevelImportTooltip}
+											<span class="text-red-700">{moduleLevelImportTooltip}</span>
+										{/if}
+									</Tooltip.Content>
+								</Tooltip.Root>
+							</Tabs.Content>
+
+							<Tabs.Content
+								value="data"
+								class="animate-in fade-in-50 flex flex-wrap gap-2 transition-all duration-200 ease-in-out"
 							>
-								These nodes allow you to inject data into a PlanAI Graph and retrieve its output.
-							</Tooltip.Content>
-						</Tooltip.Root>
+								<!-- DataInput Node -->
+								{@const dataInputStyle = getNodeIconStyle('datainput')}
+								<Tooltip.Root delayDuration={400}>
+									<Tooltip.Trigger>
+										<div
+											class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-white p-1.5 shadow-sm transition-shadow hover:shadow-md xl:p-2"
+											role="button"
+											tabindex="0"
+											draggable="true"
+											ondragstart={(e) => onDragStart(e, 'datainput')}
+										>
+											<div class="flex items-center gap-1 xl:gap-1.5">
+												<dataInputStyle.icon size={14} weight="fill" class={dataInputStyle.color} />
+												<div class="text-xs font-semibold xl:text-sm">DataInput</div>
+											</div>
+										</div>
+									</Tooltip.Trigger>
+									<Tooltip.Content
+										class="z-50 max-w-xs rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 shadow-md"
+										side="bottom"
+									>
+										Create an entry point for your PlanAI Graph that allows data to be injected when
+										executing the workflow.
+									</Tooltip.Content>
+								</Tooltip.Root>
 
-						<Tooltip.Root delayDuration={800}>
-							<Tooltip.Trigger class="flex-1">
-								<Tabs.Trigger
-									value="workers"
-									class="flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-150 data-[state=active]:bg-white data-[state=active]:shadow-sm"
-								>
-									{#snippet child({ props }: { props: Record<string, unknown> })}
-										<div {...props}>Workers</div>
-									{/snippet}
-								</Tabs.Trigger>
-							</Tooltip.Trigger>
-							<Tooltip.Content
-								class="z-50 max-w-xs rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 shadow-md"
-								side="bottom"
+								<!-- AssistantInput Node -->
+								{@const assistantInputStyle = getNodeIconStyle('assistantinput')}
+								<Tooltip.Root delayDuration={400}>
+									<Tooltip.Trigger>
+										<div
+											class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-purple-50 p-1.5 shadow-sm transition-shadow hover:shadow-md xl:p-2"
+											role="button"
+											tabindex="0"
+											draggable="true"
+											ondragstart={(e) => onDragStart(e, 'assistantinput')}
+										>
+											<div class="flex items-center gap-1 xl:gap-1.5">
+												<assistantInputStyle.icon
+													size={14}
+													weight="fill"
+													class={assistantInputStyle.color}
+												/>
+												<div class="text-xs font-semibold xl:text-sm">AssistantInput</div>
+											</div>
+										</div>
+									</Tooltip.Trigger>
+									<Tooltip.Content
+										class="z-50 max-w-xs rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 shadow-md"
+										side="bottom"
+									>
+										Provides a dedicated input node for the AI Assistant to interact with the graph.
+									</Tooltip.Content>
+								</Tooltip.Root>
+
+								<!-- Data Output Node -->
+								{@const dataOutputStyle = getNodeIconStyle('dataoutput')}
+								<Tooltip.Root delayDuration={400}>
+									<Tooltip.Trigger>
+										<div
+											class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-white p-1.5 shadow-sm transition-shadow hover:shadow-md xl:p-2"
+											role="button"
+											tabindex="0"
+											draggable="true"
+											ondragstart={(e) => onDragStart(e, 'dataoutput')}
+										>
+											<div class="flex items-center gap-1 xl:gap-1.5">
+												<dataOutputStyle.icon
+													size={14}
+													weight="fill"
+													class={dataOutputStyle.color}
+												/>
+												<div class="text-xs font-semibold xl:text-sm">DataOutput</div>
+											</div>
+										</div>
+									</Tooltip.Trigger>
+									<Tooltip.Content
+										class="z-50 max-w-xs rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 shadow-md"
+										side="bottom"
+									>
+										Create a sink for your PlanAI Graph that collects and displays results from the
+										workflow execution.
+									</Tooltip.Content>
+								</Tooltip.Root>
+							</Tabs.Content>
+
+							<Tabs.Content
+								value="workers"
+								class="animate-in fade-in-50 flex flex-wrap gap-2 transition-all duration-200 ease-in-out"
 							>
-								Worker nodes process tasks and form the backbone of PlanAI. They include TaskWorkers
-								for custom logic, LLMTaskWorkers for AI processing, JoinedTaskWorkers for combining
-								multiple tasks, and more.
-							</Tooltip.Content>
-						</Tooltip.Root>
-					</Tabs.List>
-
-					<div class="min-h-[32px] pt-2">
-						<Tabs.Content
-							value="tasks"
-							class="animate-in fade-in-50 flex flex-wrap gap-2 transition-all duration-200 ease-in-out"
-						>
-							<!-- Task Node -->
-							{@const taskStyle = getNodeIconStyle('task')}
-							<Tooltip.Root delayDuration={400}>
-								<Tooltip.Trigger>
-									<div
-										class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
-										role="button"
-										tabindex="0"
-										draggable="true"
-										ondragstart={(e) => onDragStart(e, 'task')}
-									>
-										<div class="flex items-center gap-1.5">
-											<taskStyle.icon size={16} weight="fill" class={taskStyle.color} />
-											<div class="text-sm font-semibold">Task</div>
+								<!-- TaskWorker Node -->
+								{@const taskWorkerStyle = getNodeIconStyle('taskworker')}
+								<Tooltip.Root delayDuration={400}>
+									<Tooltip.Trigger>
+										<div
+											class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-white p-1.5 shadow-sm transition-shadow hover:shadow-md xl:p-2"
+											role="button"
+											tabindex="0"
+											draggable="true"
+											ondragstart={(e) => onDragStart(e, 'taskworker')}
+										>
+											<div class="flex items-center gap-1 xl:gap-1.5">
+												<taskWorkerStyle.icon
+													size={14}
+													weight="fill"
+													class={taskWorkerStyle.color}
+												/>
+												<div class="text-xs font-semibold xl:text-sm">TaskWorker</div>
+											</div>
 										</div>
-									</div>
-								</Tooltip.Trigger>
-								<Tooltip.Content
-									class="z-50 max-w-xs rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 shadow-md"
-									side="bottom"
-								>
-									Define a PlanAI Task class that represents a specific data structure. Tasks are
-									Pydantic models that flow through the graph as inputs and outputs.
-								</Tooltip.Content>
-							</Tooltip.Root>
-
-							<!-- Task Import Node -->
-							{@const taskImportStyle = getNodeIconStyle('taskimport')}
-							<Tooltip.Root delayDuration={400}>
-								<Tooltip.Trigger>
-									<div
-										class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
-										role="button"
-										tabindex="0"
-										draggable="true"
-										ondragstart={(e) => onDragStart(e, 'taskimport')}
+									</Tooltip.Trigger>
+									<Tooltip.Content
+										class="z-50 max-w-xs rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 shadow-md"
+										side="bottom"
 									>
-										<div class="flex items-center gap-1.5">
-											<taskImportStyle.icon size={16} weight="fill" class={taskImportStyle.color} />
-											<div class="text-sm font-semibold">TaskImport</div>
-										</div>
-									</div>
-								</Tooltip.Trigger>
-								<Tooltip.Content
-									class="z-50 max-w-xs rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 shadow-md"
-									side="bottom"
-								>
-									Import existing Task classes from Python modules to use in your workflow.
-								</Tooltip.Content>
-							</Tooltip.Root>
+										A basic worker that processes tasks with custom Python logic. Implement the
+										consume_work method to transform input tasks into output tasks.
+									</Tooltip.Content>
+								</Tooltip.Root>
 
-							<!-- Module Level Import Node -->
-							{@const moduleLevelImportStyle = getNodeIconStyle('modulelevelimport')}
-							<Tooltip.Root delayDuration={400}>
-								<Tooltip.Trigger>
-									<div
-										class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 p-2 shadow-sm transition-shadow hover:shadow-md {canAddModuleLevelImport
-											? 'cursor-grab bg-white'
-											: 'cursor-not-allowed opacity-50'}"
-										role="button"
-										tabindex="0"
-										draggable={canAddModuleLevelImport}
-										ondragstart={(e) => onDragStart(e, 'modulelevelimport')}
+								<!-- LLMTaskWorker Node -->
+								{@const llmTaskWorkerStyle = getNodeIconStyle('llmtaskworker')}
+								<Tooltip.Root delayDuration={400}>
+									<Tooltip.Trigger>
+										<div
+											class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-white p-1.5 shadow-sm transition-shadow hover:shadow-md xl:p-2"
+											role="button"
+											tabindex="0"
+											draggable="true"
+											ondragstart={(e) => onDragStart(e, 'llmtaskworker')}
+										>
+											<div class="flex items-center gap-1 xl:gap-1.5">
+												<llmTaskWorkerStyle.icon
+													size={14}
+													weight="fill"
+													class={llmTaskWorkerStyle.color}
+												/>
+												<div class="text-xs font-semibold xl:text-sm">LLMTaskWorker</div>
+											</div>
+										</div>
+									</Tooltip.Trigger>
+									<Tooltip.Content
+										class="z-50 max-w-xs rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 shadow-md"
+										side="bottom"
 									>
-										<div class="flex items-center gap-1.5">
-											<moduleLevelImportStyle.icon
-												size={16}
-												weight="fill"
-												class={moduleLevelImportStyle.color}
-											/>
-											<div class="text-sm font-semibold">ModuleLevelImport</div>
-										</div>
-									</div>
-								</Tooltip.Trigger>
-								<Tooltip.Content
-									class="z-50 max-w-xs rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 shadow-md"
-									side="bottom"
-								>
-									Import existing Python modules to use in your workflow.
-									{#if moduleLevelImportTooltip}
-										<span class="text-red-700">{moduleLevelImportTooltip}</span>
-									{/if}
-								</Tooltip.Content>
-							</Tooltip.Root>
-						</Tabs.Content>
+										Process tasks using Large Language Models (LLMs). Define prompts and handle
+										AI-generated responses with validation and post-processing.
+									</Tooltip.Content>
+								</Tooltip.Root>
 
-						<Tabs.Content
-							value="data"
-							class="animate-in fade-in-50 flex flex-wrap gap-2 transition-all duration-200 ease-in-out"
-						>
-							<!-- DataInput Node -->
-							{@const dataInputStyle = getNodeIconStyle('datainput')}
-							<Tooltip.Root delayDuration={400}>
-								<Tooltip.Trigger>
-									<div
-										class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
-										role="button"
-										tabindex="0"
-										draggable="true"
-										ondragstart={(e) => onDragStart(e, 'datainput')}
+								<!-- JoinedTaskWorker Node -->
+								{@const joinedTaskWorkerStyle = getNodeIconStyle('joinedtaskworker')}
+								<Tooltip.Root delayDuration={400}>
+									<Tooltip.Trigger>
+										<div
+											class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-white p-1.5 shadow-sm transition-shadow hover:shadow-md xl:p-2"
+											role="button"
+											tabindex="0"
+											draggable="true"
+											ondragstart={(e) => onDragStart(e, 'joinedtaskworker')}
+										>
+											<div class="flex items-center gap-1 xl:gap-1.5">
+												<joinedTaskWorkerStyle.icon
+													size={14}
+													weight="fill"
+													class={joinedTaskWorkerStyle.color}
+												/>
+												<div class="text-xs font-semibold xl:text-sm">JoinedTaskWorker</div>
+											</div>
+										</div>
+									</Tooltip.Trigger>
+									<Tooltip.Content
+										class="z-50 max-w-xs rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 shadow-md"
+										side="bottom"
 									>
-										<div class="flex items-center gap-1.5">
-											<dataInputStyle.icon size={16} weight="fill" class={dataInputStyle.color} />
-											<div class="text-sm font-semibold">DataInput</div>
-										</div>
-									</div>
-								</Tooltip.Trigger>
-								<Tooltip.Content
-									class="z-50 max-w-xs rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 shadow-md"
-									side="bottom"
-								>
-									Create an entry point for your PlanAI Graph that allows data to be injected when
-									executing the workflow.
-								</Tooltip.Content>
-							</Tooltip.Root>
+										Combine multiple related tasks into one process. Waits for all upstream tasks
+										sharing a common ancestor to complete before processing them together.
+									</Tooltip.Content>
+								</Tooltip.Root>
 
-							<!-- AssistantInput Node -->
-							{@const assistantInputStyle = getNodeIconStyle('assistantinput')}
-							<Tooltip.Root delayDuration={400}>
-								<Tooltip.Trigger>
-									<div
-										class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-purple-50 p-2 shadow-sm transition-shadow hover:shadow-md"
-										role="button"
-										tabindex="0"
-										draggable="true"
-										ondragstart={(e) => onDragStart(e, 'assistantinput')}
+								<!-- SubGraphWorker Node -->
+								{@const subGraphWorkerStyle = getNodeIconStyle('subgraphworker')}
+								<Tooltip.Root delayDuration={400}>
+									<Tooltip.Trigger>
+										<div
+											class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-white p-1.5 shadow-sm transition-shadow hover:shadow-md xl:p-2"
+											role="button"
+											tabindex="0"
+											draggable="true"
+											ondragstart={(e) => onDragStart(e, 'subgraphworker')}
+										>
+											<div class="flex items-center gap-1 xl:gap-1.5">
+												<subGraphWorkerStyle.icon
+													size={14}
+													weight="fill"
+													class={subGraphWorkerStyle.color}
+												/>
+												<div class="text-xs font-semibold xl:text-sm">SubGraphWorker</div>
+											</div>
+										</div>
+									</Tooltip.Trigger>
+									<Tooltip.Content
+										class="z-50 max-w-xs rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 shadow-md"
+										side="bottom"
 									>
-										<div class="flex items-center gap-1.5">
-											<assistantInputStyle.icon
-												size={16}
-												weight="fill"
-												class={assistantInputStyle.color}
-											/>
-											<div class="text-sm font-semibold">AssistantInput</div>
-										</div>
-									</div>
-								</Tooltip.Trigger>
-								<Tooltip.Content
-									class="z-50 max-w-xs rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 shadow-md"
-									side="bottom"
-								>
-									Provides a dedicated input node for the AI Assistant to interact with the graph.
-								</Tooltip.Content>
-							</Tooltip.Root>
+										Encapsulate an entire PlanAI Graph as a single worker within a larger workflow.
+										Useful for creating reusable, modular components.
+									</Tooltip.Content>
+								</Tooltip.Root>
 
-							<!-- Data Output Node -->
-							{@const dataOutputStyle = getNodeIconStyle('dataoutput')}
-							<Tooltip.Root delayDuration={400}>
-								<Tooltip.Trigger>
-									<div
-										class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
-										role="button"
-										tabindex="0"
-										draggable="true"
-										ondragstart={(e) => onDragStart(e, 'dataoutput')}
+								<!-- ChatTaskWorker Node -->
+								{@const chatTaskWorkerStyle = getNodeIconStyle('chattaskworker')}
+								<Tooltip.Root delayDuration={400}>
+									<Tooltip.Trigger>
+										<div
+											class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-white p-1.5 shadow-sm transition-shadow hover:shadow-md xl:p-2"
+											role="button"
+											tabindex="0"
+											draggable="true"
+											ondragstart={(e) => onDragStart(e, 'chattaskworker')}
+										>
+											<div class="flex items-center gap-1 xl:gap-1.5">
+												<chatTaskWorkerStyle.icon
+													size={14}
+													weight="fill"
+													class={chatTaskWorkerStyle.color}
+												/>
+												<div class="text-xs font-semibold xl:text-sm">ChatTaskWorker</div>
+											</div>
+										</div>
+									</Tooltip.Trigger>
+									<Tooltip.Content
+										class="z-50 max-w-xs rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 shadow-md"
+										side="bottom"
 									>
-										<div class="flex items-center gap-1.5">
-											<dataOutputStyle.icon size={16} weight="fill" class={dataOutputStyle.color} />
-											<div class="text-sm font-semibold">DataOutput</div>
-										</div>
-									</div>
-								</Tooltip.Trigger>
-								<Tooltip.Content
-									class="z-50 max-w-xs rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 shadow-md"
-									side="bottom"
-								>
-									Create a sink for your PlanAI Graph that collects and displays results from the
-									workflow execution.
-								</Tooltip.Content>
-							</Tooltip.Root>
-						</Tabs.Content>
+										Specialized worker for handling conversational AI tasks. Maintains chat history
+										and manages interactive dialogues with LLMs.
+									</Tooltip.Content>
+								</Tooltip.Root>
 
-						<Tabs.Content
-							value="workers"
-							class="animate-in fade-in-50 flex flex-wrap gap-2 transition-all duration-200 ease-in-out"
-						>
-							<!-- TaskWorker Node -->
-							{@const taskWorkerStyle = getNodeIconStyle('taskworker')}
-							<Tooltip.Root delayDuration={400}>
-								<Tooltip.Trigger>
-									<div
-										class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
-										role="button"
-										tabindex="0"
-										draggable="true"
-										ondragstart={(e) => onDragStart(e, 'taskworker')}
+								<!-- Tool Node -->
+								{@const toolNodeStyle = getNodeIconStyle('tool')}
+								<Tooltip.Root delayDuration={400}>
+									<Tooltip.Trigger>
+										<div
+											class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-white p-1.5 shadow-sm transition-shadow hover:shadow-md xl:p-2"
+											role="button"
+											tabindex="0"
+											draggable="true"
+											ondragstart={(e) => onDragStart(e, 'tool')}
+										>
+											<div class="flex items-center gap-1 xl:gap-1.5">
+												<toolNodeStyle.icon size={14} weight="fill" class={toolNodeStyle.color} />
+												<div class="text-xs font-semibold xl:text-sm">Tool Library</div>
+											</div>
+										</div>
+									</Tooltip.Trigger>
+									<Tooltip.Content
+										class="z-50 max-w-xs rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 shadow-md"
+										side="bottom"
 									>
-										<div class="flex items-center gap-1.5">
-											<taskWorkerStyle.icon size={16} weight="fill" class={taskWorkerStyle.color} />
-											<div class="text-sm font-semibold">TaskWorker</div>
-										</div>
-									</div>
-								</Tooltip.Trigger>
-								<Tooltip.Content
-									class="z-50 max-w-xs rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 shadow-md"
-									side="bottom"
-								>
-									A basic worker that processes tasks with custom Python logic. Implement the
-									consume_work method to transform input tasks into output tasks.
-								</Tooltip.Content>
-							</Tooltip.Root>
-
-							<!-- LLMTaskWorker Node -->
-							{@const llmTaskWorkerStyle = getNodeIconStyle('llmtaskworker')}
-							<Tooltip.Root delayDuration={400}>
-								<Tooltip.Trigger>
-									<div
-										class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
-										role="button"
-										tabindex="0"
-										draggable="true"
-										ondragstart={(e) => onDragStart(e, 'llmtaskworker')}
-									>
-										<div class="flex items-center gap-1.5">
-											<llmTaskWorkerStyle.icon
-												size={16}
-												weight="fill"
-												class={llmTaskWorkerStyle.color}
-											/>
-											<div class="text-sm font-semibold">LLMTaskWorker</div>
-										</div>
-									</div>
-								</Tooltip.Trigger>
-								<Tooltip.Content
-									class="z-50 max-w-xs rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 shadow-md"
-									side="bottom"
-								>
-									Process tasks using Large Language Models (LLMs). Define prompts and handle
-									AI-generated responses with validation and post-processing.
-								</Tooltip.Content>
-							</Tooltip.Root>
-
-							<!-- JoinedTaskWorker Node -->
-							{@const joinedTaskWorkerStyle = getNodeIconStyle('joinedtaskworker')}
-							<Tooltip.Root delayDuration={400}>
-								<Tooltip.Trigger>
-									<div
-										class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
-										role="button"
-										tabindex="0"
-										draggable="true"
-										ondragstart={(e) => onDragStart(e, 'joinedtaskworker')}
-									>
-										<div class="flex items-center gap-1.5">
-											<joinedTaskWorkerStyle.icon
-												size={16}
-												weight="fill"
-												class={joinedTaskWorkerStyle.color}
-											/>
-											<div class="text-sm font-semibold">JoinedTaskWorker</div>
-										</div>
-									</div>
-								</Tooltip.Trigger>
-								<Tooltip.Content
-									class="z-50 max-w-xs rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 shadow-md"
-									side="bottom"
-								>
-									Combine multiple related tasks into one process. Waits for all upstream tasks
-									sharing a common ancestor to complete before processing them together.
-								</Tooltip.Content>
-							</Tooltip.Root>
-
-							<!-- SubGraphWorker Node -->
-							{@const subGraphWorkerStyle = getNodeIconStyle('subgraphworker')}
-							<Tooltip.Root delayDuration={400}>
-								<Tooltip.Trigger>
-									<div
-										class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
-										role="button"
-										tabindex="0"
-										draggable="true"
-										ondragstart={(e) => onDragStart(e, 'subgraphworker')}
-									>
-										<div class="flex items-center gap-1.5">
-											<subGraphWorkerStyle.icon
-												size={16}
-												weight="fill"
-												class={subGraphWorkerStyle.color}
-											/>
-											<div class="text-sm font-semibold">SubGraphWorker</div>
-										</div>
-									</div>
-								</Tooltip.Trigger>
-								<Tooltip.Content
-									class="z-50 max-w-xs rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 shadow-md"
-									side="bottom"
-								>
-									Encapsulate an entire PlanAI Graph as a single worker within a larger workflow.
-									Useful for creating reusable, modular components.
-								</Tooltip.Content>
-							</Tooltip.Root>
-
-							<!-- ChatTaskWorker Node -->
-							{@const chatTaskWorkerStyle = getNodeIconStyle('chattaskworker')}
-							<Tooltip.Root delayDuration={400}>
-								<Tooltip.Trigger>
-									<div
-										class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
-										role="button"
-										tabindex="0"
-										draggable="true"
-										ondragstart={(e) => onDragStart(e, 'chattaskworker')}
-									>
-										<div class="flex items-center gap-1.5">
-											<chatTaskWorkerStyle.icon
-												size={16}
-												weight="fill"
-												class={chatTaskWorkerStyle.color}
-											/>
-											<div class="text-sm font-semibold">ChatTaskWorker</div>
-										</div>
-									</div>
-								</Tooltip.Trigger>
-								<Tooltip.Content
-									class="z-50 max-w-xs rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 shadow-md"
-									side="bottom"
-								>
-									Specialized worker for handling conversational AI tasks. Maintains chat history
-									and manages interactive dialogues with LLMs.
-								</Tooltip.Content>
-							</Tooltip.Root>
-
-							<!-- Tool Node -->
-							{@const toolNodeStyle = getNodeIconStyle('tool')}
-							<Tooltip.Root delayDuration={400}>
-								<Tooltip.Trigger>
-									<div
-										class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
-										role="button"
-										tabindex="0"
-										draggable="true"
-										ondragstart={(e) => onDragStart(e, 'tool')}
-									>
-										<div class="flex items-center gap-1.5">
-											<toolNodeStyle.icon size={16} weight="fill" class={toolNodeStyle.color} />
-											<div class="text-sm font-semibold">Tool Library</div>
-										</div>
-									</div>
-								</Tooltip.Trigger>
-								<Tooltip.Content
-									class="z-50 max-w-xs rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 shadow-md"
-									side="bottom"
-								>
-									A library node that provides a collection of tools that can be used for function
-									calling by LLMs.
-								</Tooltip.Content>
-							</Tooltip.Root>
-						</Tabs.Content>
-					</div>
-				</Tabs.Root>
-			</Tooltip.Provider>
-		</div>
-	</div>
-
-	<!-- Actions Section -->
-	<div class="flex flex-col gap-2 border-r border-gray-300/70 pr-4">
-		<!-- Graph Name Input -->
-		<div class="flex items-center gap-2">
-			<label for="graph-name" class="text-xs tracking-wider text-gray-500 uppercase"
-				>Graph Name</label
-			>
-			<input
-				id="graph-name"
-				type="text"
-				value={graphName}
-				placeholder="Unnamed Graph"
-				class="h-[34px] rounded-md border border-gray-300 px-3 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-				oninput={(e) => onGraphNameChange(e.currentTarget.value)}
-				onkeydown={handleGraphNameKeydown}
-			/>
+										A library node that provides a collection of tools that can be used for function
+										calling by LLMs.
+									</Tooltip.Content>
+								</Tooltip.Root>
+							</Tabs.Content>
+						</div>
+					</Tabs.Root>
+				</Tooltip.Provider>
+			</div>
 		</div>
 
-		<!-- Action Buttons -->
-		<div class="flex flex-wrap gap-2">
-			<!-- Load Button -->
-			<button
-				onclick={onLoad}
-				class="flex items-center rounded bg-teal-500 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-teal-600"
-				title="Load graph from JSON file"
-				data-testid="load-button"
-			>
-				<FolderOpen size={18} weight="bold" class="mr-1.5" />
-				Load
-			</button>
-			<!-- Save Button -->
-			<button
-				onclick={onSave}
-				class="flex items-center rounded bg-sky-500 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-sky-600"
-				title="Save graph to JSON file"
-				data-testid="save-button"
-			>
-				<FloppyDisk size={18} weight="bold" class="mr-1.5" />
-				Save
-			</button>
-			<!-- Python Import Button -->
-			<button
-				onclick={onImport}
-				class="flex items-center rounded bg-blue-500 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-600 disabled:opacity-50"
-				title="Import Task definitions from Python file"
-				data-testid="import-button"
-			>
-				<UploadSimple size={18} weight="bold" class="mr-1.5" />
-				Import
-			</button>
-			<!-- Export Button -->
-			<button
-				onclick={onExport}
-				class="flex items-center rounded bg-orange-500 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-orange-600"
-				data-testid="export-button"
-				title={unconnectedWorkersTooltip ? unconnectedWorkersTooltip : 'Export'}
-			>
-				<Export size={18} class="mr-1.5" />
-				Export
-			</button>
-			<!-- Execute Button -->
-			<button
-				onclick={onExecute}
-				class="flex items-center rounded bg-green-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-green-600"
-				data-testid="execute-button"
-				disabled={!isExecutionReady}
-				title={unconnectedWorkersTooltip ? unconnectedWorkersTooltip : 'Execute Graph'}
-			>
-				<Play size={18} class="mr-1.5" />
-				Execute
-			</button>
-			<!-- Assistant Button -->
-			<button
-				onclick={openAssistant}
-				class="flex items-center rounded bg-purple-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-purple-600"
-				title="Open AI Assistant"
-				disabled={!isAssistantReady}
-			>
-				<Robot size={18} class="mr-1.5" />
-				Assistant
-			</button>
-			<!-- Clear Button -->
-			<button
-				onclick={onClearGraph}
-				class="flex items-center rounded bg-red-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-red-700"
-				title="Clear the entire graph"
-			>
-				<Eraser size={18} class="mr-1.5" />
-				Clear
-			</button>
-			<!-- Configure LLMs Button -->
-			<button
-				onclick={onConfigureLLMs}
-				class="flex items-center rounded bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"
-				title="Configure LLM Models"
-			>
-				<Gear size={18} class="mr-1.5" />
-				Configure LLMs
-			</button>
+		<!-- Actions Section -->
+		<div class="flex min-w-0 shrink-[2] flex-col gap-2 border-r border-gray-300/70 pr-4 pl-4">
+			<!-- Graph Name Input -->
+			<div class="flex items-center gap-2">
+				<label for="graph-name" class="text-xs tracking-wider text-gray-500 uppercase"
+					>Graph Name</label
+				>
+				<input
+					id="graph-name"
+					type="text"
+					value={graphName}
+					placeholder="Unnamed Graph"
+					class="h-[30px] min-w-25 rounded-md border border-gray-300 px-2 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none xl:h-[34px] xl:px-3 xl:text-sm"
+					oninput={(e) => onGraphNameChange(e.currentTarget.value)}
+					onkeydown={handleGraphNameKeydown}
+				/>
+			</div>
+
+			<!-- Action Buttons -->
+			<div class="flex min-w-0 flex-1 flex-wrap gap-2">
+				<!-- Load Button -->
+				<button
+					onclick={onLoad}
+					class="flex items-center rounded bg-teal-500 px-2 py-1 text-xs font-medium text-white shadow-sm transition-colors hover:bg-teal-600 xl:px-3 xl:py-1.5 xl:text-sm"
+					title="Load graph from JSON file"
+					data-testid="load-button"
+				>
+					<FolderOpen size={16} weight="bold" class="mr-1 xl:mr-1.5 xl:size-[18px]" />
+					Load
+				</button>
+				<!-- Save Button -->
+				<button
+					onclick={onSave}
+					class="flex items-center rounded bg-sky-500 px-2 py-1 text-xs font-medium text-white shadow-sm transition-colors hover:bg-sky-600 xl:px-3 xl:py-1.5 xl:text-sm"
+					title="Save graph to JSON file"
+					data-testid="save-button"
+				>
+					<FloppyDisk size={16} weight="bold" class="mr-1 xl:mr-1.5 xl:size-[18px]" />
+					Save
+				</button>
+				<!-- Python Import Button -->
+				<button
+					onclick={onImport}
+					class="flex items-center rounded bg-blue-500 px-2 py-1 text-xs font-medium text-white shadow-sm transition-colors hover:bg-blue-600 disabled:opacity-50 xl:px-3 xl:py-1.5 xl:text-sm"
+					title="Import Task definitions from Python file"
+					data-testid="import-button"
+				>
+					<UploadSimple size={16} weight="bold" class="mr-1 xl:mr-1.5 xl:size-[18px]" />
+					Import
+				</button>
+				<!-- Export Button -->
+				<button
+					onclick={onExport}
+					class="flex items-center rounded bg-orange-500 px-2 py-1 text-xs font-medium text-white shadow-sm transition-colors hover:bg-orange-600 xl:px-3 xl:py-1.5 xl:text-sm"
+					data-testid="export-button"
+					title={unconnectedWorkersTooltip ? unconnectedWorkersTooltip : 'Export'}
+				>
+					<Export size={16} class="mr-1 xl:mr-1.5 xl:size-[18px]" />
+					Export
+				</button>
+				<!-- Execute Button -->
+				<button
+					onclick={onExecute}
+					class="flex items-center rounded bg-green-600 px-2 py-1 text-xs font-medium text-white shadow-sm transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-green-600 xl:px-3 xl:py-1.5 xl:text-sm"
+					data-testid="execute-button"
+					disabled={!isExecutionReady}
+					title={unconnectedWorkersTooltip ? unconnectedWorkersTooltip : 'Execute Graph'}
+				>
+					<Play size={16} class="mr-1 xl:mr-1.5 xl:size-[18px]" />
+					Execute
+				</button>
+				<!-- Assistant Button -->
+				<button
+					onclick={openAssistant}
+					class="flex items-center rounded bg-purple-600 px-2 py-1 text-xs font-medium text-white shadow-sm transition-colors hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-purple-600 xl:px-3 xl:py-1.5 xl:text-sm"
+					title="Open AI Assistant"
+					disabled={!isAssistantReady}
+				>
+					<Robot size={16} class="mr-1 xl:mr-1.5 xl:size-[18px]" />
+					Assistant
+				</button>
+				<!-- Clear Button -->
+				<button
+					onclick={onClearGraph}
+					class="flex items-center rounded bg-red-600 px-2 py-1 text-xs font-medium text-white shadow-sm transition-colors hover:bg-red-700 xl:px-3 xl:py-1.5 xl:text-sm"
+					title="Clear the entire graph"
+				>
+					<Eraser size={16} class="mr-1 xl:mr-1.5 xl:size-[18px]" />
+					Clear
+				</button>
+				<!-- Configure LLMs Button -->
+				<button
+					onclick={onConfigureLLMs}
+					class="flex items-center rounded bg-indigo-600 px-2 py-1 text-xs font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 xl:px-3 xl:py-1.5 xl:text-sm"
+					title="Configure LLM Models"
+				>
+					<Gear size={16} class="mr-1 xl:mr-1.5 xl:size-[18px]" />
+					Configure LLMs
+				</button>
+			</div>
 		</div>
 	</div>
 
 	<!-- Interpreter Section -->
 	<div class="flex items-center gap-2">
-		<span class="text-xs tracking-wider text-gray-500 uppercase">Interpreter</span>
-		<PythonInterpreterSelector />
+		<div class="flex flex-col items-start gap-2">
+			<span class="text-xs tracking-wider text-gray-500 uppercase">Interpreter</span>
+			<PythonInterpreterSelector />
+		</div>
 	</div>
 </div>
