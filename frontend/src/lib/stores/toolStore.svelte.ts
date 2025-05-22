@@ -1,3 +1,5 @@
+import { persistedState } from '$lib/utils/persist.svelte';
+
 export interface Tool {
 	id: string;
 	name: string;
@@ -5,7 +7,7 @@ export interface Tool {
 	code: string;
 }
 
-export const tools = $state<Tool[]>([]);
+export const tools = persistedState<Tool[]>('tools', [], { storage: 'local' });
 
 export function addTool(tool: Tool) {
 	tools.push(tool);
