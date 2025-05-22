@@ -34,18 +34,7 @@
 			}
 		}
 		// activeTab will update reactively via $derived(getActiveTab())
-		// If we wanted to force activeTab, we'd need a separate $state for user-selected tab
-		// and reconcile, but for now, clearing selectedNodeId is enough to switch to 'tasks'
-		// if the tool tab was active due to a node selection.
 	}
-
-	// Function to allow Tabs.Root to update our reactive activeTab if needed by a two-way binding, though direct click on trigger should work.
-	// For Svelte 5, direct binding to $derived might not be two-way in the way $state is.
-	// However, Tabs.Root value usually controls which trigger is active and which content is shown.
-	// We will make triggers update the selectedNodeId or a local state if direct control is needed.
-	// For now, this derived value should correctly set the initial active tab.
-	// If tab clicks need to update something beyond what bits-ui handles internally for display,
-	// we would add on:click to triggers or use the onValueChange of Tabs.Root.
 </script>
 
 <div class="h-full overflow-auto">

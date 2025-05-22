@@ -68,6 +68,7 @@
 	import {
 		openSplitPane,
 		splitPaneConfig,
+		MAX_SPLIT_PANE_SIZE
 	} from '$lib/stores/splitPaneStore.svelte';
 
 	// Import the LLM Config Modal
@@ -1158,7 +1159,7 @@
 					</Controls>
 				</SvelteFlow>
 			</Pane>
-			<Pane maxSize={25} bind:size={splitPaneConfig.size} snapSize={5}>
+			<Pane maxSize={MAX_SPLIT_PANE_SIZE} bind:size={splitPaneConfig.size} snapSize={5}>
 				<Splitpanes horizontal={true}>
 					<Pane>
 						<EditPane />

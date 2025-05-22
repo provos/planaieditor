@@ -1,15 +1,21 @@
 interface SplitePaneConfig {
     size: number;
     selectedNodeId: string | null;
+    upperNodeType: 'tool' | 'task' | null;
+    upperNodeId: string | null;
 }
+
+export const MAX_SPLIT_PANE_SIZE = 40;
 
 export const splitPaneConfig = $state<SplitePaneConfig>({
     size: 0,
     selectedNodeId: null,
+    upperNodeId: null,
+    upperNodeType: null,
 });
 
 export function openSplitPane() {
-    splitPaneConfig.size = 25;
+    splitPaneConfig.size = MAX_SPLIT_PANE_SIZE;
 }
 
 export function closeSplitPane() {
@@ -17,5 +23,5 @@ export function closeSplitPane() {
 }
 
 export function toggleSplitPane() {
-    splitPaneConfig.size = splitPaneConfig.size === 0 ? 25 : 0;
+    splitPaneConfig.size = splitPaneConfig.size === 0 ? MAX_SPLIT_PANE_SIZE : 0;
 }

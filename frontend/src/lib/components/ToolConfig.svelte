@@ -1,7 +1,6 @@
 <script lang="ts">
 	import EditableCodeSection from '$lib/components/EditableCodeSection.svelte';
 	import HeaderIcon from '$lib/components/HeaderIcon.svelte';
-	import { persistNodeDataDebounced } from '$lib/utils/nodeUtils';
 	import { tick, onMount, untrack } from 'svelte';
 	import { useUpdateNodeInternals } from '@xyflow/svelte';
 	import { backendUrl } from '$lib/utils/backendUrl';
@@ -10,22 +9,18 @@
 	import { toolNamesStore } from '$lib/stores/classNameStore';
 	import { get } from 'svelte/store';
 	import Spinner from 'phosphor-svelte/lib/Spinner';
+	import type { Tool } from '$lib/stores/toolStore.svelte';
+	import { tools as toolsStore } from '$lib/stores/toolStore.svelte';
 
-	export interface ToolNodeData {
-		name: string;
-		description: string | null;
-		code: string;
-		nodeId: string; // Should be populated with the node's id
-	}
-
-	let { id, data } = $props<{
+	let { id } = $props<{
 		id: string;
-		data: ToolNodeData;
 	}>();
 
-	let toolName = $state(data.name || 'new_tool_function');
-	let toolDescription = $state(data.description || '');
-	let codeContent = $derived(data.code || 'def new_tool_function():\n    pass');
+	const tool: Tool | undefined = $derived(toolsStore.find((tool) => tool.id === id));
+
+	let toolName = $derived(tool?.name || 'new_tool_function');
+	let toolDescription = $derived(tool?.description || '');
+	let codeContent = $derived(tool?.code || 'def new_tool_function():\n    pass');
 
 	let editingName = $state(false);
 	let tempToolName = $state('');
@@ -76,8 +71,7 @@
 		});
 
 		toolName = tempToolName;
-		data.name = tempToolName;
-		persistNodeDataDebounced();
+		tool.name = tempToolName;
 		editingName = false;
 		toolNameError = '';
 		// Name changed, trigger validation (debounced)
@@ -102,19 +96,17 @@
 	function handleDescriptionChange(event: Event) {
 		const newDescription = (event.target as HTMLInputElement).value;
 		toolDescription = newDescription;
-		data.description = newDescription;
-		persistNodeDataDebounced();
+		tool.description = newDescription;
 	}
 
 	function handleCodeUpdate(newCode: string) {
-		data.code = newCode;
-		persistNodeDataDebounced();
+		tool.code = newCode;
 		// Code changed, trigger validation (debounced)
 		debouncedValidateTool();
 	}
 
 	async function validateTool() {
-		if (isValidatingTool || !data.name || !data.code) {
+		if (isValidatingTool || !tool || !tool.name || !tool.code) {
 			return;
 		}
 
@@ -131,7 +123,8 @@
 				},
 				// Send a snapshot of data, ensuring nodeId is included.
 				// The backend expects { node: { data: ToolNodeData } }
-				body: JSON.stringify({ node: { data: { ...data, nodeId: id } } })
+				// XXX - we don't need nodeId here any longer
+				body: JSON.stringify({ node: { data: { ...tool, nodeId: id } } })
 			});
 
 			const result = await response.json();
@@ -162,32 +155,8 @@
 	}
 
 	onMount(() => {
-		let updated = false;
-		if (data.name === undefined) {
-			data.name = 'new_tool_function';
-			toolName = 'new_tool_function';
-			updated = true;
-		}
-		if (data.description === undefined) {
-			data.description = '';
-			toolDescription = '';
-			updated = true;
-		}
-		if (data.code === undefined) {
-			data.code = 'def new_tool_function():\n    pass';
-			updated = true;
-		}
-		if (data.nodeId === undefined && id) {
-			data.nodeId = id; // Ensure nodeId is set from the prop
-			updated = true;
-		}
-
-		if (updated) {
-			persistNodeDataDebounced();
-		}
-
 		// Initial validation on mount if essential data exists
-		if (data.name && data.code) {
+		if (tool?.name && tool.code) {
 			validateTool(); // Direct call on mount
 		}
 	});
@@ -195,13 +164,14 @@
 	// Effect for interpreter changes
 	$effect(() => {
 		if (selectedInterpreterPath.value) {
-			if (data.name && data.code) {
+			if (tool?.name && tool?.code) {
 				untrack(validateTool); // Re-validate immediately
 			}
 		}
 	});
 </script>
 
+{#if tool}
 <div class="flex-none border-b bg-yellow-100 p-1">
 	<HeaderIcon workerType={'tool'} />
 	{#if editingName}
@@ -266,7 +236,7 @@
 			<div class="rounded-sm bg-white/50 px-1.5 py-1.5">
 				<Spinner size={12} class="animate-spin text-blue-500" weight="bold" />
 			</div>
-		{:else if data.name && data.code && isToolValid !== undefined}
+		{:else if tool?.name && tool?.code && isToolValid !== undefined}
 			<p
 				class="text-2xs {isToolValid
 					? 'text-green-700'
@@ -296,6 +266,14 @@
 			</ul>
 		</div>
 	{/if}
+{/if}
+{:else}
+	<div class="flex-none border-b bg-yellow-100 p-1">
+		<HeaderIcon workerType={'tool'} />
+		<div class="w-full cursor-pointer rounded px-1 py-0.5 text-center text-xs font-medium hover:bg-yellow-50">
+			Tool not found
+		</div>
+	</div>
 {/if}
 
 <style>
