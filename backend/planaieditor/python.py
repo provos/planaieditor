@@ -44,11 +44,10 @@ def custom_format(template: str, **kwargs) -> str:
     return re.sub(pattern, replace_match, template)
 
 
-def create_tool_function(node: Dict[str, Any]) -> str:
+def create_tool_function(tool: Dict[str, Any]) -> str:
     """
     Creates a Pydantic Tool class from a tool node.
     """
-    tool = node.get("data", {})
     if "name" not in tool or "description" not in tool or "code" not in tool:
         raise ValueError("Tool node is missing name, description, or code")
 
@@ -733,7 +732,7 @@ def generate_python_module(
         import_statements.append(node.get("data", {}).get("code"))
 
     # Tool Definitions
-    tool_definitions = extract_tool_calls(nodes)
+    tool_definitions = extract_tool_calls(graph_data.get("tools", []))
 
     # We add them to the import statements for now
     import_statements.extend(tool_definitions)
@@ -911,20 +910,19 @@ def generate_python_module(
         )
 
 
-def extract_tool_calls(nodes):
+def extract_tool_calls(tools: List[Dict[str, Any]]):
     """
     Extracts tool calls from the nodes and returns a dictionary of tool names and their definitions.
 
     Args:
-        nodes (List[Dict[str, Any]]): The nodes to extract tool calls from.
+        tools (List[Dict[str, Any]]): The tools to extract tool calls from.
 
     Returns:
         Tuple[Dict[str, str], List[str]]: A tuple containing a dictionary of tool names and their definitions.
     """
-    tool_nodes = [n for n in nodes if n.get("type") == "tool"]
     tool_definitions = []
-    for node in tool_nodes:
-        tool_definitions.append(create_tool_function(node))
+    for tool in tools:
+        tool_definitions.append(create_tool_function(tool))
     return tool_definitions
 
 

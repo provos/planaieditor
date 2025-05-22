@@ -709,15 +709,12 @@ def {tool_name}(param_x: str, param_y: int = 123) -> str:
     tool_function_definition_str = tool_function_definition_str.replace("\\n", "\n")
 
     graph_data = {
-        "nodes": [
+        "tools": [
             {
                 "id": "tool-1745544328318",
-                "type": "tool",
-                "data": {
-                    "name": tool_name,
-                    "description": "A sample tool for testing generate_python_module.",
-                    "code": tool_function_definition_str,
-                },
+                "name": tool_name,
+                "description": "A sample tool for testing generate_python_module.",
+                "code": tool_function_definition_str,
             },
         ],
         "edges": [],
@@ -725,7 +722,7 @@ def {tool_name}(param_x: str, param_y: int = 123) -> str:
         "module_imports": "import os\nfrom typing import List, Dict",
     }
 
-    generated_module_code, module_name, error = generate_python_module(graph_data)
+    generated_module_code, _, error = generate_python_module(graph_data)
 
     assert error is None, f"generate_python_module failed with an error: {error}"
     assert (
@@ -785,16 +782,16 @@ def custom_calculator_tool(operation: str, val1: float, val2: float) -> float:
 '''
 
     graph_data = {
-        "nodes": [
+        "tools": [
             {
                 "id": "tool-1745544328318",
                 "type": "tool",
-                "data": {
-                    "name": tool_name,
-                    "description": "A custom calculator tool.",
-                    "code": tool_function_code,
-                },
+                "name": tool_name,
+                "description": "A custom calculator tool.",
+                "code": tool_function_code,
             },
+        ],
+        "nodes": [
             {
                 "id": "llmworker-67890",
                 "type": "llmtaskworker",
