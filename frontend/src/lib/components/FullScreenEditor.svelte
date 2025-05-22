@@ -39,11 +39,9 @@
 		}
 
 		let requestData = {
-			worker: convertNodeData(currentNode, getNodes()),
-			moduleLevelImport: moduleLevelImport
-				? convertNodeData(moduleLevelImport, getNodes())
-				: undefined,
-			toolNodes: toolNodes.map((node) => convertNodeData(node, getNodes()))
+			worker: convertNodeData(currentNode),
+			moduleLevelImport: moduleLevelImport ? convertNodeData(moduleLevelImport) : undefined,
+			toolNodes: toolNodes.map((node) => convertNodeData(node))
 		};
 
 		const response = await fetch(`${backendUrl}/api/get-node-code`, {

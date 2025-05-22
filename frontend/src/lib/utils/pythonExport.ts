@@ -3,6 +3,7 @@ import type { Socket } from 'socket.io-client';
 import type { BackendError } from './pythonImport';
 import { get } from 'svelte/store';
 import { llmConfigs, type LLMConfig } from '$lib/stores/llmConfigsStore';
+import { tools as toolStore, type Tool } from '$lib/stores/toolStore.svelte';
 
 // Type for export status updates
 export interface ExportStatus {
@@ -75,7 +76,7 @@ export function convertGraphtoJSON(
 
 	// replace workerName with className for worker nodes
 	const exportedNodes = nodes.map((node) => {
-		return convertNodeData(node, nodes);
+		return convertNodeData(node);
 	});
 
 	// Transform edges to use class names instead of node IDs
@@ -101,7 +102,7 @@ export function convertGraphtoJSON(
 		.filter((edge): edge is { source: string; target: string } => edge !== null); // Type guard to filter out nulls and satisfy TypeScript
 
 	// Send transformed data
-	const graphData = { nodes: exportedNodes, edges: exportedEdges, mode: mode }; // Use transformed nodes and edges
+	const graphData = { nodes: exportedNodes, edges: exportedEdges, tools: toolStore, mode: mode }; // Use transformed nodes and edges
 	return graphData;
 }
 
@@ -117,7 +118,7 @@ export function convertGraphtoJSON(
  * @param node The node to process, containing type and data properties
  * @returns A new node object with transformed data
  */
-export function convertNodeData(node: Node, allNodes: Node[]) {
+export function convertNodeData(node: Node) {
 	const data = node.data as any; // Use any for easier manipulation
 	let processedData = { ...data };
 
@@ -218,8 +219,8 @@ export function convertNodeData(node: Node, allNodes: Node[]) {
 		if (processedData.classVars.tool_ids && Array.isArray(processedData.classVars.tool_ids)) {
 			const toolNames = processedData.classVars.tool_ids
 				.map((toolId: string) => {
-					const toolNode = allNodes.find((n: Node) => n.id === toolId && n.type === 'tool');
-					return toolNode ? (toolNode.data as any)?.name : null;
+					const toolNode = toolStore.find((t: Tool) => t.id === toolId);
+					return toolNode ? toolNode.name : null;
 				})
 				.filter((name: string | null) => name !== null);
 
