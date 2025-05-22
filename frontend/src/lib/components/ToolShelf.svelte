@@ -578,7 +578,7 @@
 									>
 										<div class="flex items-center gap-1.5">
 											<toolNodeStyle.icon size={16} weight="fill" class={toolNodeStyle.color} />
-											<div class="text-sm font-semibold">Tool</div>
+											<div class="text-sm font-semibold">Tool Library</div>
 										</div>
 									</div>
 								</Tooltip.Trigger>
@@ -586,7 +586,8 @@
 									class="z-50 max-w-xs rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 shadow-md"
 									side="bottom"
 								>
-									Define a Python function that can be used as a tool for function calling by LLMs.
+									A library node that provides a collection of tools that can be used for function
+									calling by LLMs.
 								</Tooltip.Content>
 							</Tooltip.Root>
 						</Tabs.Content>
@@ -600,7 +601,7 @@
 	<div class="flex flex-col gap-2 border-r border-gray-300/70 pr-4">
 		<!-- Graph Name Input -->
 		<div class="flex items-center gap-2">
-			<label for="graph-name" class="text-xs tracking-wider text-gray-500 uppercase"
+			<label for="graph-name" class="text-xs uppercase tracking-wider text-gray-500"
 				>Graph Name</label
 			>
 			<input
@@ -608,7 +609,7 @@
 				type="text"
 				value={graphName}
 				placeholder="Unnamed Graph"
-				class="h-[34px] rounded-md border border-gray-300 px-3 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+				class="h-[34px] rounded-md border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
 				oninput={(e) => onGraphNameChange(e.currentTarget.value)}
 				onkeydown={handleGraphNameKeydown}
 			/>
@@ -700,7 +701,7 @@
 
 	<!-- Interpreter Section -->
 	<div class="flex items-center gap-2">
-		<span class="text-xs tracking-wider text-gray-500 uppercase">Interpreter</span>
+		<span class="text-xs uppercase tracking-wider text-gray-500">Interpreter</span>
 		<PythonInterpreterSelector />
 	</div>
 </div>

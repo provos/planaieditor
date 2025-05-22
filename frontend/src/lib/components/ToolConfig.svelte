@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { NodeResizer, type Node } from '@xyflow/svelte';
 	import EditableCodeSection from '$lib/components/EditableCodeSection.svelte';
 	import HeaderIcon from '$lib/components/HeaderIcon.svelte';
 	import { persistNodeDataDebounced } from '$lib/utils/nodeUtils';
@@ -11,7 +10,6 @@
 	import { toolNamesStore } from '$lib/stores/classNameStore';
 	import { get } from 'svelte/store';
 	import Spinner from 'phosphor-svelte/lib/Spinner';
-	import ToolConfig from '$lib/components/ToolConfig.svelte';
 
 	export interface ToolNodeData {
 		name: string;
@@ -204,20 +202,105 @@
 	});
 </script>
 
-<div
-	class="tool-node flex h-full flex-col overflow-auto rounded-md border border-gray-300 bg-white shadow-md"
->
-	<div class="flex-none border-b bg-yellow-100 p-1">
-		<HeaderIcon workerType={'tool'} />
+<div class="flex-none border-b bg-yellow-100 p-1">
+	<HeaderIcon workerType={'tool'} />
+	{#if editingName}
+		<div class="flex flex-col">
+			<input
+				type="text"
+				bind:value={tempToolName}
+				onblur={submitNameChange}
+				onkeydown={handleNameKeydown}
+				placeholder="Tool Name"
+				class="w-full cursor-text rounded px-1 py-0.5 text-center text-xs font-medium hover:bg-yellow-50 focus:border-yellow-400 focus:ring-1 {toolNameError
+					? 'border-red-500 ring-red-500'
+					: 'focus:ring-yellow-400'}"
+				title="Enter the name of the tool function (alphanumeric, _, -)"
+			/>
+			{#if toolNameError}
+				<div class="mt-0.5 text-center text-xs text-red-500">{toolNameError}</div>
+			{/if}
+		</div>
+	{:else}
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<div
-			class="w-full cursor-pointer rounded px-1 py-0.5 text-center text-xs font-medium hover:bg-yellow-50"
+			class="nodrag w-full cursor-pointer rounded px-1 py-0.5 text-center text-xs font-medium hover:bg-yellow-50"
+			onclick={startEditingName}
+			role="button"
+			tabindex={0}
+			title="Click to edit tool name (alphanumeric, _, -)"
 		>
-			Tool Library
+			{toolName}
 		</div>
-	</div>
-	<div class="flex-none p-1.5">
-		<div class="prose prose-xs max-w-xs">
-			<p>Click on this node to open the tool library where you can add, edit, and delete tools.</p>
-		</div>
+	{/if}
+</div>
+
+<div class="flex-none border-b p-1.5">
+	<input
+		type="text"
+		bind:value={toolDescription}
+		oninput={handleDescriptionChange}
+		placeholder="Tool description (optional, single line)"
+		class="nodrag text-2xs w-full cursor-text rounded border border-gray-200 px-1.5 py-1 focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
+		title="Enter a single-line description for the tool"
+		onkeydown={(event) => {
+			if (event.key === 'Enter' || event.key === 'Escape') {
+				(event.target as HTMLInputElement).blur();
+			}
+		}}
+	/>
+</div>
+
+<div class="relative flex h-full min-h-0 flex-col p-1.5">
+	<EditableCodeSection
+		title="Tool Function Code"
+		code={codeContent}
+		language="python"
+		onUpdate={handleCodeUpdate}
+		showReset={false}
+		onUpdateSize={handleCollapse}
+	/>
+	<!-- Validation Status Overlay -->
+	<div class="absolute bottom-1 right-3 z-10">
+		{#if isValidatingTool}
+			<div class="rounded-sm bg-white/50 px-1.5 py-1.5">
+				<Spinner size={12} class="animate-spin text-blue-500" weight="bold" />
+			</div>
+		{:else if data.name && data.code && isToolValid !== undefined}
+			<p
+				class="text-2xs {isToolValid
+					? 'text-green-700'
+					: 'text-red-700'} rounded-sm bg-white/50 px-1.5 py-1.5"
+			>
+				{isToolValid ? 'validated' : 'not validated'}
+			</p>
+		{/if}
 	</div>
 </div>
+
+<!-- Error and Warnings Display Area -->
+{#if !isValidatingTool && (toolValidationError || (isToolValid && toolValidationWarnings.length > 0))}
+	{#if toolValidationError && isToolValid === false}
+		<div class="mt-auto flex-none border-t border-red-200 bg-red-50 p-1.5">
+			<p class="text-2xs font-semibold text-red-700">Error:</p>
+			<p class="text-2xs text-red-600">{@html formatErrorMessage(toolValidationError)}</p>
+		</div>
+	{/if}
+	{#if isToolValid && toolValidationWarnings.length > 0}
+		<div class="mt-auto flex-none border-t border-yellow-200 bg-yellow-50 p-1.5">
+			<p class="text-2xs font-semibold text-yellow-700">Warnings:</p>
+			<ul class="text-2xs mt-0.5 list-inside list-disc text-yellow-600">
+				{#each toolValidationWarnings as warning}
+					<li>{warning}</li>
+				{/each}
+			</ul>
+		</div>
+	{/if}
+{/if}
+
+<style>
+	.text-2xs {
+		font-size: 0.65rem; /* 10.4px */
+		line-height: 1rem; /* 16px */
+	}
+</style>

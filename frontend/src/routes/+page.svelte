@@ -63,6 +63,7 @@
 		clearAssistantMessages
 	} from '$lib/stores/assistantStateStore.svelte';
 	import Assistant from '$lib/components/Assistant.svelte';
+	import { openSplitPane, splitPaneConfig } from '$lib/stores/splitPaneStore.svelte.ts';
 
 	// Import the LLM Config Modal
 	import LLMConfigModal from '$lib/components/LLMConfigModal.svelte';
@@ -89,6 +90,9 @@
 
 	// Import the GraphNameDialog component
 	import GraphNameDialog from '$lib/components/GraphNameDialog.svelte';
+
+	// Support for Svelte Splitpanes
+	import { Splitpanes, Pane } from 'svelte-splitpanes';
 
 	// Define the structure for the saved JSON file
 	interface SavedGraphState {
@@ -434,7 +438,10 @@
 			if (!taskImportNode) {
 				// We have a taskimport node, so we can add the assistantinput node
 				const id = `taskimport-${Date.now()}`;
-				const nodeData: TaskImportNodeData = nodeDataFromType(id, 'taskimport');
+				const nodeData: TaskImportNodeData = nodeDataFromType(
+					id,
+					'taskimport'
+				) as TaskImportNodeData;
 				nodeData.modulePath = 'planai';
 				nodeData.isImplicit = false;
 				nodeData.availableClasses = ['ChatTask'];
@@ -450,7 +457,7 @@
 			}
 
 			const id = `datainput-${Date.now()}`;
-			const nodeData: DataInputNodeData = nodeDataFromType(id, 'datainput');
+			const nodeData: DataInputNodeData = nodeDataFromType(id, 'datainput') as DataInputNodeData;
 			nodeData.className = 'ChatTask';
 			addNewNode(nodes, id, 'datainput', position, nodeData);
 		} else {
@@ -461,6 +468,9 @@
 			let nodeData: any = nodeDataFromType(id, nodeType);
 			// Then add the node to the graph
 			addNewNode(nodes, id, nodeType, position, nodeData);
+		}
+		if (nodeType === 'tool') {
+			openSplitPane();
 		}
 	}
 
@@ -648,6 +658,13 @@
 	function onPaneClick() {
 		if (showContextMenu) {
 			closeContextMenu();
+		}
+	}
+
+	function handleNodeClick(event: CustomEvent<{ event: MouseEvent; node: Node }>) {
+		const { node } = event.detail;
+		if (node.type === 'tool') {
+			openSplitPane();
 		}
 	}
 
@@ -1102,35 +1119,46 @@
 	</div>
 
 	<div class="flex-grow">
-		<SvelteFlow
-			{nodes}
-			{edges}
-			{nodeTypes}
-			minZoom={0.05}
-			ondrop={onDrop}
-			ondragover={onDragOver}
-			onclick={onPaneClick}
-			onconnect={handleConnect}
-			{isValidConnection}
-			defaultEdgeOptions={{ type: 'smoothstep', style: 'stroke-width: 3;' }}
-			class="flex-grow"
-			fitView
-			nodesDraggable
-			proOptions={{ hideAttribution: true }}
-			on:nodecontextmenu={({ detail: { event, node } }) => {
-				if ('clientX' in event) {
-					handleNodeContextMenu(event, node);
-				}
-			}}
-			on:edgecontextmenu={handleEdgeContextMenu}
-		>
-			<Background />
-			<Controls>
-				<ControlButton onclick={runElkLayout} title="Re-run Layout">
-					<ArrowsClockwise size={16} />
-				</ControlButton>
-			</Controls>
-		</SvelteFlow>
+		<Splitpanes horizontal={false}>
+			<Pane maxSize={100} size={100}>
+				<SvelteFlow
+					{nodes}
+					{edges}
+					{nodeTypes}
+					minZoom={0.05}
+					ondrop={onDrop}
+					ondragover={onDragOver}
+					onclick={onPaneClick}
+					onconnect={handleConnect}
+					{isValidConnection}
+					defaultEdgeOptions={{ type: 'smoothstep', style: 'stroke-width: 3;' }}
+					class="flex-grow"
+					fitView
+					nodesDraggable
+					proOptions={{ hideAttribution: true }}
+					on:nodecontextmenu={({ detail: { event, node } }) => {
+						if ('clientX' in event) {
+							handleNodeContextMenu(event, node);
+						}
+					}}
+					on:edgecontextmenu={handleEdgeContextMenu}
+					on:nodeclick={handleNodeClick}
+				>
+					<Background />
+					<Controls>
+						<ControlButton onclick={runElkLayout} title="Re-run Layout">
+							<ArrowsClockwise size={16} />
+						</ControlButton>
+					</Controls>
+				</SvelteFlow>
+			</Pane>
+			<Pane maxSize={25} size={splitPaneConfig.isOpen ? 25 : 0} snapSize={5}>
+				<Splitpanes horizontal={true}>
+					<Pane>Config Pane</Pane>
+					<Pane minSize={25} maxSize={75}>List Pane</Pane>
+				</Splitpanes>
+			</Pane>
+		</Splitpanes>
 
 		{#if showContextMenu}
 			<ContextMenu
