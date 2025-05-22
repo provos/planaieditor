@@ -56,7 +56,7 @@
 	let { getNodes } = useSvelteFlow();
 
 	// Selected tab value
-	let selectedTab = $state('tasks');
+	let selectedTab = $state('config');
 
 	let unconnectedWorkersTooltip = $state<string | null>(null);
 	let moduleLevelImportTooltip = $state<string | null>(null);
@@ -171,9 +171,11 @@
 		<SideDropdownMenu {onLoadJSON} />
 	</div>
 
-	<div class="flex min-w-[300px] flex-1 items-center gap-4">
+	<div class="flex min-w-[300px] flex-1 items-start gap-4">
 		<!-- Draggable Nodes Section -->
-		<div class="flex min-w-0 items-center gap-2 border-r border-gray-300/70 pr-4">
+		<div
+			class="flex w-full flex-shrink-0 items-center gap-2 border-r border-gray-300/70 pr-4 md:w-1/3 lg:w-[30%]"
+		>
 			<div class="w-full md:w-auto">
 				<Tooltip.Provider>
 					<Tabs.Root value={selectedTab} class="w-full">
@@ -181,11 +183,11 @@
 							<Tooltip.Root delayDuration={800}>
 								<Tooltip.Trigger class="flex-1">
 									<Tabs.Trigger
-										value="tasks"
+										value="config"
 										class="flex-1 rounded-md px-2 py-1 text-xs font-medium transition-colors duration-150 data-[state=active]:bg-white data-[state=active]:shadow-sm xl:px-3 xl:py-1.5 xl:text-sm"
 									>
 										{#snippet child({ props }: { props: Record<string, unknown> })}
-											<div {...props}>Tasks</div>
+											<div {...props}>Configuration</div>
 										{/snippet}
 									</Tabs.Trigger>
 								</Tooltip.Trigger>
@@ -241,7 +243,7 @@
 
 						<div class="min-h-[32px] pt-2">
 							<Tabs.Content
-								value="tasks"
+								value="config"
 								class="animate-in fade-in-50 flex flex-wrap gap-2 transition-all duration-200 ease-in-out"
 							>
 								<!-- Task Node -->
@@ -611,10 +613,10 @@
 		</div>
 
 		<!-- Actions Section -->
-		<div class="flex min-w-0 shrink-[2] flex-col gap-2 border-r border-gray-300/70 pr-4 pl-4">
+		<div class="flex min-w-0 shrink-[2] flex-col gap-2 border-r border-gray-300/70 pl-4 pr-4">
 			<!-- Graph Name Input -->
 			<div class="flex items-center gap-2">
-				<label for="graph-name" class="text-xs tracking-wider text-gray-500 uppercase"
+				<label for="graph-name" class="text-xs uppercase tracking-wider text-gray-500"
 					>Graph Name</label
 				>
 				<input
@@ -622,7 +624,7 @@
 					type="text"
 					value={graphName}
 					placeholder="Unnamed Graph"
-					class="h-[30px] min-w-25 rounded-md border border-gray-300 px-2 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none xl:h-[34px] xl:px-3 xl:text-sm"
+					class="min-w-25 h-[30px] rounded-md border border-gray-300 px-2 text-xs focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 xl:h-[34px] xl:px-3 xl:text-sm"
 					oninput={(e) => onGraphNameChange(e.currentTarget.value)}
 					onkeydown={handleGraphNameKeydown}
 				/>
@@ -714,9 +716,9 @@
 	</div>
 
 	<!-- Interpreter Section -->
-	<div class="flex items-center gap-2">
+	<div class="flex items-start gap-2">
 		<div class="flex flex-col items-start gap-2">
-			<span class="text-xs tracking-wider text-gray-500 uppercase">Interpreter</span>
+			<span class="text-xs uppercase tracking-wider text-gray-500">Interpreter</span>
 			<PythonInterpreterSelector />
 		</div>
 	</div>
