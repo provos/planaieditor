@@ -118,8 +118,8 @@
 </script>
 
 {#if tool}
-	<div class="flex h-full flex-col">
-		<div class="flex-none border-b p-1.5">
+	<div class="flex h-full flex-col bg-white">
+		<div class="flex-none border-b p-1.5 bg-gray-50">
 			<input
 				type="text"
 				value={currentName}
@@ -141,7 +141,7 @@
 			{/if}
 		</div>
 
-		<div class="flex-none border-b p-1.5">
+		<div class="flex-none border-b p-1.5 bg-gray-50">
 			<input
 				type="text"
 				bind:value={tool.description}
@@ -156,7 +156,7 @@
 			/>
 		</div>
 
-		<div class="relative min-h-0 flex-grow p-1.5">
+		<div class="relative min-h-0 flex-grow bg-white p-1.5">
 			<EditableCodeSection
 				title="Tool Function Code"
 				code={tool.code}
