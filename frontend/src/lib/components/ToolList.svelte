@@ -38,7 +38,7 @@
 
 <div class="p-4">
 	{#if toolsStore.length === 0}
-		<p class="text-sm italic text-gray-500">
+		<p class="text-sm text-gray-500 italic">
 			No tools defined yet. Click the plus button below to add one.
 		</p>
 	{:else}
