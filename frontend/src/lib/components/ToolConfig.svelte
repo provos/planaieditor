@@ -119,7 +119,7 @@
 
 {#if tool}
 	<div class="flex h-full flex-col bg-white">
-		<div class="flex-none border-b p-1.5 bg-gray-50">
+		<div class="flex-none border-b bg-gray-50 p-1.5">
 			<input
 				type="text"
 				value={currentName}
@@ -141,7 +141,7 @@
 			{/if}
 		</div>
 
-		<div class="flex-none border-b p-1.5 bg-gray-50">
+		<div class="flex-none border-b bg-gray-50 p-1.5">
 			<input
 				type="text"
 				bind:value={tool.description}

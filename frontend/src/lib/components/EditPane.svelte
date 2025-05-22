@@ -6,7 +6,7 @@
 	const upperNodeType = $derived(splitPaneConfig.upperNodeType);
 </script>
 
-<div class="h-full overflow-auto p-2">
+<div class="h-full overflow-auto border border-gray-300 bg-gray-200 p-2">
 	{#if upperNodeType === 'tool' && upperNodeId}
 		<ToolConfig id={upperNodeId} />
 	{:else if upperNodeType === 'task' && upperNodeId}

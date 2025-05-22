@@ -37,9 +37,9 @@
 	}
 </script>
 
-<div class="h-full overflow-auto">
+<div class="h-full overflow-auto border border-gray-300 bg-gray-200">
 	<Tabs.Root value={activeTab} onValueChange={handleTabChange} class="flex h-full flex-col p-2">
-		<Tabs.List class="mb-2 flex rounded-md bg-gray-200/70 p-1">
+		<Tabs.List class="mb-1 flex rounded-md bg-gray-200/70 p-0">
 			<Tabs.Trigger
 				value="tasks"
 				class="flex-1 rounded-md px-3 py-1.5 text-center text-sm font-medium transition-colors duration-150 hover:bg-gray-300/50 data-[state=active]:bg-white data-[state=active]:shadow-sm"

@@ -15,6 +15,8 @@
 	import type { Unsubscriber } from 'svelte/store';
 	import { persistNodeDataDebounced } from '$lib/utils/nodeUtils';
 	import { openFullScreenEditor } from '$lib/stores/fullScreenEditorStore.svelte';
+	import { tools as toolsStore, type Tool } from '$lib/stores/toolStore.svelte';
+
 	// Extend the base data interface
 	export interface LLMWorkerData extends BaseWorkerData {
 		prompt: string;
@@ -58,13 +60,11 @@
 	let nodeUnsubscribe: Unsubscriber | null = null;
 
 	let availableTools = $derived<Array<{ id: string; name: string; description: string }>>(
-		($svelteFlowNodes || [])
-			.filter((node) => node.type === 'tool' && node.data?.name)
-			.map((node) => ({
-				id: node.id,
-				name: (node.data as unknown as ToolNodeData).name,
-				description: (node.data as unknown as ToolNodeData).description || ''
-			}))
+		toolsStore.map((tool) => ({
+			id: tool.id,
+			name: tool.name,
+			description: tool.description
+		}))
 	);
 	let selectedToolIds = $derived<string[]>(data.tools || []);
 	let showToolsDropdown = $state(false);
@@ -326,13 +326,11 @@
 	}
 
 	function getToolInfoById(toolId: string): { name: string; description: string } {
-		const tool = ($svelteFlowNodes || []).find(
-			(node) => node.id === toolId && node.type === 'tool'
-		);
-		return tool && tool.data
+		const tool = toolsStore.find((tool) => tool.id === toolId);
+		return tool
 			? {
-					name: (tool.data as unknown as ToolNodeData).name,
-					description: (tool.data as unknown as ToolNodeData).description || ''
+					name: tool.name,
+					description: tool.description
 				}
 			: { name: 'Unknown Tool', description: '' };
 	}
