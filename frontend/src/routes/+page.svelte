@@ -26,6 +26,8 @@
 	import DataInputNode from '$lib/components/nodes/DataInputNode.svelte';
 	import DataOutputNode from '$lib/components/nodes/DataOutputNode.svelte';
 	import ToolNode from '$lib/components/nodes/ToolNode.svelte';
+	import EditPane from '$lib/components/EditPane.svelte';
+	import ListPane from '$lib/components/ListPane.svelte';
 	import type { BaseWorkerData } from '$lib/components/nodes/BaseWorkerNode.svelte';
 	import type { NodeData } from '$lib/components/nodes/TaskNode.svelte';
 	import type { TaskImportNodeData } from '$lib/components/nodes/TaskImportNode.svelte';
@@ -63,7 +65,10 @@
 		clearAssistantMessages
 	} from '$lib/stores/assistantStateStore.svelte';
 	import Assistant from '$lib/components/Assistant.svelte';
-	import { openSplitPane, splitPaneConfig } from '$lib/stores/splitPaneStore.svelte.ts';
+	import {
+		openSplitPane,
+		splitPaneConfig,
+	} from '$lib/stores/splitPaneStore.svelte';
 
 	// Import the LLM Config Modal
 	import LLMConfigModal from '$lib/components/LLMConfigModal.svelte';
@@ -661,11 +666,12 @@
 		}
 	}
 
-	function handleNodeClick(event: CustomEvent<{ event: MouseEvent; node: Node }>) {
+	function handleNodeClick(event: CustomEvent<{ event: MouseEvent | TouchEvent; node: Node }>) {
 		const { node } = event.detail;
 		if (node.type === 'tool') {
 			openSplitPane();
 		}
+		splitPaneConfig.selectedNodeId = node.id;
 	}
 
 	// --- Clear Graph Function ---
@@ -1152,10 +1158,14 @@
 					</Controls>
 				</SvelteFlow>
 			</Pane>
-			<Pane maxSize={25} size={splitPaneConfig.isOpen ? 25 : 0} snapSize={5}>
+			<Pane maxSize={25} bind:size={splitPaneConfig.size} snapSize={5}>
 				<Splitpanes horizontal={true}>
-					<Pane>Config Pane</Pane>
-					<Pane minSize={25} maxSize={75}>List Pane</Pane>
+					<Pane>
+						<EditPane />
+					</Pane>
+					<Pane minSize={25} maxSize={75}>
+						<ListPane />
+					</Pane>
 				</Splitpanes>
 			</Pane>
 		</Splitpanes>

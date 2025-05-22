@@ -1,19 +1,21 @@
 interface SplitePaneConfig {
-    isOpen: boolean;
+    size: number;
+    selectedNodeId: string | null;
 }
 
 export const splitPaneConfig = $state<SplitePaneConfig>({
-    isOpen: false,
+    size: 0,
+    selectedNodeId: null,
 });
 
 export function openSplitPane() {
-    splitPaneConfig.isOpen = true;
+    splitPaneConfig.size = 25;
 }
 
 export function closeSplitPane() {
-    splitPaneConfig.isOpen = false;
+    splitPaneConfig.size = 0;
 }
 
 export function toggleSplitPane() {
-    splitPaneConfig.isOpen = !splitPaneConfig.isOpen;
+    splitPaneConfig.size = splitPaneConfig.size === 0 ? 25 : 0;
 }
