@@ -40,7 +40,9 @@
 
 		let requestData = {
 			worker: convertNodeData(currentNode, getNodes()),
-			moduleLevelImport: moduleLevelImport ? convertNodeData(moduleLevelImport, getNodes()) : undefined,
+			moduleLevelImport: moduleLevelImport
+				? convertNodeData(moduleLevelImport, getNodes())
+				: undefined,
 			toolNodes: toolNodes.map((node) => convertNodeData(node, getNodes()))
 		};
 
@@ -83,7 +85,11 @@
 				error = data.error;
 				return;
 			}
-			const updatedNodeData = convertWorkerToNodeData(data.worker, fullScreenEditorState.id, getNodes());
+			const updatedNodeData = convertWorkerToNodeData(
+				data.worker,
+				fullScreenEditorState.id,
+				getNodes()
+			);
 			updatedNodeData._lastUpdated = Date.now();
 			let updatedModuleImport: boolean = false;
 			const moduleLevelCode: string = data.module_imports || '';

@@ -355,7 +355,6 @@ export async function importPythonCode(
 			nextY += 280; // Adjust vertical spacing for tool nodes (they can be taller)
 		});
 
-
 		// --- Create Worker Nodes ---
 		nextY = 0;
 
@@ -465,7 +464,6 @@ export async function importPythonCode(
 			return new Set(existingNames); // Create a new set to trigger reactivity
 		});
 
-
 		return {
 			success: true,
 			message: `Imported ${importedTasks.length} Task(s), ${importedTaskReferences.length} TaskImport(s), ${importedWorkers.length} Worker(s), and ${importedToolsDefinition.length} Tool(s).`,
@@ -562,15 +560,17 @@ export function convertWorkerToNodeData(worker: ImportedWorker, id: string, node
 		// Map the tools from class variables
 		const tools = worker.classVars?.tools || [];
 		// Map to tool ids
-		const toolIds = tools.map((tool: Record<string, string>) => {
-			const toolNode = nodes.find((node) => node.type === 'tool' && node.data.name === tool);
-			if (toolNode) {
-				return toolNode.id;
-			} else {
-				console.warn(`Tool node not found for ${tool}`);
-			}
-			return undefined;
-		}).filter((id: string | undefined) => id !== undefined);
+		const toolIds = tools
+			.map((tool: Record<string, string>) => {
+				const toolNode = nodes.find((node) => node.type === 'tool' && node.data.name === tool);
+				if (toolNode) {
+					return toolNode.id;
+				} else {
+					console.warn(`Tool node not found for ${tool}`);
+				}
+				return undefined;
+			})
+			.filter((id: string | undefined) => id !== undefined);
 		nodeData.tools = toolIds;
 	}
 
