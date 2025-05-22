@@ -15,6 +15,7 @@
 	import type { Node, Edge, Connection } from '@xyflow/svelte';
 	import '@xyflow/svelte/dist/style.css';
 	import ToolShelf from '$lib/components/ToolShelf.svelte';
+	import { tools as toolStore } from '$lib/stores/toolStore.svelte';
 	import ModuleLevelImport from '$lib/components/nodes/ModuleLevelImport.svelte';
 	import TaskNode from '$lib/components/nodes/TaskNode.svelte';
 	import TaskWorkerNode from '$lib/components/nodes/TaskWorkerNode.svelte';
@@ -41,7 +42,7 @@
 	import {
 		llmConfigs,
 		llmConfigsFromCode,
-		clearLLMConfigsFromCode,
+		clearLLMConfigsFromCode
 	} from '$lib/stores/llmConfigsStore';
 	import ContextMenu from '$lib/components/ContextMenu.svelte';
 	import type { ContextMenuItem } from '$lib/components/ContextMenu.svelte';
@@ -676,6 +677,7 @@
 		if (confirm('Are you sure you want to clear the entire graph? This action cannot be undone.')) {
 			nodes.set([]);
 			edges.set([]);
+			toolStore.length = 0;
 			llmConfigs.set([]); // Clear user LLM configs
 			llmConfigsFromCode.set([]); // Clear code LLM configs
 			graphName.set('');

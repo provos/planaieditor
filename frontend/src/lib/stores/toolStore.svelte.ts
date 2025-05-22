@@ -20,3 +20,7 @@ export function removeTool(tool: Tool) {
 export function updateTool(tool: Tool) {
 	tools[tools.indexOf(tool)] = tool;
 }
+
+export function getToolByName(name: string): Tool | undefined {
+	return tools.find((tool: Tool) => tool.name === name);
+}

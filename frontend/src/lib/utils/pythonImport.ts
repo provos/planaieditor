@@ -7,6 +7,7 @@ import ELK from 'elkjs/lib/elk.bundled.js';
 import { Position } from '@xyflow/svelte';
 import { getEdgeStyleProps } from '$lib/utils/edgeUtils';
 import { addLLMConfigFromCode } from '$lib/stores/llmConfigsStore';
+import { addTool, type Tool, getToolByName } from '$lib/stores/toolStore.svelte';
 
 // Type for the structured error from the backend
 export interface BackendError {
@@ -325,34 +326,19 @@ export async function importPythonCode(
 			nextY += 180; // Basic vertical spacing
 		});
 
-		// --- Create Tool Nodes --- //
+		// --- Create Tool Entries --- //
 		const importedToolsDefinition: { name: string; description: string | null; code: string }[] =
 			result.tools || [];
 		importedToolsDefinition.forEach((toolDef) => {
 			const id = `imported-tool-${toolDef.name.replace(/\s+/g, '_')}-${Date.now()}`;
 
-			const nodeData = {
-				name: toolDef.name,
-				description: toolDef.description,
-				code: toolDef.code,
-				nodeId: id
-			};
-
-			const newNode: Node = {
+			const tool: Tool = {
 				id,
-				type: 'tool',
-				position: { x: startX + 800, y: nextY }, // Position tools further to the right
-				draggable: true,
-				selectable: true,
-				deletable: true,
-				selected: false,
-				dragging: false,
-				zIndex: 0,
-				data: nodeData,
-				origin: [0, 0]
+				name: toolDef.name,
+				description: toolDef.description || 'Missing description',
+				code: toolDef.code
 			};
-			newNodes.push(newNode);
-			nextY += 280; // Adjust vertical spacing for tool nodes (they can be taller)
+			addTool(tool);
 		});
 
 		// --- Create Worker Nodes ---
@@ -558,11 +544,11 @@ export function convertWorkerToNodeData(worker: ImportedWorker, id: string, node
 
 	if (worker.workerType === 'llmtaskworker' || worker.workerType === 'chattaskworker') {
 		// Map the tools from class variables
-		const tools = worker.classVars?.tools || [];
+		const workerTools = worker.classVars?.tools || [];
 		// Map to tool ids
-		const toolIds = tools
-			.map((tool: Record<string, string>) => {
-				const toolNode = nodes.find((node) => node.type === 'tool' && node.data.name === tool);
+		const toolIds = workerTools
+			.map((tool: string) => {
+				const toolNode = getToolByName(tool);
 				if (toolNode) {
 					return toolNode.id;
 				} else {
