@@ -42,8 +42,6 @@
 		llmConfigs,
 		llmConfigsFromCode,
 		clearLLMConfigsFromCode,
-		type LLMConfig,
-		type LLMConfigFromCode
 	} from '$lib/stores/llmConfigsStore';
 	import ContextMenu from '$lib/components/ContextMenu.svelte';
 	import type { ContextMenuItem } from '$lib/components/ContextMenu.svelte';
@@ -97,18 +95,15 @@
 	// Import the GraphNameDialog component
 	import GraphNameDialog from '$lib/components/GraphNameDialog.svelte';
 
+	// Import the new JSON utility functions and SavedGraphState interface
+	import {
+		saveGraphToJson,
+		loadGraphFromJson as loadGraphFromJsonUtil
+	} from '$lib/utils/jsonUtils';
+	import type { SavedGraphState } from '$lib/utils/jsonUtils';
+
 	// Support for Svelte Splitpanes
 	import { Splitpanes, Pane } from 'svelte-splitpanes';
-
-	// Define the structure for the saved JSON file
-	interface SavedGraphState {
-		version: number;
-		name?: string;
-		nodes: Node[];
-		edges: Edge[];
-		llmConfigs: LLMConfig[];
-		llmConfigsFromCode: LLMConfigFromCode[];
-	}
 
 	// Define node types and pass stores as props
 	const nodeTypes: any = {
@@ -916,35 +911,6 @@
 
 	// --- Save/Load Graph Functions ---
 
-	// Function to handle saving the graph state to a JSON file
-	function handleSave() {
-		// Show dialog if unnamed
-		if (!get(graphName).trim()) {
-			pendingActionAfterName = 'save';
-			showGraphNameDialog = true;
-			return;
-		}
-
-		const currentNodes = get(nodes);
-		const currentEdges = get(edges);
-		const currentUserLLMConfigs = get(llmConfigs);
-		const currentCodeLLMConfigs = get(llmConfigsFromCode);
-
-		const graphState: SavedGraphState = {
-			version: 1,
-			name: get(graphName),
-			nodes: currentNodes,
-			edges: currentEdges,
-			llmConfigs: currentUserLLMConfigs,
-			llmConfigsFromCode: currentCodeLLMConfigs
-		};
-
-		const jsonString = JSON.stringify(graphState, null, 2);
-		downloadFile(`${get(graphName) || 'planai-graph'}.json`, jsonString);
-
-		console.log('Graph saved to JSON.');
-	}
-
 	// Handle JSON file selection for loading
 	async function handleJsonFileSelect(event: Event) {
 		const input = event.target as HTMLInputElement;
@@ -965,81 +931,22 @@
 
 		try {
 			const jsonContent = await readFileAsText(file);
-			await loadGraphFromJson(jsonContent);
+			loadStatus = await loadGraphFromJsonUtil(jsonContent);
+			setTimeout(runElkLayout, 100);
 		} catch (error: any) {
 			loadStatus = { type: 'error', message: error.message || 'Error reading JSON file.' };
 		}
 	}
 
-	// Process the JSON content and update the graph
-	async function loadGraphFromJson(jsonContent: string) {
-		loadStatus = { type: 'loading', message: 'Loading graph from JSON...' };
-
-		try {
-			const loadedState: SavedGraphState = JSON.parse(jsonContent);
-
-			// Basic validation of the loaded structure
-			if (
-				!loadedState ||
-				typeof loadedState !== 'object' ||
-				!Array.isArray(loadedState.nodes) ||
-				!Array.isArray(loadedState.edges) ||
-				!Array.isArray(loadedState.llmConfigs) ||
-				!Array.isArray(loadedState.llmConfigsFromCode)
-			) {
-				throw new Error('Invalid JSON file structure.');
-			}
-
-			// Clear existing graph FIRST
-			nodes.set([]);
-			edges.set([]);
-			llmConfigs.set([]);
-			llmConfigsFromCode.set([]);
-			clearAssistantMessages();
-			// Introduce a small delay before setting new data to ensure reactivity
-			await new Promise((resolve) => setTimeout(resolve, 10));
-
-			// Load data from the file
-			nodes.set(loadedState.nodes);
-			edges.set(loadedState.edges);
-			llmConfigs.set(loadedState.llmConfigs);
-			llmConfigsFromCode.set(loadedState.llmConfigsFromCode);
-
-			// Restore graph name if it exists in the loaded state
-			if (loadedState.name) {
-				graphName.set(loadedState.name);
-			}
-
-			loadStatus = { type: 'success', message: 'Graph loaded successfully.' };
-
-			// Recompute all edge styles
-			edges.update((eds) => {
-				return eds.map((edge) => {
-					const sourceNode = get(nodes).find((node) => node.id === edge.source);
-					if (!sourceNode) {
-						console.error('sourceNode not found');
-						return edge;
-					}
-					return { ...edge, style: getEdgeStyleProps(sourceNode, edge).style };
-				});
-			});
-
-			// Use setTimeout to allow Svelte to render nodes first before layout
-			setTimeout(runElkLayout, 100);
-		} catch (error: any) {
-			console.error('Error loading graph from JSON:', error);
-			loadStatus = {
-				type: 'error',
-				message: `Load failed: ${error.message || 'Invalid JSON format'}`
-			};
-			// Optionally clear again on error to prevent partial loading state
-			nodes.set([]);
-			edges.set([]);
-			llmConfigs.set([]);
-			llmConfigsFromCode.set([]);
-			clearAssistantMessages();
-			graphName.set(''); // Reset graph name on error
+	// Function to handle saving the graph state to a JSON file
+	function handleSave() {
+		// Show dialog if unnamed
+		if (!get(graphName).trim()) {
+			pendingActionAfterName = 'save';
+			showGraphNameDialog = true;
+			return;
 		}
+		saveGraphToJson(); // Use the imported function
 	}
 
 	// Trigger the hidden JSON file input
@@ -1070,8 +977,8 @@
 			onImport={triggerImport}
 			onSave={handleSave}
 			onLoad={triggerLoad}
+			onLoadJSON={loadGraphFromJsonUtil}
 			onConfigureLLMs={() => (showLLMConfigModal = true)}
-			onLoadJSON={loadGraphFromJson}
 			graphName={currentGraphName}
 			onGraphNameChange={(name) => graphName.set(name)}
 		/>
