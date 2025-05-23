@@ -613,10 +613,10 @@
 		</div>
 
 		<!-- Actions Section -->
-		<div class="flex min-w-0 shrink-[2] flex-col gap-2 border-r border-gray-300/70 pl-4 pr-4">
+		<div class="flex min-w-0 shrink-[2] flex-col gap-2 border-r border-gray-300/70 pr-4 pl-4">
 			<!-- Graph Name Input -->
 			<div class="flex items-center gap-2">
-				<label for="graph-name" class="text-xs uppercase tracking-wider text-gray-500"
+				<label for="graph-name" class="text-xs tracking-wider text-gray-500 uppercase"
 					>Graph Name</label
 				>
 				<input
@@ -624,7 +624,7 @@
 					type="text"
 					value={graphName}
 					placeholder="Unnamed Graph"
-					class="min-w-25 h-[30px] rounded-md border border-gray-300 px-2 text-xs focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 xl:h-[34px] xl:px-3 xl:text-sm"
+					class="h-[30px] min-w-25 rounded-md border border-gray-300 px-2 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none xl:h-[34px] xl:px-3 xl:text-sm"
 					oninput={(e) => onGraphNameChange(e.currentTarget.value)}
 					onkeydown={handleGraphNameKeydown}
 				/>
@@ -718,7 +718,7 @@
 	<!-- Interpreter Section -->
 	<div class="flex flex-none items-start gap-2">
 		<div class="flex flex-col items-start gap-2">
-			<span class="text-xs uppercase tracking-wider text-gray-500">Interpreter</span>
+			<span class="text-xs tracking-wider text-gray-500 uppercase">Interpreter</span>
 			<PythonInterpreterSelector />
 		</div>
 	</div>
