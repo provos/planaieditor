@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { splitPaneConfig } from '$lib/stores/splitPaneStore.svelte';
 	import ToolConfig from './ToolConfig.svelte';
+	import TaskConfig from './TaskConfig.svelte';
 
 	const upperNodeId = $derived(splitPaneConfig.upperNodeId);
 	const upperNodeType = $derived(splitPaneConfig.upperNodeType);
@@ -10,10 +11,10 @@
 	{#if upperNodeType === 'tool' && upperNodeId}
 		<ToolConfig id={upperNodeId} />
 	{:else if upperNodeType === 'task' && upperNodeId}
-		Nothing to see here yet
+		<TaskConfig id={upperNodeId} />
 	{:else}
 		<div class="flex h-full items-center justify-center rounded border-t border-gray-200 bg-white">
-			<p class="text-sm text-gray-500 italic">
+			<p class="text-sm italic text-gray-500">
 				Click on a tool or task in the list at the bottom to edit it.
 			</p>
 		</div>
