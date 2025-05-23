@@ -18,7 +18,7 @@ def discover_python_environments(sort_venv_paths=True) -> List[Dict[str, str]]:
     common_venv_paths = [
         dir / "bin" / "python" for dir in potential_dirs if dir.is_dir()
     ]
-    if sys.executable not in common_venv_paths:
+    if Path(sys.executable) not in common_venv_paths:
         common_venv_paths.append(Path(sys.executable))
     if sort_venv_paths:
         common_venv_paths.sort()
