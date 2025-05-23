@@ -471,7 +471,7 @@
 			// Then add the node to the graph
 			addNewNode(nodes, id, nodeType, position, nodeData);
 		}
-		if (nodeType === 'tool') {
+		if (nodeType === 'tool' || nodeType === 'task') {
 			openSplitPane();
 		}
 	}

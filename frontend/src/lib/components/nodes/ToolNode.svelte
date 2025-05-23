@@ -1,16 +1,9 @@
 <script lang="ts">
 	import HeaderIcon from '$lib/components/HeaderIcon.svelte';
 
-	export interface ToolNodeData {
-		name: string;
-		description: string | null;
-		code: string;
-		nodeId: string; // Should be populated with the node's id
-	}
-
 	let { id, data } = $props<{
 		id: string;
-		data: ToolNodeData;
+		data: any;
 	}>();
 </script>
 
