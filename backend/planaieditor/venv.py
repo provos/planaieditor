@@ -13,13 +13,13 @@ def discover_python_environments(sort_venv_paths=True) -> List[Dict[str, str]]:
     environments = []
 
     # Current directory venvs
-    base_dir = Path(os.path.abspath(__file__)).parent.parent.parent
+    base_dir = Path(os.path.abspath(__file__)).parent.parent.parent.parent
     potential_dirs = base_dir.glob("*/.venv")
     common_venv_paths = [
         dir / "bin" / "python" for dir in potential_dirs if dir.is_dir()
     ]
     if sys.executable not in common_venv_paths:
-        common_venv_paths.append(sys.executable)
+        common_venv_paths.append(Path(sys.executable))
     if sort_venv_paths:
         common_venv_paths.sort()
 
