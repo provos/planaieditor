@@ -8,21 +8,70 @@ from planaieditor.venv import discover_python_environments
 class TestDiscoverPythonEnvironments(unittest.TestCase):
     """Tests for the discover_python_environments function."""
 
-    @patch("planaieditor.venv.Path")
-    @patch("planaieditor.venv.sys")
+    def _setup_path_mocks(
+        self, mock_path_class, mock_os, sys_executable_path, base_dir_mock=None
+    ):
+        """
+        Helper method to set up common Path and os mocks.
+
+        Args:
+            mock_path_class: Mocked Path class
+            mock_os: Mocked os module
+            sys_executable_path: Path string for sys.executable
+            base_dir_mock: Optional base directory mock to use
+
+        Returns:
+            tuple: (mock_sys_exec_path, mock_file_path, mock_base_dir)
+        """
+        # Set up mock for base_dir - needs 4 parents
+        mock_file_path = MagicMock()
+        if base_dir_mock is None:
+            mock_base_dir = MagicMock()
+            mock_base_dir.glob.return_value = []
+        else:
+            mock_base_dir = base_dir_mock
+        mock_file_path.parent.parent.parent.parent = mock_base_dir
+
+        # Mock sys.executable Path object
+        mock_sys_exec_path = MagicMock()
+        mock_sys_exec_path.__str__.return_value = sys_executable_path
+        mock_sys_exec_path.parent.parent.parent.name = "planaieditor"
+
+        # Make sure sys.executable Path is not equal to other venv paths
+        mock_sys_exec_path.__eq__ = lambda self, other: False
+        mock_sys_exec_path.__ne__ = lambda self, other: True
+
+        # Set up Path constructor to return appropriate mocks
+        def path_constructor_side_effect(*args, **kwargs):
+            if len(args) > 0:
+                if args[0] == sys_executable_path:
+                    return mock_sys_exec_path
+                elif "/__file__" in str(args[0]) or args[0].endswith("venv.py"):
+                    return mock_file_path
+            return MagicMock()
+
+        mock_path_class.side_effect = path_constructor_side_effect
+
+        # Mock os.path.abspath to return a recognizable path
+        mock_os.path.abspath.return_value = "/some/path/to/venv.py/__file__"
+
+        return mock_sys_exec_path, mock_file_path, mock_base_dir
+
     @patch("planaieditor.venv.os")
-    def test_discover_python_environments_base_case(self, mock_os, mock_sys, mock_path):
+    @patch("planaieditor.venv.sys")
+    @patch("planaieditor.venv.Path")
+    def test_discover_python_environments_base_case(
+        self, mock_path_class, mock_sys, mock_os
+    ):
         """Test basic functionality of discover_python_environments."""
         # Set up sys.executable mock
         mock_sys.executable = "/usr/bin/python3"
         mock_sys.platform = "linux"
 
-        # Set up base_dir mock
-        mock_base_dir = MagicMock()
-        mock_path.return_value.parent.parent.parent = mock_base_dir
-
-        # Mock no venvs found in base_dir
-        mock_base_dir.glob.return_value = []
+        # Set up mocks using helper
+        _, _, mock_base_dir = self._setup_path_mocks(
+            mock_path_class, mock_os, "/usr/bin/python3"
+        )
 
         # Mock os.path.isfile and os.access to say executable is valid
         mock_os.path.isfile.return_value = True
@@ -38,11 +87,11 @@ class TestDiscoverPythonEnvironments(unittest.TestCase):
         # Verify that glob was called to search for venvs
         mock_base_dir.glob.assert_called_once_with("*/.venv")
 
-    @patch("planaieditor.venv.Path")
-    @patch("planaieditor.venv.sys")
     @patch("planaieditor.venv.os")
+    @patch("planaieditor.venv.sys")
+    @patch("planaieditor.venv.Path")
     def test_discover_python_environments_with_venvs(
-        self, mock_os, mock_sys, mock_path
+        self, mock_path_class, mock_sys, mock_os
     ):
         """Test discovery of virtual environments in base directory."""
         # Set up sys.executable mock as a string
@@ -52,10 +101,6 @@ class TestDiscoverPythonEnvironments(unittest.TestCase):
         # Create real Path objects for the venv Python executables
         venv1_python = Path("/path/to/project1/.venv/bin/python")
         venv2_python = Path("/path/to/project2/.venv/bin/python")
-
-        # Set up mock for base_dir
-        mock_base_dir = MagicMock()
-        mock_path.return_value.parent.parent.parent = mock_base_dir
 
         # Create mock venv path objects
         mock_venv1 = MagicMock()
@@ -68,8 +113,14 @@ class TestDiscoverPythonEnvironments(unittest.TestCase):
         # Return the real path object when bin/python is accessed
         mock_venv2.__truediv__.return_value.__truediv__.return_value = venv2_python
 
-        # Mock glob to return our mock venvs
+        # Create base dir mock with venvs
+        mock_base_dir = MagicMock()
         mock_base_dir.glob.return_value = [mock_venv1, mock_venv2]
+
+        # Set up mocks using helper
+        self._setup_path_mocks(
+            mock_path_class, mock_os, "/usr/bin/python3", mock_base_dir
+        )
 
         # Mock os.path.isfile and os.access
         mock_os.path.isfile.return_value = True
@@ -106,7 +157,7 @@ class TestDiscoverPythonEnvironments(unittest.TestCase):
         # Set up mock for base_dir (no venvs there)
         mock_base_dir = MagicMock()
         mock_base_dir.glob.return_value = []
-        mock_path.return_value.parent.parent.parent = mock_base_dir
+        mock_path.return_value.parent.parent.parent.parent = mock_base_dir
 
         # Create real Path objects for virtual environments
         venv_paths = {
@@ -193,23 +244,23 @@ class TestDiscoverPythonEnvironments(unittest.TestCase):
         self.assertIn("venv3", names)
         self.assertIn("venv4", names)
 
-    @patch("planaieditor.venv.Path")
-    @patch("planaieditor.venv.sys")
     @patch("planaieditor.venv.os")
-    def test_discover_python_environments_windows(self, mock_os, mock_sys, mock_path):
+    @patch("planaieditor.venv.sys")
+    @patch("planaieditor.venv.Path")
+    def test_discover_python_environments_windows(
+        self, mock_path_class, mock_sys, mock_os
+    ):
         """Test that home directory venvs are not checked on Windows."""
         # Set up sys.executable mock
         mock_sys.executable = "C:\\Python39\\python.exe"
         mock_sys.platform = "win32"  # Test Windows case
 
-        # Set up mock for base_dir (no venvs there)
-        mock_base_dir = MagicMock()
-        mock_base_dir.glob.return_value = []
-        mock_path.return_value.parent.parent.parent = mock_base_dir
+        # Set up mocks using helper
+        self._setup_path_mocks(mock_path_class, mock_os, "C:\\Python39\\python.exe")
 
         # Set up mock for home directory - should not be accessed on Windows
         mock_home = MagicMock()
-        mock_path.home.return_value = mock_home
+        mock_path_class.home.return_value = mock_home
 
         # Mock os.path.isfile and os.access
         mock_os.path.isfile.return_value = True
@@ -223,13 +274,13 @@ class TestDiscoverPythonEnvironments(unittest.TestCase):
         self.assertEqual("C:\\Python39\\python.exe", envs[0]["path"])
 
         # Verify home() was not called on Windows
-        mock_path.home.assert_not_called()
+        mock_path_class.home.assert_not_called()
 
-    @patch("planaieditor.venv.Path")
-    @patch("planaieditor.venv.sys")
     @patch("planaieditor.venv.os")
+    @patch("planaieditor.venv.sys")
+    @patch("planaieditor.venv.Path")
     def test_discover_python_environments_deduplication(
-        self, mock_os, mock_sys, mock_path
+        self, mock_path_class, mock_sys, mock_os
     ):
         """Test that duplicate paths are filtered out."""
         # Set up sys.executable mock
@@ -238,10 +289,6 @@ class TestDiscoverPythonEnvironments(unittest.TestCase):
 
         # Create a real Path object for the Python executable
         duplicate_python_path = Path("/path/to/project1/.venv/bin/python")
-
-        # Set up mock for base_dir
-        mock_base_dir = MagicMock()
-        mock_path.return_value.parent.parent.parent = mock_base_dir
 
         # Create mock venv path objects that both point to the same real Path
         mock_venv1 = MagicMock()
@@ -256,7 +303,14 @@ class TestDiscoverPythonEnvironments(unittest.TestCase):
             duplicate_python_path
         )
 
+        # Create base dir mock with duplicate venvs
+        mock_base_dir = MagicMock()
         mock_base_dir.glob.return_value = [mock_venv1, mock_venv2]
+
+        # Set up mocks using helper
+        self._setup_path_mocks(
+            mock_path_class, mock_os, "/usr/bin/python3", mock_base_dir
+        )
 
         # Mock os.path.isfile and os.access
         mock_os.path.isfile.return_value = True
