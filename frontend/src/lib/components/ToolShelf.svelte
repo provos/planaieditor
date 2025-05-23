@@ -176,10 +176,10 @@
 		<div
 			class="flex w-full flex-shrink-0 items-center gap-2 border-r border-gray-300/70 pr-4 md:w-1/3 lg:w-[30%]"
 		>
-			<div class="w-full md:w-auto">
+			<div class="w-full">
 				<Tooltip.Provider>
 					<Tabs.Root value={selectedTab} class="w-full">
-						<Tabs.List class="w-fullrounded-md flex bg-gray-300/80 p-0.5 xl:p-1">
+						<Tabs.List class="flex w-full rounded-md bg-gray-300/80 p-0.5 xl:p-1">
 							<Tooltip.Root delayDuration={800}>
 								<Tooltip.Trigger class="flex-1">
 									<Tabs.Trigger
@@ -289,7 +289,7 @@
 													weight="fill"
 													class={taskImportStyle.color}
 												/>
-												<div class="text-xs font-semibold xl:text-sm">TaskImport</div>
+												<div class="text-xs font-semibold xl:text-sm">Task Import</div>
 											</div>
 										</div>
 									</Tooltip.Trigger>
@@ -320,7 +320,7 @@
 													weight="fill"
 													class={moduleLevelImportStyle.color}
 												/>
-												<div class="text-xs font-semibold xl:text-sm">ModuleLevelImport</div>
+												<div class="text-xs font-semibold xl:text-sm">Module Imports</div>
 											</div>
 										</div>
 									</Tooltip.Trigger>
@@ -332,6 +332,32 @@
 										{#if moduleLevelImportTooltip}
 											<span class="text-red-700">{moduleLevelImportTooltip}</span>
 										{/if}
+									</Tooltip.Content>
+								</Tooltip.Root>
+
+								<!-- Tool Node -->
+								{@const toolNodeStyle = getNodeIconStyle('tool')}
+								<Tooltip.Root delayDuration={400}>
+									<Tooltip.Trigger>
+										<div
+											class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-white p-1.5 shadow-sm transition-shadow hover:shadow-md xl:p-2"
+											role="button"
+											tabindex="0"
+											draggable="true"
+											ondragstart={(e) => onDragStart(e, 'tool')}
+										>
+											<div class="flex items-center gap-1 xl:gap-1.5">
+												<toolNodeStyle.icon size={14} weight="fill" class={toolNodeStyle.color} />
+												<div class="text-xs font-semibold xl:text-sm">Tool Library</div>
+											</div>
+										</div>
+									</Tooltip.Trigger>
+									<Tooltip.Content
+										class="z-50 max-w-xs rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 shadow-md"
+										side="bottom"
+									>
+										A library node that provides a collection of tools that can be used for function
+										calling by LLMs.
 									</Tooltip.Content>
 								</Tooltip.Root>
 							</Tabs.Content>
@@ -577,32 +603,6 @@
 									>
 										Specialized worker for handling conversational AI tasks. Maintains chat history
 										and manages interactive dialogues with LLMs.
-									</Tooltip.Content>
-								</Tooltip.Root>
-
-								<!-- Tool Node -->
-								{@const toolNodeStyle = getNodeIconStyle('tool')}
-								<Tooltip.Root delayDuration={400}>
-									<Tooltip.Trigger>
-										<div
-											class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-white p-1.5 shadow-sm transition-shadow hover:shadow-md xl:p-2"
-											role="button"
-											tabindex="0"
-											draggable="true"
-											ondragstart={(e) => onDragStart(e, 'tool')}
-										>
-											<div class="flex items-center gap-1 xl:gap-1.5">
-												<toolNodeStyle.icon size={14} weight="fill" class={toolNodeStyle.color} />
-												<div class="text-xs font-semibold xl:text-sm">Tool Library</div>
-											</div>
-										</div>
-									</Tooltip.Trigger>
-									<Tooltip.Content
-										class="z-50 max-w-xs rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 shadow-md"
-										side="bottom"
-									>
-										A library node that provides a collection of tools that can be used for function
-										calling by LLMs.
 									</Tooltip.Content>
 								</Tooltip.Root>
 							</Tabs.Content>
