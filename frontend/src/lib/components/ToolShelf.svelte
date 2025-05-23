@@ -716,7 +716,7 @@
 	</div>
 
 	<!-- Interpreter Section -->
-	<div class="flex items-start gap-2">
+	<div class="flex flex-none items-start gap-2">
 		<div class="flex flex-col items-start gap-2">
 			<span class="text-xs uppercase tracking-wider text-gray-500">Interpreter</span>
 			<PythonInterpreterSelector />
