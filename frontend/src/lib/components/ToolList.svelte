@@ -48,12 +48,10 @@
 				{@const isSelected =
 					splitPaneConfig.upperNodeId === tool.id && splitPaneConfig.upperNodeType === 'tool'}
 				<div
-					class="group flex cursor-pointer items-center justify-between rounded border-l-4 p-2 shadow-sm transition-colors {isSelected
-						? 'border-blue-500 bg-blue-100/70'
-						: 'hover:bg-gray-100/50'}"
-					style="border-left-color: {isSelected
-						? 'transparent'
-						: color}; background-color: {isSelected ? '' : color + '1A'};"
+					class="group flex cursor-pointer items-center justify-between rounded p-2 shadow-sm transition-colors {isSelected
+						? 'border-l-6 border-blue-600 bg-blue-100/70'
+						: 'border-l-4 hover:bg-gray-100/50'}"
+					style={isSelected ? '' : `border-left-color: ${color}; background-color: ${color}1A;`}
 					onclick={() => selectTool(tool)}
 					onkeydown={(event: KeyboardEvent) => {
 						if (event.key === 'Enter' || event.key === ' ') {
