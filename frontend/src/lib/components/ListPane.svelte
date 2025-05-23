@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { splitPaneConfig } from '$lib/stores/splitPaneStore.svelte';
 	import ToolList from './ToolList.svelte';
+	import TaskList from './TaskList.svelte';
 	import { Tabs } from 'bits-ui';
 	import { nodes as graphNodesStore } from '$lib/stores/graphStore'; // Svelte 5 store for nodes
 	import { get } from 'svelte/store';
@@ -55,8 +56,7 @@
 		</Tabs.List>
 
 		<Tabs.Content value="tasks" class="flex-grow rounded-md bg-white p-3 shadow-inner">
-			<p class="text-sm text-gray-600">Task Definitions Placeholder</p>
-			<!-- Future: Component for task definitions will go here -->
+			<TaskList />
 		</Tabs.Content>
 
 		<Tabs.Content value="tools" class="flex-grow overflow-auto rounded-md bg-white shadow-inner">
