@@ -8,6 +8,11 @@ import { Position } from '@xyflow/svelte';
 import { getEdgeStyleProps } from '$lib/utils/edgeUtils';
 import { addLLMConfigFromCode } from '$lib/stores/llmConfigsStore';
 import { addTool, type Tool, getToolByName } from '$lib/stores/toolStore.svelte';
+import { addTask, type Task as TaskType } from '$lib/stores/taskStore.svelte';
+import {
+	addTaskImport,
+	type TaskImport as TaskImportType
+} from '$lib/stores/taskImportStore.svelte';
 
 // Type for the structured error from the backend
 export interface BackendError {
@@ -240,15 +245,18 @@ export async function importPythonCode(
 		const importedWorkers: ImportedWorker[] = result.workers || [];
 		const importedEdges: ImportedEdge[] = result.edges || [];
 		const importedTaskReferences: ImportedTaskReference[] = result.imported_tasks || []; // Get imported task references
+		const importedToolsDefinition: { name: string; description: string | null; code: string }[] =
+			result.tools || [];
 
 		if (
 			importedTasks.length === 0 &&
 			importedWorkers.length === 0 &&
-			importedTaskReferences.length === 0
+			importedTaskReferences.length === 0 &&
+			importedToolsDefinition.length === 0
 		) {
 			return {
 				success: true,
-				message: 'No Task or Worker classes found.'
+				message: 'No Task, Worker, or Tool classes found.'
 			};
 		}
 
@@ -258,79 +266,45 @@ export async function importPythonCode(
 		let nextY = existingNodes.reduce(
 			(maxY, node) => Math.max(maxY, node.position.y + (node.height || 150)),
 			50
-		); // Start below existing nodes
-		const startX = 50;
-		const classNameToNodeId: Record<string, string> = {}; // Map className to generated Node ID
+		);
 
 		importedTasks.forEach((task) => {
-			const id = `imported-task-${task.className}-${Date.now()}`;
-			classNameToNodeId[task.className] = id; // Store mapping
-			const nodeData = {
+			const id = `imported-task-${crypto.randomUUID()}`;
+			const newTask: TaskType = {
+				id: id,
+				type: 'task',
 				className: task.className, // Use the imported class name
 				fields: task.fields.map((f) => ({
-					// Map imported fields
 					name: f.name,
-					type: f.type, // Assuming TaskNode accepts these directly
+					type: f.type,
 					isList: f.isList,
 					required: f.required,
 					description: f.description,
 					literalValues: f.literalValues
-				})),
-				nodeId: id // Crucial: Pass the generated node ID
+				}))
 			};
 
-			const newNode: Node = {
-				id,
-				type: 'task', // It's a TaskNode
-				position: { x: startX, y: nextY },
-				draggable: true,
-				selectable: true,
-				deletable: true,
-				selected: false,
-				dragging: false,
-				zIndex: 0,
-				data: nodeData,
-				origin: [0, 0]
-			};
-			newNodes.push(newNode);
-			nextY += 180; // Basic vertical spacing
+			addTask(newTask);
 		});
 
 		// --- Create Task Import Nodes --- //
 		importedTaskReferences.forEach((importedTaskRef) => {
-			const id = `imported-taskref-${importedTaskRef.className}-${Date.now()}`;
-			classNameToNodeId[importedTaskRef.className] = id; // Store mapping
+			const id = `imported-taskimport-${crypto.randomUUID()}`;
 
-			const nodeData = {
+			const newTaskImport: TaskImportType = {
+				id: id,
+				type: 'taskimport',
 				modulePath: importedTaskRef.modulePath,
 				className: importedTaskRef.className, // Store class name
 				isImplicit: importedTaskRef.isImplicit,
-				fields: [], // Fields will be fetched by the node itself
-				nodeId: id // Crucial: Pass the generated node ID
+				fields: [] // Fields will be fetched by the node itself
 			};
-
-			const newNode: Node = {
-				id,
-				type: 'taskimport', // Use the new node type
-				position: { x: startX, y: nextY }, // Position with other tasks for now
-				draggable: true,
-				selectable: true,
-				deletable: true,
-				selected: false,
-				dragging: false,
-				zIndex: 0,
-				data: nodeData,
-				origin: [0, 0]
-			};
-			newNodes.push(newNode);
-			nextY += 180; // Basic vertical spacing
+			addTaskImport(newTaskImport);
 		});
 
 		// --- Create Tool Entries --- //
-		const importedToolsDefinition: { name: string; description: string | null; code: string }[] =
-			result.tools || [];
 		importedToolsDefinition.forEach((toolDef) => {
-			const id = `imported-tool-${toolDef.name.replace(/\s+/g, '_')}-${Date.now()}`;
+			const id = `imported-tool-${crypto.randomUUID()}`;
 
 			const tool: Tool = {
 				id,
@@ -342,6 +316,8 @@ export async function importPythonCode(
 		});
 
 		// --- Create Worker Nodes ---
+		const startX = 50;
+		const classNameToNodeId: Record<string, string> = {}; // Map className to generated Node ID
 		nextY = 0;
 
 		// Get existing names to avoid conflicts
@@ -441,13 +417,6 @@ export async function importPythonCode(
 				style: styleProps.style,
 				animated: styleProps.animated
 			};
-		});
-
-		// Update the taskClassNamesStore with the newly imported names
-		const importedTaskNames = new Set(importedTasks.map((task) => task.className));
-		taskClassNamesStore.update((existingNames) => {
-			importedTaskNames.forEach((name) => existingNames.add(name));
-			return new Set(existingNames); // Create a new set to trigger reactivity
 		});
 
 		return {
