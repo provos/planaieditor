@@ -9,17 +9,21 @@
 </script>
 
 <div class="h-full overflow-auto border border-gray-300 bg-gray-200 p-2">
-	{#if upperNodeType === 'tool' && upperNodeId}
-		<ToolConfig id={upperNodeId} />
-	{:else if upperNodeType === 'task' && upperNodeId}
-		<TaskConfig id={upperNodeId} />
-	{:else if upperNodeType === 'taskimport' && upperNodeId}
-		<TaskImportConfig id={upperNodeId} />
-	{:else}
-		<div class="flex h-full items-center justify-center rounded border-t border-gray-200 bg-white">
-			<p class="text-sm text-gray-500 italic">
-				Click on a tool, task, or task import in the list at the bottom to edit it.
-			</p>
-		</div>
-	{/if}
+	{#key upperNodeId}
+		{#if upperNodeType === 'tool' && upperNodeId}
+			<ToolConfig id={upperNodeId} />
+		{:else if upperNodeType === 'task' && upperNodeId}
+			<TaskConfig id={upperNodeId} />
+		{:else if upperNodeType === 'taskimport' && upperNodeId}
+			<TaskImportConfig id={upperNodeId} />
+		{:else}
+			<div
+				class="flex h-full items-center justify-center rounded border-t border-gray-200 bg-white"
+			>
+				<p class="text-sm text-gray-500 italic">
+					Click on a tool, task, or task import in the list at the bottom to edit it.
+				</p>
+			</div>
+		{/if}
+	{/key}
 </div>
