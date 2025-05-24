@@ -10,15 +10,21 @@
 	import Plus from 'phosphor-svelte/lib/Plus';
 	import Trash from 'phosphor-svelte/lib/Trash';
 	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
+	import type { Snippet } from 'svelte';
 
 	// Define basic field types
 	type BaseFieldType = 'string' | 'integer' | 'float' | 'boolean' | 'literal';
 	// Enhanced field type can be a basic type or a custom Task name
 	type FieldType = string;
 
-	let { id, allowEditing = true } = $props<{
+	let {
+		id,
+		allowEditing = true,
+		children
+	} = $props<{
 		id: string;
 		allowEditing?: boolean;
+		children?: Snippet;
 	}>();
 
 	const task: Task | undefined = $derived(tasksStore.find((t) => t.id === id));
@@ -335,6 +341,9 @@
 				<div class="w-full rounded px-1.5 py-1 text-center text-sm font-medium text-gray-700">
 					{task.className || 'Unnamed Task'}
 				</div>
+				{#if children}
+					{@render children()}
+				{/if}
 			{/if}
 		</div>
 

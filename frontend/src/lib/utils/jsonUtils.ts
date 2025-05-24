@@ -17,6 +17,10 @@ import {
 	type Task as TaskType,
 	type Field as FieldType
 } from '$lib/stores/taskStore.svelte';
+import {
+	taskImports as taskImportsStore,
+	type TaskImport as TaskImportType
+} from '$lib/stores/taskImportStore.svelte';
 
 export interface SavedGraphState {
 	version: number;
@@ -73,8 +77,24 @@ export async function loadGraphFromJson(jsonContent: string): Promise<ExportStat
 					taskStore.push(task);
 				});
 
+				// Convert taskimport nodes to the taskimport store
+				const taskImportNodes = loadedState.nodes.filter((node) => node.type === 'taskimport');
+				taskImportNodes.forEach((node) => {
+					const taskImport: TaskImportType = {
+						id: node.id,
+						className: node.data.className as string,
+						fields: node.data.fields as FieldType[],
+						modulePath: node.data.modulePath as string,
+						isImplicit: node.data.isImplicit as boolean,
+						availableClasses: node.data.availableClasses as string[]
+					};
+					taskImportsStore.push(taskImport);
+				});
+
 				// Remove task nodes from the graph
-				loadedState.nodes = loadedState.nodes.filter((node) => node.type !== 'task');
+				loadedState.nodes = loadedState.nodes.filter(
+					(node) => node.type !== 'task' && node.type !== 'taskimport'
+				);
 				break;
 			case 2:
 				break;
