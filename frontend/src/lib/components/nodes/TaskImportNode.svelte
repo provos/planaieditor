@@ -18,18 +18,16 @@
 	}
 </script>
 
+<!-- svelte-ignore a11y_click_events_have_key_events -->
 <div
-	class="taskimport-node flex h-full flex-col overflow-auto rounded-md border border-gray-300 bg-white shadow-md"
+	class="taskimport-node flex h-full cursor-pointer flex-col overflow-auto rounded-md border border-gray-300 bg-white shadow-md"
+	onclick={handleNodeClick}
+	role="button"
+	tabindex="0"
 >
 	<div class="flex-none border-b bg-purple-100 p-1">
 		<HeaderIcon workerType={'taskimport'} />
-		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<div
-			class="w-full cursor-pointer rounded px-1 py-0.5 text-center text-xs font-medium hover:bg-purple-50"
-			onclick={handleNodeClick}
-			role="button"
-			tabindex="0"
-		>
+		<div class="w-full rounded px-1 py-0.5 text-center text-xs font-medium hover:bg-purple-50">
 			Task Imports
 		</div>
 	</div>
