@@ -3,17 +3,23 @@
 	import Spinner from 'phosphor-svelte/lib/Spinner';
 	import DownloadSimple from 'phosphor-svelte/lib/DownloadSimple';
 	import MagicWand from 'phosphor-svelte/lib/MagicWand';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { selectedInterpreterPath } from '$lib/stores/pythonInterpreterStore.svelte'; // Import the store
-	import { getTaskImportByName, updateTaskImport } from '$lib/stores/taskImportStore.svelte';
+	import {
+		taskImports as taskImportsStore,
+		updateTaskImport
+	} from '$lib/stores/taskImportStore.svelte';
 	import type { TaskImport as TaskImportType } from '$lib/stores/taskImportStore.svelte';
 	import TaskConfig from './TaskConfig.svelte';
+	import { arraysEqual } from '$lib/utils/utils';
 
 	let { id } = $props<{
 		id: string;
 	}>();
 
-	const taskImport: TaskImportType | undefined = $derived(getTaskImportByName(id));
+	const taskImport: TaskImportType | undefined = $derived(
+		taskImportsStore.find((t) => t.id === id)
+	);
 
 	// Internal state
 	let internalModulePath = $derived(taskImport?.modulePath);
@@ -44,14 +50,21 @@
 					availableClasses: result.classes,
 					modulePath: internalModulePath
 				};
-				updateTaskImport(updatedTaskImport);
+				if (
+					!arraysEqual(result.classes || [], taskImport?.availableClasses || []) ||
+					internalModulePath != taskImport?.modulePath
+				) {
+					updateTaskImport(updatedTaskImport);
+				}
 			} else {
 				error = result.error || `HTTP error ${response.status}`;
 				const updatedTaskImport: TaskImportType = {
 					...taskImport,
 					availableClasses: []
 				};
-				updateTaskImport(updatedTaskImport);
+				if (taskImport?.availableClasses) {
+					updateTaskImport(updatedTaskImport);
+				}
 			}
 		} catch (err: any) {
 			error = err.message || 'Failed to fetch task classes.';
@@ -61,9 +74,7 @@
 	}
 
 	async function fetchTaskFields(className: string) {
-		if (!taskImport) return;
-		console.log('[fetchTaskFields] Started for class:', className);
-		if (!className) return;
+		if (!taskImport || !className || !taskImport.modulePath) return;
 		loading = true;
 		error = null; // Assign null instead of undefined
 		console.log(`Fetching fields for class: ${className} in module ${taskImport.modulePath}...`);
@@ -82,8 +93,10 @@
 					...taskImport,
 					fields: result.fields
 				};
-				updateTaskImport(updatedTaskImport);
-				console.log('[fetchTaskFields] Success, updating fields.');
+				if (!arraysEqual(result.fields || [], taskImport?.fields || [])) {
+					updateTaskImport(updatedTaskImport);
+					console.log('[fetchTaskFields] Success, updating fields.');
+				}
 			} else {
 				console.error(
 					'[fetchTaskFields] API Error or non-success:',
@@ -94,7 +107,9 @@
 					...taskImport,
 					fields: []
 				};
-				updateTaskImport(updatedTaskImport);
+				if (taskImport?.fields) {
+					updateTaskImport(updatedTaskImport);
+				}
 			}
 		} catch (err: any) {
 			console.error('[fetchTaskFields] Catch block error:', err);
@@ -105,8 +120,6 @@
 			loading = false;
 		}
 	}
-
-	let isEdgeConnected = $state(false);
 
 	// Fetch fields when component mounts AND interpreter is selected AND class is selected
 	onMount(() => {
@@ -119,31 +132,35 @@
 	$effect(() => {
 		if (!taskImport) return;
 		if (taskImport.className !== localSelectedClassName) {
-			const updatedTaskImport: TaskImportType = {
-				...taskImport,
-				className: localSelectedClassName || ''
-			};
-			updateTaskImport(updatedTaskImport);
-			hasFetchedFields = false; // Reset fetch status when class changes
+			untrack(() => {
+				const updatedTaskImport: TaskImportType = {
+					...taskImport,
+					className: localSelectedClassName || ''
+				};
+				updateTaskImport(updatedTaskImport);
+				hasFetchedFields = false; // Reset fetch status when class changes
 
-			// Fetch fields based on the current local state IF interpreter is selected
-			if (localSelectedClassName && selectedInterpreterPath.value && !hasFetchedFields) {
-				console.log('[Effect 2] Calling fetchTaskFields with:', localSelectedClassName);
-				fetchTaskFields(localSelectedClassName);
-			}
+				// Fetch fields based on the current local state IF interpreter is selected
+				if (localSelectedClassName && selectedInterpreterPath.value && !hasFetchedFields) {
+					console.log('[Effect 2] Calling fetchTaskFields with:', localSelectedClassName);
+					fetchTaskFields(localSelectedClassName);
+				}
+			});
 		}
 	});
 
 	// Trigger fetch when interpreter becomes available AND class is already selected
 	$effect(() => {
 		const currentPath = selectedInterpreterPath.value;
-		if (currentPath && localSelectedClassName && !hasFetchedFields) {
-			console.log(
-				'[Effect 3] Interpreter selected, calling fetchTaskFields with:',
-				localSelectedClassName
-			);
-			fetchTaskFields(localSelectedClassName);
-		}
+		untrack(() => {
+			if (currentPath && localSelectedClassName && !hasFetchedFields) {
+				console.log(
+					'[Effect 3] Interpreter selected, calling fetchTaskFields with:',
+					localSelectedClassName
+				);
+				fetchTaskFields(localSelectedClassName);
+			}
+		});
 	});
 </script>
 
@@ -191,10 +208,6 @@
 					onchange={(e) => {
 						const target = e.currentTarget as HTMLSelectElement;
 						localSelectedClassName = target.value ? target.value : undefined;
-						console.log(
-							'[Select onchange] Updated localSelectedClassName:',
-							localSelectedClassName
-						);
 					}}
 					class="text-2xs w-full rounded border border-gray-200 px-1.5 py-1"
 					disabled={loading || !selectedInterpreterPath.value || taskImport?.isImplicit}

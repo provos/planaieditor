@@ -34,7 +34,10 @@ export function removeTask(task: Task) {
 }
 
 export function updateTask(task: Task) {
-	tasks[tasks.indexOf(task)] = task;
+	const index = tasks.findIndex((t) => t.id === task.id);
+	if (index !== -1) {
+		tasks[index] = task;
+	}
 }
 
 export function getTaskByName(name: string): Task | undefined {

@@ -20,7 +20,10 @@ export function removeTaskImport(task: TaskImport) {
 }
 
 export function updateTaskImport(task: TaskImport) {
-	taskImports[taskImports.indexOf(task)] = task;
+	const index = taskImports.findIndex((t) => t.id === task.id);
+	if (index !== -1) {
+		taskImports[index] = task;
+	}
 }
 
 export function getTaskImportByName(name: string): TaskImport | undefined {

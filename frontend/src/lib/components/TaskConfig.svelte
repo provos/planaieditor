@@ -7,6 +7,7 @@
 		type Task,
 		type Field
 	} from '$lib/stores/taskStore.svelte';
+	import { taskImports as taskImportsStore } from '$lib/stores/taskImportStore.svelte';
 	import Plus from 'phosphor-svelte/lib/Plus';
 	import Trash from 'phosphor-svelte/lib/Trash';
 	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
@@ -27,7 +28,9 @@
 		children?: Snippet;
 	}>();
 
-	const task: Task | undefined = $derived(tasksStore.find((t) => t.id === id));
+	const task: Task | undefined = $derived(
+		tasksStore.find((t) => t.id === id) || taskImportsStore.find((t) => t.id === id)
+	);
 
 	// State variables
 	let editingClassName = $state(false);

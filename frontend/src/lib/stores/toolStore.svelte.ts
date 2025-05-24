@@ -19,7 +19,10 @@ export function removeTool(tool: Tool) {
 }
 
 export function updateTool(tool: Tool) {
-	tools[tools.indexOf(tool)] = tool;
+	const index = tools.findIndex((t) => t.id === tool.id);
+	if (index !== -1) {
+		tools[index] = tool;
+	}
 }
 
 export function getToolByName(name: string): Tool | undefined {

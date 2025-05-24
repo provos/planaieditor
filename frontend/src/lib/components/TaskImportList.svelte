@@ -11,11 +11,11 @@
 	import { taskClassNamesStore } from '$lib/stores/classNameStore.svelte';
 
 	function createNewTaskImport() {
-		const baseName = 'TaskImport';
-		const taskName = generateUniqueName(baseName, taskClassNamesStore);
 		const newTask: TaskImport = {
 			id: `taskimport-${Date.now()}`,
-			className: taskName,
+			className: '',
+			modulePath: '',
+			availableClasses: [],
 			fields: []
 		};
 		addTaskImport(newTask);
