@@ -12,7 +12,7 @@
 
 	function createNewTaskImport() {
 		const newTask: TaskImport = {
-			id: `taskimport-${Date.now()}`,
+			id: `taskimport-${crypto.randomUUID()}`,
 			type: 'taskimport',
 			className: '',
 			modulePath: '',

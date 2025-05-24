@@ -14,7 +14,7 @@
 		const baseName = 'new_tool';
 		const toolName = generateUniqueName(baseName, toolNamesStore);
 		const newTool: Tool = {
-			id: `tool-${Date.now()}`,
+			id: `tool-${crypto.randomUUID()}`,
 			name: toolName,
 			description: 'Enter tool description',
 			code: `def new_tool_function():\n    pass`

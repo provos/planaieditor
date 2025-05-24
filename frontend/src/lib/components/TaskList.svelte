@@ -14,7 +14,7 @@
 		const baseName = 'Task';
 		const taskName = generateUniqueName(baseName, taskClassNamesStore);
 		const newTask: Task = {
-			id: `task-${Date.now()}`,
+			id: `task-${crypto.randomUUID()}`,
 			className: taskName,
 			type: 'task',
 			fields: []
