@@ -16,7 +16,7 @@
 	import type { Snippet } from 'svelte';
 	import { tick, untrack } from 'svelte';
 	import { formatErrorMessage } from '$lib/utils/utils';
-	import { persistNodeDataDebounced } from '$lib/utils/nodeUtils';
+	import { isClassNameAvailable, persistNodeDataDebounced } from '$lib/utils/nodeUtils';
 	import { onMount } from 'svelte';
 	import { openFullScreenEditor } from '$lib/stores/fullScreenEditorStore.svelte';
 	import { getTaskByName } from '$lib/stores/taskStore.svelte';
@@ -197,6 +197,10 @@
 	function validateWorkerName(name: string): boolean {
 		if (!isValidPythonClassName(name)) {
 			nameError = 'Invalid Python class name';
+			return false;
+		}
+		if (!isClassNameAvailable(name)) {
+			nameError = 'Class name already exists';
 			return false;
 		}
 		nameError = '';
@@ -528,8 +532,8 @@
 						<div class="mt-0.5 ml-2 border-l-2 border-gray-200 pl-2">
 							<TaskConfig
 								id={taskItem.id}
-								showAsNode={false}
 								allowEditing={false}
+								embedded={true}
 								styleClasses="p-0"
 							/>
 						</div>
@@ -562,9 +566,7 @@
 			<div class="mt-1 space-y-1">
 				{#each currentOutputTypes as type, index (type)}
 					{@const color = getColorForType(type)}
-					{@const node = outputTypeNodes.find(
-						(n) => (n.data as unknown as NodeData).className === type
-					)}
+					{@const entry = getTaskByName(type) || getTaskImportByName(type)}
 					{#if editingOutputType === index}
 						<!-- Output Type Edit Form -->
 						<div class="rounded border border-blue-200 bg-blue-50 p-1">
@@ -576,7 +578,6 @@
 									class="text-2xs w-full rounded border border-gray-200 px-1 py-0.5 {typeError
 										? 'border-red-500'
 										: ''}"
-									autofocus
 								/>
 								{#if typeError}<div class="text-2xs mt-0.5 text-red-500">{typeError}</div>{/if}
 							</div>
@@ -599,20 +600,20 @@
 						>
 							<div
 								class="flex flex-grow cursor-pointer items-center"
-								onclick={() => node && toggleTaskNodeVisibility(type)}
+								onclick={() => entry && toggleTaskNodeVisibility(type)}
 								role="button"
-								tabindex={node ? 0 : -1}
+								tabindex={entry ? 0 : -1}
 								onkeypress={(e) => {
-									if (node && (e.key === 'Enter' || e.key === ' ')) toggleTaskNodeVisibility(type);
+									if (entry && (e.key === 'Enter' || e.key === ' ')) toggleTaskNodeVisibility(type);
 								}}
-								title={node
+								title={entry
 									? taskNodeVisibility[type]
 										? `Collapse details for ${type}`
 										: `Expand details for ${type}`
 									: type}
 							>
 								<span class="font-mono">{type}</span>
-								{#if node}
+								{#if entry}
 									{#if taskNodeVisibility[type]}
 										<CaretUp size={10} class="ml-1 text-gray-500 group-hover:text-gray-700" />
 									{:else}
@@ -641,15 +642,9 @@
 								</div>
 							{/if}
 						</div>
-						{#if node && taskNodeVisibility[type]}
+						{#if entry && taskNodeVisibility[type]}
 							<div class="mt-0.5 ml-2 border-l-2 border-gray-200 pl-2">
-								<TaskNode
-									id={node.id}
-									data={node.data as unknown as NodeData}
-									showAsNode={false}
-									allowEditing={false}
-									styleClasses="p-0"
-								/>
+								<TaskConfig id={entry.id} allowEditing={false} embedded={true} styleClasses="p-0" />
 							</div>
 						{/if}
 					{/if}

@@ -21,11 +21,15 @@
 	let {
 		id,
 		allowEditing = true,
-		children
+		embedded = false,
+		children,
+		styleClasses
 	} = $props<{
 		id: string;
 		allowEditing?: boolean;
+		embedded?: boolean;
 		children?: Snippet;
+		styleClasses?: string;
 	}>();
 
 	const task: Task | undefined = $derived(
@@ -311,44 +315,45 @@
 </script>
 
 {#if task}
-	<div class="flex h-full flex-col bg-white">
-		<!-- Header with editable class name -->
-		<div class="flex-none border-b border-gray-200 bg-gray-50 p-1.5">
-			{#if editingClassName}
-				<div class="flex flex-col">
-					<input
-						type="text"
-						bind:value={tempClassName}
-						onblur={updateClassName}
-						onkeydown={handleClassNameKeydown}
-						class="w-full rounded border border-gray-200 bg-white px-1.5 py-1 text-sm font-medium {classNameError
-							? 'border-red-500'
-							: ''}"
-					/>
-					{#if classNameError}
-						<div class="mt-0.5 text-xs text-red-500">{classNameError}</div>
-					{/if}
-				</div>
-			{:else if allowEditing}
-				<!-- svelte-ignore a11y_click_events_have_key_events -->
-				<div
-					class="w-full cursor-pointer rounded px-1.5 py-1 text-center text-sm font-medium hover:bg-gray-100"
-					onclick={startEditingClassName}
-					role="button"
-					tabindex={0}
-				>
-					{task.className || 'Unnamed Task'}
-				</div>
-			{:else}
-				<!-- Read-only class name when editing is disabled -->
-				<div class="w-full rounded px-1.5 py-1 text-center text-sm font-medium text-gray-700">
-					{task.className || 'Unnamed Task'}
-				</div>
-				{#if children}
-					{@render children()}
+	<div class="flex h-full flex-col bg-white {styleClasses}">
+		{#if !embedded}
+			<!-- Header with editable class name -->
+			<div class="flex-none border-b border-gray-200 bg-gray-50 p-1.5">
+				{#if editingClassName}
+					<div class="flex flex-col">
+						<input
+							type="text"
+							bind:value={tempClassName}
+							onblur={updateClassName}
+							onkeydown={handleClassNameKeydown}
+							class="w-full rounded border border-gray-200 bg-white px-1.5 py-1 text-sm font-medium {classNameError
+								? 'border-red-500'
+								: ''}"
+						/>
+						{#if classNameError}
+							<div class="mt-0.5 text-xs text-red-500">{classNameError}</div>
+						{/if}
+					</div>
+				{:else if allowEditing}
+					<!-- svelte-ignore a11y_click_events_have_key_events -->
+					<div
+						class="w-full cursor-pointer rounded px-1.5 py-1 text-center text-sm font-medium hover:bg-gray-100"
+						onclick={startEditingClassName}
+						role="button"
+						tabindex={0}
+					>
+						{task.className || 'Unnamed Task'}
+					</div>
+				{:else}
+					<!-- Read-only class name when editing is disabled -->
+					<div class="w-full rounded px-1.5 py-1 text-center text-sm font-medium text-gray-700">
+						{task.className || 'Unnamed Task'}
+					</div>
 				{/if}
-			{/if}
-		</div>
+			</div>
+		{:else if children}
+			{@render children()}
+		{/if}
 
 		<!-- Fields list -->
 		<div class="relative h-full min-h-0 flex-grow overflow-y-auto p-1.5">

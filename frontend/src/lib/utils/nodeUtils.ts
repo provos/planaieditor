@@ -4,10 +4,9 @@ import { getDefaultMethodBody } from './defaults';
 import { debounce } from './utils';
 import type { DataInputNodeData } from '$lib/components/nodes/DataInputNode.svelte';
 import { generateUniqueName } from '$lib/utils/utils';
-import { allWorkerClassNames, toolNamesStore } from '$lib/stores/classNameStore.svelte';
+import { allWorkerClassNames } from '$lib/stores/classNameStore.svelte';
 import { nodes } from '$lib/stores/graphStore';
 import type { ModuleLevelImportData } from '$lib/components/nodes/ModuleLevelImport.svelte';
-import type { TaskImportNodeData } from '$lib/components/nodes/TaskImportNode.svelte';
 import type { BaseWorkerData } from '$lib/components/nodes/BaseWorkerNode.svelte';
 import type { LLMWorkerData as LLMTaskWorkerData } from '$lib/components/nodes/LLMTaskWorkerNode.svelte';
 import type { JoinedWorkerData } from '$lib/components/nodes/JoinedTaskWorkerNode.svelte';
@@ -78,6 +77,14 @@ export function isWorkerTypeNode(node: Node): boolean {
 		node.type === 'joinedtaskworker' ||
 		node.type === 'subgraphworker' ||
 		node.type === 'chattaskworker'
+	);
+}
+
+export function isClassNameAvailable(className: string): boolean {
+	return (
+		!allWorkerClassNames.has(className) &&
+		!taskStore.find((task) => task.className === className) &&
+		!taskImportStore.find((taskImport) => taskImport.className === className)
 	);
 }
 
