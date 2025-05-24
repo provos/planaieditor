@@ -425,7 +425,7 @@
 			);
 			if (!taskImportNode) {
 				// We have a taskimport node, so we can add the assistantinput node
-				const id = `taskimport-${Date.now()}`;
+				const id = `taskimport-${crypto.randomUUID()}`;
 				const nodeData: TaskImportType = {
 					id: id,
 					type: 'taskimport',
@@ -438,13 +438,13 @@
 				addTaskImport(nodeData);
 			}
 
-			const id = `datainput-${Date.now()}`;
+			const id = `datainput-${crypto.randomUUID()}`;
 			const nodeData: DataInputNodeData = nodeDataFromType(id, 'datainput') as DataInputNodeData;
 			nodeData.className = 'ChatTask';
 			addNewNode(nodes, id, 'datainput', position, nodeData);
 		} else {
 			// Create a unique ID for the new node
-			const id = `${nodeType}-${Date.now()}`;
+			const id = `${nodeType}-${crypto.randomUUID()}`;
 
 			// Configure node data based on node type
 			let nodeData: any = nodeDataFromType(id, nodeType);
