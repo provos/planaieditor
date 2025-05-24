@@ -61,6 +61,12 @@
 	let unconnectedWorkersTooltip = $state<string | null>(null);
 	let moduleLevelImportTooltip = $state<string | null>(null);
 	let canAddModuleLevelImport = $state(true);
+	let canAddTask = $state(true);
+	let canAddTaskImport = $state(true);
+	let canAddTool = $state(true);
+	let taskTooltip = $state<string | null>(null);
+	let taskImportTooltip = $state<string | null>(null);
+	let toolTooltip = $state<string | null>(null);
 	// Define the types of nodes that are expected to have an output connection
 	const workerNodeTypes = new Set([
 		'datainput',
@@ -96,6 +102,55 @@
 		} else {
 			canAddModuleLevelImport = true;
 			moduleLevelImportTooltip = null;
+		}
+	});
+
+	$effect(() => {
+		const currentNodes = $nodes;
+		const hasTask = currentNodes.filter((node) => node.type === 'task').length > 0;
+		// Be careful with triggering reactivity here in regards to the canAddTask state
+		if (!hasTask == $state.snapshot(canAddTask)) {
+			return;
+		}
+		if (hasTask) {
+			canAddTask = false;
+			taskTooltip = 'A Task node already exists. You can only have one Task node.';
+		} else {
+			canAddTask = true;
+			taskTooltip = null;
+		}
+	});
+
+	$effect(() => {
+		const currentNodes = $nodes;
+		const hasTaskImport = currentNodes.filter((node) => node.type === 'taskimport').length > 0;
+		// Be careful with triggering reactivity here in regards to the canAddTaskImport state
+		if (!hasTaskImport == $state.snapshot(canAddTaskImport)) {
+			return;
+		}
+		if (hasTaskImport) {
+			canAddTaskImport = false;
+			taskImportTooltip =
+				'A Task Import node already exists. You can only have one Task Import node.';
+		} else {
+			canAddTaskImport = true;
+			taskImportTooltip = null;
+		}
+	});
+
+	$effect(() => {
+		const currentNodes = $nodes;
+		const hasTool = currentNodes.filter((node) => node.type === 'tool').length > 0;
+		// Be careful with triggering reactivity here in regards to the canAddTool state
+		if (!hasTool == $state.snapshot(canAddTool)) {
+			return;
+		}
+		if (hasTool) {
+			canAddTool = false;
+			toolTooltip = 'A Tool node already exists. You can only have one Tool node.';
+		} else {
+			canAddTool = true;
+			toolTooltip = null;
 		}
 	});
 
@@ -251,15 +306,17 @@
 								<Tooltip.Root delayDuration={400}>
 									<Tooltip.Trigger>
 										<div
-											class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-white p-1.5 shadow-sm transition-shadow hover:shadow-md xl:p-2"
+											class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 p-1.5 shadow-sm transition-shadow hover:shadow-md xl:p-2 {canAddTask
+												? 'cursor-grab bg-white'
+												: 'cursor-not-allowed opacity-50'}"
 											role="button"
 											tabindex="0"
-											draggable="true"
+											draggable={canAddTask}
 											ondragstart={(e) => onDragStart(e, 'task')}
 										>
 											<div class="flex items-center gap-1 xl:gap-1.5">
 												<taskStyle.icon size={14} weight="fill" class={taskStyle.color} />
-												<div class="text-xs font-semibold xl:text-sm">Task</div>
+												<div class="text-xs font-semibold xl:text-sm">Tasks</div>
 											</div>
 										</div>
 									</Tooltip.Trigger>
@@ -269,6 +326,9 @@
 									>
 										Define a PlanAI Task class that represents a specific data structure. Tasks are
 										Pydantic models that flow through the graph as inputs and outputs.
+										{#if taskTooltip}
+											<span class="text-red-700">{taskTooltip}</span>
+										{/if}
 									</Tooltip.Content>
 								</Tooltip.Root>
 
@@ -277,10 +337,12 @@
 								<Tooltip.Root delayDuration={400}>
 									<Tooltip.Trigger>
 										<div
-											class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-white p-1.5 shadow-sm transition-shadow hover:shadow-md xl:p-2"
+											class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 p-1.5 shadow-sm transition-shadow hover:shadow-md xl:p-2 {canAddTaskImport
+												? 'cursor-grab bg-white'
+												: 'cursor-not-allowed opacity-50'}"
 											role="button"
 											tabindex="0"
-											draggable="true"
+											draggable={canAddTaskImport}
 											ondragstart={(e) => onDragStart(e, 'taskimport')}
 										>
 											<div class="flex items-center gap-1 xl:gap-1.5">
@@ -289,7 +351,7 @@
 													weight="fill"
 													class={taskImportStyle.color}
 												/>
-												<div class="text-xs font-semibold xl:text-sm">Task Import</div>
+												<div class="text-xs font-semibold xl:text-sm">Task Imports</div>
 											</div>
 										</div>
 									</Tooltip.Trigger>
@@ -298,6 +360,9 @@
 										side="bottom"
 									>
 										Import existing Task classes from Python modules to use in your workflow.
+										{#if taskImportTooltip}
+											<span class="text-red-700">{taskImportTooltip}</span>
+										{/if}
 									</Tooltip.Content>
 								</Tooltip.Root>
 
@@ -340,10 +405,12 @@
 								<Tooltip.Root delayDuration={400}>
 									<Tooltip.Trigger>
 										<div
-											class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 bg-white p-1.5 shadow-sm transition-shadow hover:shadow-md xl:p-2"
+											class="flex-shrink-0 cursor-grab rounded-md border border-gray-300 p-1.5 shadow-sm transition-shadow hover:shadow-md xl:p-2 {canAddTool
+												? 'cursor-grab bg-white'
+												: 'cursor-not-allowed opacity-50'}"
 											role="button"
 											tabindex="0"
-											draggable="true"
+											draggable={canAddTool}
 											ondragstart={(e) => onDragStart(e, 'tool')}
 										>
 											<div class="flex items-center gap-1 xl:gap-1.5">
@@ -358,6 +425,9 @@
 									>
 										A library node that provides a collection of tools that can be used for function
 										calling by LLMs.
+										{#if toolTooltip}
+											<span class="text-red-700">{toolTooltip}</span>
+										{/if}
 									</Tooltip.Content>
 								</Tooltip.Root>
 							</Tabs.Content>
