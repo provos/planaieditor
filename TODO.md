@@ -9,5 +9,4 @@
 - task worker invocations supported in patch.py
 - real sub-graph support. designated subgraph entry and exit. needs support in planai
 - market place for workflows - publish json/consume json - perhaps even with requirements.txt and kernel provisoning
-- tool support in the editor
 - migrate to svelteflow 1.0 which no longer uses stores for nodes and edges
