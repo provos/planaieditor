@@ -631,11 +631,20 @@ class PlanFinalizer(TaskWorker):
     print(f"Extracted Imported Tasks: {imported_tasks}")
 
     expected_imported = [
-        {"modulePath": "planai.patterns", "className": "SearchQuery"},
-        {"modulePath": "planai.patterns", "className": "SearchResult"},
+        {
+            "modulePath": "planai.patterns",
+            "className": "SearchQuery",
+            "type": "taskimport",
+        },
+        {
+            "modulePath": "planai.patterns",
+            "className": "SearchResult",
+            "type": "taskimport",
+        },
         {
             "modulePath": "planai.patterns.planner",
             "className": "FP",
+            "type": "taskimport",
         },  # Check aliased name
     ]
 
@@ -1071,8 +1080,18 @@ def build_chat_graph():
     print(f"Imported Tasks (Implicit Test): {imported_tasks}")
 
     expected_imports = [
-        {"modulePath": "planai", "className": "ChatTask", "isImplicit": True},
-        {"modulePath": "planai", "className": "ChatMessage", "isImplicit": True},
+        {
+            "modulePath": "planai",
+            "className": "ChatTask",
+            "isImplicit": True,
+            "type": "taskimport",
+        },
+        {
+            "modulePath": "planai",
+            "className": "ChatMessage",
+            "isImplicit": True,
+            "type": "taskimport",
+        },
     ]
 
     # Convert to sets of tuples for comparison
@@ -1121,8 +1140,8 @@ def build_chat_graph():
 
     # Expected imports WITHOUT the isImplicit flag
     expected_imports = [
-        {"modulePath": "planai", "className": "ChatTask"},
-        {"modulePath": "planai", "className": "ChatMessage"},
+        {"modulePath": "planai", "className": "ChatTask", "type": "taskimport"},
+        {"modulePath": "planai", "className": "ChatMessage", "type": "taskimport"},
     ]
 
     # Convert to sets of tuples for comparison

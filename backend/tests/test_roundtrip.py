@@ -52,37 +52,18 @@ def create_graph_data(
     """Create a graph data structure for code generation."""
     nodes = []
 
-    # Add task nodes
-    for i, task_def in enumerate(task_defs):
-        nodes.append({"id": f"task_{i}", "type": "task", "data": task_def})
-
-    # Add imported task nodes
-    for i, imp_task in enumerate(imported_tasks):
-        nodes.append(
-            {
-                "id": f"imported_task_{i}",
-                "type": "taskimport",
-                "data": {
-                    "className": imp_task["className"],
-                    "modulePath": imp_task["modulePath"],
-                    "nodeId": f"imported_task_{i}",
-                    # If isImplicit exists in the original, preserve it
-                    **(
-                        {"isImplicit": imp_task["isImplicit"]}
-                        if "isImplicit" in imp_task
-                        else {}
-                    ),
-                },
-            }
-        )
-
     # Add worker nodes
     for i, worker_def in enumerate(worker_defs):
         nodes.append(
             {"id": f"worker_{i}", "type": worker_def["workerType"], "data": worker_def}
         )
 
-    return {"nodes": nodes, "edges": edges}
+    return {
+        "nodes": nodes,
+        "edges": edges,
+        "tasks": task_defs,
+        "taskimports": imported_tasks,
+    }
 
 
 def generate_and_parse(
@@ -251,14 +232,10 @@ def test_task_roundtrip(sample_planai_module, temp_file):
 
     # Step 3: Prepare the graph data structure expected by python.py
     # Create nodes for each Task
-    nodes = []
-    for i, task_def in enumerate(task_definitions):
-        nodes.append({"id": f"task_{i}", "type": "task", "data": task_def})
-
-    graph_data = {"nodes": nodes, "edges": []}
+    graph_data = {"tasks": task_definitions, "edges": []}
 
     # Step 4: Use python.py to regenerate Python code from the JSON
-    python_code, module_name, error = generate_python_module(graph_data)
+    python_code, _, error = generate_python_module(graph_data)
 
     # Check for errors
     assert error is None, f"Error generating Python code: {error}"
@@ -620,27 +597,6 @@ def setup_graph():
     assert any(t["className"] == "SearchResult" for t in orig_imported_tasks)
     assert any(t["modulePath"] == "planai.patterns" for t in orig_imported_tasks)
 
-    # Step 2: Create graph data for regeneration
-    task_nodes = []
-    for i, task_def in enumerate(orig_task_defs):
-        task_nodes.append({"id": f"task_{i}", "type": "task", "data": task_def})
-
-    # Create taskimport nodes for the *parsed* imported tasks
-    imported_task_nodes = []
-    for i, imp_task_ref in enumerate(orig_imported_tasks):
-        imported_task_nodes.append(
-            {
-                "id": f"imp_task_{i}",
-                "type": "taskimport",  # Crucial: use taskimport type
-                "data": {
-                    "modulePath": imp_task_ref["modulePath"],
-                    "className": imp_task_ref["className"],
-                    "nodeId": f"imp_task_{i}",  # Match node ID
-                    "fields": [],  # Fields are fetched by frontend, not stored here
-                },
-            }
-        )
-
     worker_nodes = []
     for i, worker_def in enumerate(orig_worker_defs):
         worker_nodes.append(
@@ -652,8 +608,12 @@ def setup_graph():
         )
 
     # Combine nodes and include original edges
-    all_nodes = task_nodes + imported_task_nodes + worker_nodes
-    graph_data = {"nodes": all_nodes, "edges": orig_edges}
+    graph_data = {
+        "nodes": worker_nodes,
+        "edges": orig_edges,
+        "tasks": orig_task_defs,
+        "taskimports": orig_imported_tasks,
+    }
 
     # Step 3: Regenerate Python code
     print("\nRegenerating Python code with imported tasks...")
@@ -896,30 +856,17 @@ def get_llm():
     # Step 2: Create graph data for code generation
     nodes = []
 
-    # Add task nodes for local tasks
-    for i, task_def in enumerate(task_defs):
-        nodes.append({"id": f"task_{i}", "type": "task", "data": task_def})
-
-    # Add nodes for imported tasks
-    for i, imp_task in enumerate(imported_tasks):
-        nodes.append(
-            {
-                "id": f"imported_task_{i}",
-                "type": "taskimport",
-                "data": {
-                    "className": imp_task["className"],
-                    "modulePath": imp_task["modulePath"],
-                    "nodeId": f"imported_task_{i}",
-                },
-            }
-        )
-
     # Add worker nodes (both regular and factory-created)
     for i, worker_def in enumerate(worker_defs):
         worker_type = worker_def["workerType"]
         nodes.append({"id": f"worker_{i}", "type": worker_type, "data": worker_def})
 
-    graph_data = {"nodes": nodes, "edges": edges}
+    graph_data = {
+        "nodes": nodes,
+        "edges": edges,
+        "tasks": task_defs,
+        "taskimports": imported_tasks,
+    }
 
     # Step 3: Generate Python code
     python_code, _, error = generate_python_module(graph_data)

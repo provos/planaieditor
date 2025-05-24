@@ -4,6 +4,8 @@ import type { BackendError } from './pythonImport';
 import { get } from 'svelte/store';
 import { llmConfigs, type LLMConfig } from '$lib/stores/llmConfigsStore';
 import { tools as toolStore, type Tool } from '$lib/stores/toolStore.svelte';
+import { tasks as taskStore } from '$lib/stores/taskStore.svelte';
+import { taskImports as taskImportStore } from '$lib/stores/taskImportStore.svelte';
 
 // Type for export status updates
 export interface ExportStatus {
@@ -102,7 +104,14 @@ export function convertGraphtoJSON(
 		.filter((edge): edge is { source: string; target: string } => edge !== null); // Type guard to filter out nulls and satisfy TypeScript
 
 	// Send transformed data
-	const graphData = { nodes: exportedNodes, edges: exportedEdges, tools: toolStore, mode: mode }; // Use transformed nodes and edges
+	const graphData = {
+		nodes: exportedNodes,
+		edges: exportedEdges,
+		tools: toolStore,
+		tasks: taskStore,
+		taskimports: taskImportStore,
+		mode: mode
+	}; // Use transformed nodes and edges
 	return graphData;
 }
 

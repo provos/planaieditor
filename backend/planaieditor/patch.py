@@ -1376,7 +1376,9 @@ def get_definitions_from_python(
     for class_def in task_class_definitions:
         # Pass the set of known task names to the field extractor
         fields = extract_task_fields(class_def, source_code, known_task_names)
-        task_results.append({"className": class_def.name, "fields": fields})
+        task_results.append(
+            {"className": class_def.name, "fields": fields, "type": "task"}
+        )
 
     # --- Extract Workers ---
     worker_definitions_with_type = get_worker_definitions(class_definitions)
@@ -1547,6 +1549,10 @@ def get_definitions_from_python(
     imported_tasks = add_implicit_imports(
         imported_tasks, {w["workerType"] for w in all_worker_defs}
     )
+
+    # Match the format from the output of the frontend
+    for imported_task in imported_tasks:
+        imported_task["type"] = "taskimport"
 
     # create the custom modulelevelimport data structure
     # clean up the imports with black

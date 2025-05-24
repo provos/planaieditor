@@ -208,7 +208,9 @@ def create_all_graph_dependencies(
     return "\n".join(code)
 
 
-def add_to_task_import_state(node: Dict[str, Any], imported_tasks: Dict[str, Set[str]]):
+def add_to_task_import_state(
+    entry: Dict[str, Any], imported_tasks: Dict[str, Set[str]]
+):
     """
     Creates a task import state from a node.
 
@@ -216,16 +218,15 @@ def add_to_task_import_state(node: Dict[str, Any], imported_tasks: Dict[str, Set
         node: The node to create the task import state from.
         imported_tasks: A dictionary of unique imported tasks.
     """
-    assert node.get("type") == "taskimport"
-    data = node.get("data", {})
+    assert entry.get("type") == "taskimport"
 
     # Skip implicit imports
-    if data.get("isImplicit"):
+    if entry.get("isImplicit"):
         return None
 
     # Read modulePath and className directly from data for taskimport nodes
-    module_path = data.get("modulePath")
-    class_name = data.get("className")
+    module_path = entry.get("modulePath")
+    class_name = entry.get("className")
 
     if module_path and class_name and is_valid_python_class_name(class_name):
         # Group imports by module path
@@ -239,23 +240,22 @@ def add_to_task_import_state(node: Dict[str, Any], imported_tasks: Dict[str, Set
             )
     else:
         print(
-            f"Warning: Invalid or missing import details for node {node['id']}. Module: '{module_path}', Class: '{class_name}'"
+            f"Warning: Invalid or missing import details for node {entry['id']}. Module: '{module_path}', Class: '{class_name}'"
         )
 
 
-def create_task_class(node: Dict[str, Any]) -> Optional[str]:
+def create_task_class(entry: Dict[str, Any]) -> Optional[str]:
     """
     Creates a Pydantic Task class from a node.
     """
-    assert node.get("type") == "task"
-    data = node.get("data", {})
-    class_name = data.get("className")
+    assert entry.get("type") == "task"
+    class_name = entry.get("className")
     if not is_valid_python_class_name(class_name):
         raise ValueError(f"Invalid class name: {class_name}")
 
     code = []
     code.append(f"\nclass {class_name}(Task):")
-    fields = data.get("fields", [])
+    fields = entry.get("fields", [])
     if not fields:
         code.append("    pass # No fields defined")
         return "\n".join(code)
@@ -710,12 +710,12 @@ def generate_python_module(
 
     # 1. Imports
     imported_tasks = {}  # Store details of imported tasks: {className: modulePath}
-    task_import_nodes = [n for n in nodes if n.get("type") == "taskimport"]
+    task_import_nodes = graph_data.get("taskimports", [])
 
     # Add imports for TaskImportNodes first
     import_statements = []
-    for node in task_import_nodes:
-        add_to_task_import_state(node, imported_tasks)
+    for entry in task_import_nodes:
+        add_to_task_import_state(entry, imported_tasks)
 
     # Generate the import statements from the grouped dictionary
     for module_path, class_names in imported_tasks.items():
@@ -728,8 +728,8 @@ def generate_python_module(
     module_level_import_nodes = [
         n for n in nodes if n.get("type") == "modulelevelimport"
     ]
-    for node in module_level_import_nodes:
-        import_statements.append(node.get("data", {}).get("code"))
+    for entry in module_level_import_nodes:
+        import_statements.append(entry.get("data", {}).get("code"))
 
     # Tool Definitions
     tool_definitions = extract_tool_calls(graph_data.get("tools", []))
@@ -739,12 +739,12 @@ def generate_python_module(
 
     # 2. Task Definitions (from 'task' nodes)
     tasks_code = []
-    task_nodes = [n for n in nodes if n.get("type") == "task"]
+    task_entries = graph_data.get("tasks", [])
 
     # Add locally defined Task nodes
-    for node in task_nodes:
-        tasks_code.append(create_task_class(node))
-    if not task_nodes:
+    for entry in task_entries:
+        tasks_code.append(create_task_class(entry))
+    if not task_entries:
         tasks_code.append("# No Task nodes defined in the graph.")
 
     # 3. Worker Definitions (from worker nodes)
@@ -765,8 +765,8 @@ def generate_python_module(
 
     # Instance names will be generated later
     workers = []
-    for node in worker_nodes:
-        code = create_worker_class(node)
+    for entry in worker_nodes:
+        code = create_worker_class(entry)
         if code:
             workers.append(code)
 
@@ -782,9 +782,9 @@ def generate_python_module(
     # Track factory-created workers for special handling and imports
     factories_used = set()  # Track factory function names used
 
-    for node in worker_nodes:
-        node_id = node["id"]
-        data = node.get("data", {})
+    for entry in worker_nodes:
+        node_id = entry["id"]
+        data = entry.get("data", {})
         worker_class_name = data.get("className")
         factory_function = data.get("factoryFunction")
 
@@ -792,7 +792,7 @@ def generate_python_module(
             print(f"Warning: Skipping node {node_id} due to missing className.")
             continue
 
-        instance_name = worker_to_instance_name(node)
+        instance_name = worker_to_instance_name(entry)
         worker_names.append(instance_name)  # Keep track of all instance names
 
         # Check if this is a factory-created worker
@@ -800,7 +800,7 @@ def generate_python_module(
             # Handle factory-created SubGraphWorker
             worker_setup.append(
                 create_factory_worker_instance(
-                    node, factories_used, wrap_in_try_except=mode == "execute"
+                    entry, factories_used, wrap_in_try_except=mode == "execute"
                 )
             )
         else:  # Only process regular workers here
@@ -813,7 +813,7 @@ def generate_python_module(
                 llm_names_used.add(llm_name)
             worker_setup.append(
                 create_worker_instance(
-                    node, llm_name, wrap_in_try_except=mode == "execute"
+                    entry, llm_name, wrap_in_try_except=mode == "execute"
                 )
             )
 
@@ -838,7 +838,7 @@ def generate_python_module(
     dep_code_lines = []
     dep_code_lines.append(
         create_all_graph_dependencies(
-            task_nodes, task_import_nodes, worker_nodes, output_nodes, edges
+            task_entries, task_import_nodes, worker_nodes, output_nodes, edges
         )
     )
     if not dep_code_lines:
@@ -847,8 +847,8 @@ def generate_python_module(
     # 5. Initial Tasks
     datainput_nodes = [n for n in nodes if n.get("type") == "datainput"]
     initial_tasks = []
-    for node in datainput_nodes:
-        inital_task = create_initial_tasks(node, worker_nodes, edges)
+    for entry in datainput_nodes:
+        inital_task = create_initial_tasks(entry, worker_nodes, edges)
         if inital_task:
             initial_tasks.append(inital_task)
 
