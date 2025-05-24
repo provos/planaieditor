@@ -31,6 +31,6 @@ $effect.root(() => {
 	$effect(() => {
 		const toolNames = new Set(tools.map((tool: Tool) => tool.name));
 		toolNamesStore.clear();
-		toolNames.forEach(name => toolNamesStore.add(name));
+		toolNames.forEach((name) => toolNamesStore.add(name));
 	});
 });

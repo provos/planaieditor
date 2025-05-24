@@ -33,7 +33,7 @@
 
 <div class="p-4">
 	{#if items.length === 0}
-		<p class="text-sm italic text-gray-500">
+		<p class="text-sm text-gray-500 italic">
 			{emptyMessage}
 		</p>
 	{:else}

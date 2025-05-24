@@ -481,7 +481,7 @@
 			<div class="mt-1 space-y-1">
 				{#each inferredInputTypes as type (type)}
 					{@const color = getColorForType(type)}
-					{@const taskItem = getTaskByName(type) || getTaskImportByName(type)	}
+					{@const taskItem = getTaskByName(type) || getTaskImportByName(type)}
 					<div
 						class="text-2xs group flex items-center justify-between rounded px-1 py-0.5"
 						style={`background-color: ${color}20; border-left: 3px solid ${color};`}
@@ -492,7 +492,8 @@
 							role="button"
 							tabindex={taskItem ? 0 : -1}
 							onkeypress={(e) => {
-								if (taskItem && (e.key === 'Enter' || e.key === ' ')) toggleTaskNodeVisibility(type);
+								if (taskItem && (e.key === 'Enter' || e.key === ' '))
+									toggleTaskNodeVisibility(type);
 							}}
 							title={taskItem
 								? taskNodeVisibility[type]

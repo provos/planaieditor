@@ -37,7 +37,9 @@
 	}
 
 	function isTaskImportSelected(task: TaskImport): boolean {
-		return splitPaneConfig.upperNodeId === task.id && splitPaneConfig.upperNodeType === 'taskimport';
+		return (
+			splitPaneConfig.upperNodeId === task.id && splitPaneConfig.upperNodeType === 'taskimport'
+		);
 	}
 </script>
 

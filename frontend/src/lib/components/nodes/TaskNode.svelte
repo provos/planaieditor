@@ -36,8 +36,7 @@
 	<div class="flex-none p-1.5">
 		<div class="prose prose-xs max-w-xs">
 			<p>
-				Click to open the task definitions pane where you can add, edit, and delete
-				task classes.
+				Click to open the task definitions pane where you can add, edit, and delete task classes.
 			</p>
 		</div>
 	</div>

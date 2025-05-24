@@ -14,7 +14,7 @@
 		<TaskConfig id={upperNodeId} />
 	{:else}
 		<div class="flex h-full items-center justify-center rounded border-t border-gray-200 bg-white">
-			<p class="text-sm italic text-gray-500">
+			<p class="text-sm text-gray-500 italic">
 				Click on a tool or task in the list at the bottom to edit it.
 			</p>
 		</div>
