@@ -451,7 +451,7 @@
 			// Then add the node to the graph
 			addNewNode(nodes, id, nodeType, position, nodeData);
 		}
-		if (nodeType === 'tool' || nodeType === 'task') {
+		if (nodeType === 'tool' || nodeType === 'task' || nodeType === 'taskimport') {
 			openSplitPane();
 		}
 	}
@@ -645,9 +645,6 @@
 
 	function handleNodeClick(event: CustomEvent<{ event: MouseEvent | TouchEvent; node: Node }>) {
 		const { node } = event.detail;
-		if (node.type === 'tool') {
-			openSplitPane();
-		}
 		splitPaneConfig.selectedNodeId = node.id;
 	}
 
