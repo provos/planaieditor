@@ -55,17 +55,13 @@
 			currentName = originalName;
 			return;
 		}
-		const allToolNames = get(toolNamesStore);
-		if (allToolNames.has(newName)) {
+		if (toolNamesStore.has(newName)) {
 			toolNameError = 'Name already exists.';
 			currentName = originalName;
 			return;
 		}
-		toolNamesStore.update((names) => {
-			names.delete(originalName);
-			names.add(newName);
-			return names;
-		});
+		toolNamesStore.delete(originalName);
+		toolNamesStore.add(newName);
 		tool.name = newName;
 		toolNameError = '';
 		debouncedValidateTool();
