@@ -2,7 +2,7 @@
 	import BaseWorkerNode from '$lib/components/nodes/BaseWorkerNode.svelte';
 	import EditableCodeSection from '$lib/components/EditableCodeSection.svelte';
 	import type { BaseWorkerData } from '$lib/components/nodes/BaseWorkerNode.svelte';
-	import { allClassNames } from '$lib/stores/classNameStore.svelte'; // Import store for worker names
+	import { allWorkerClassNames } from '$lib/stores/classNameStore.svelte'; // Import store for worker names
 	import { get } from 'svelte/store'; // To get store value
 	import { useStore, useUpdateNodeInternals } from '@xyflow/svelte';
 	import type { Node, Edge } from '@xyflow/svelte';
@@ -66,7 +66,7 @@
 
 			// Iterate through allClassNames to find worker nodes
 			// This access to allClassNames creates reactive dependency
-			allClassNames.forEach((name, nodeId) => {
+			allWorkerClassNames.forEach((name, nodeId) => {
 				const node = currentNodes.find((n: Node) => n.id === nodeId);
 				// Check if it's a worker type (excluding self) and has a name
 				if (node && isWorkerTypeNode(node) && node.id !== id && name) {

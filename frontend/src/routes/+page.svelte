@@ -37,7 +37,7 @@
 	import { tasks as taskStore } from '$lib/stores/taskStore.svelte';
 	import { taskImports as taskImportStore } from '$lib/stores/taskImportStore.svelte';
 	import { get } from 'svelte/store';
-	import { allClassNames } from '$lib/stores/classNameStore.svelte';
+	import { allWorkerClassNames } from '$lib/stores/classNameStore.svelte';
 	import { socketStore } from '$lib/stores/socketStore.svelte';
 	import { startLspManager, stopLspManager } from '$lib/stores/monacoStore.svelte';
 	import {
@@ -394,9 +394,9 @@
 			});
 
 			// Update the store directly by modifying the Map
-			allClassNames.clear();
+			allWorkerClassNames.clear();
 			nameMap.forEach((value, key) => {
-				allClassNames.set(key, value);
+				allWorkerClassNames.set(key, value);
 			});
 		});
 

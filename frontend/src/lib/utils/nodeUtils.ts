@@ -4,7 +4,7 @@ import { getDefaultMethodBody } from './defaults';
 import { debounce } from './utils';
 import type { DataInputNodeData } from '$lib/components/nodes/DataInputNode.svelte';
 import { generateUniqueName } from '$lib/utils/utils';
-import { allClassNames, toolNamesStore } from '$lib/stores/classNameStore.svelte';
+import { allWorkerClassNames, toolNamesStore } from '$lib/stores/classNameStore.svelte';
 import { nodes } from '$lib/stores/graphStore';
 import type { ModuleLevelImportData } from '$lib/components/nodes/ModuleLevelImport.svelte';
 import type { TaskImportNodeData } from '$lib/components/nodes/TaskImportNode.svelte';
@@ -98,7 +98,7 @@ export function nodeDataFromType(
 	let nodeData: any = {};
 
 	// Get current existing names
-	let currentNameMap = allClassNames;
+	let currentNameMap = allWorkerClassNames;
 	const existingNames = new Set(currentNameMap.values());
 	taskStore.forEach((task) => existingNames.add(task.className));
 	taskImportStore.forEach((taskImport) => existingNames.add(taskImport.className));

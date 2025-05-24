@@ -1,6 +1,6 @@
 // Create a global store for tracking all class names
 // Maps nodeId -> className
-export const allClassNames = $state<Map<string, string>>(new Map());
+export const allWorkerClassNames = $state<Map<string, string>>(new Map());
 
 /**
  * A Svelte 5 rune that holds a Set of all known Task class names in the current graph.

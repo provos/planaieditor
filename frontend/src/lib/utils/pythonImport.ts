@@ -1,7 +1,7 @@
 import { backendUrl } from '$lib/utils/backendUrl';
 import type { Node, Edge } from '@xyflow/svelte';
 import { taskClassNamesStore } from '$lib/stores/classNameStore.svelte';
-import { allClassNames } from '$lib/stores/classNameStore.svelte';
+import { allWorkerClassNames } from '$lib/stores/classNameStore.svelte';
 import ELK from 'elkjs/lib/elk.bundled.js';
 import { Position } from '@xyflow/svelte';
 import { getEdgeStyleProps } from '$lib/utils/edgeUtils';
@@ -321,7 +321,7 @@ export async function importPythonCode(
 		nextY = 0;
 
 		// Get existing names to avoid conflicts
-		const existingNames = new Set(Object.values(allClassNames));
+		const existingNames = new Set(Object.values(allWorkerClassNames));
 
 		importedWorkers.forEach((worker) => {
 			// Basic check for name collision (though backend should ideally handle this)
