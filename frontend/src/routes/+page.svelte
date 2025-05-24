@@ -431,7 +431,7 @@
 					type: 'taskimport',
 					className: 'ChatTask',
 					modulePath: 'planai',
-					isImplicit: false,
+					isImplicit: true,
 					availableClasses: ['ChatTask'],
 					fields: []
 				};

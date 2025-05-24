@@ -14,6 +14,7 @@
 		const newTask: TaskImport = {
 			id: `taskimport-${crypto.randomUUID()}`,
 			type: 'taskimport',
+			isImplicit: false,
 			className: '',
 			modulePath: '',
 			availableClasses: [],

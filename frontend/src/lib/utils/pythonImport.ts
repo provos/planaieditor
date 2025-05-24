@@ -296,6 +296,7 @@ export async function importPythonCode(
 				type: 'taskimport',
 				modulePath: importedTaskRef.modulePath,
 				className: importedTaskRef.className, // Store class name
+				availableClasses: [importedTaskRef.className],
 				isImplicit: importedTaskRef.isImplicit,
 				fields: [] // Fields will be fetched by the node itself
 			};
