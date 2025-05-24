@@ -36,7 +36,7 @@
 	import type { DataInputNodeData } from '$lib/components/nodes/DataInputNode.svelte';
 	import type { ToolNodeData } from '$lib/components/nodes/ToolNode.svelte';
 	import { get } from 'svelte/store';
-	import { allClassNames, taskClassNamesStore, toolNamesStore } from '$lib/stores/classNameStore';
+	import { allClassNames, taskClassNamesStore } from '$lib/stores/classNameStore.svelte';
 	import { socketStore } from '$lib/stores/socketStore.svelte';
 	import { startLspManager, stopLspManager } from '$lib/stores/monacoStore.svelte';
 	import {
@@ -408,7 +408,6 @@
 			// Update the stores
 			allClassNames.set(nameMap);
 			taskClassNamesStore.set(taskNameSet);
-			toolNamesStore.set(toolNameSet);
 		});
 
 		return unsubNodes;

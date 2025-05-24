@@ -5,7 +5,7 @@ import { debounce } from './utils';
 import type { DataInputNodeData } from '$lib/components/nodes/DataInputNode.svelte';
 import type { NodeData as TaskNodeData } from '$lib/components/nodes/TaskNode.svelte';
 import { generateUniqueName } from '$lib/utils/utils';
-import { allClassNames, toolNamesStore } from '$lib/stores/classNameStore';
+import { allClassNames, toolNamesStore } from '$lib/stores/classNameStore.svelte';
 import { nodes } from '$lib/stores/graphStore';
 import type { ModuleLevelImportData } from '$lib/components/nodes/ModuleLevelImport.svelte';
 import type { TaskImportNodeData } from '$lib/components/nodes/TaskImportNode.svelte';
@@ -15,7 +15,6 @@ import type { JoinedWorkerData } from '$lib/components/nodes/JoinedTaskWorkerNod
 import type { SubGraphWorkerData } from '$lib/components/nodes/SubGraphWorkerNode.svelte';
 import type { ChatWorkerData } from '$lib/components/nodes/ChatTaskWorkerNode.svelte';
 import type { DataOutputNodeData } from '$lib/components/nodes/DataOutputNode.svelte';
-import type { ToolNodeData } from '$lib/components/nodes/ToolNode.svelte';
 import { get } from 'svelte/store';
 
 // Adds a method to the node with the given id
@@ -95,7 +94,6 @@ export function nodeDataFromType(
 	| ChatWorkerData
 	| DataInputNodeData
 	| DataOutputNodeData
-	| ToolNodeData
 	| undefined {
 	// Configure node data based on node type
 	let nodeData: any = {};
@@ -227,17 +225,6 @@ Analyze the following information and provide a response.`,
 				nodeId: id,
 				receivedData: [],
 				inputTypes: []
-			};
-			break;
-		}
-		case 'tool': {
-			const baseName = 'new_tool_function';
-			const uniqueName = generateUniqueName(baseName, get(toolNamesStore));
-			nodeData = {
-				nodeId: id,
-				name: uniqueName,
-				description: 'a description of the tool',
-				code: 'def new_tool_function():\n    pass'
 			};
 			break;
 		}

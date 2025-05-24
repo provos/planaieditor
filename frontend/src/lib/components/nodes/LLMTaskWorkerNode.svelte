@@ -3,7 +3,7 @@
 	import EditableCodeSection from '$lib/components/EditableCodeSection.svelte';
 	import LLMConfigSelector from '$lib/components/LLMConfigSelector.svelte';
 	import type { BaseWorkerData } from '$lib/components/nodes/BaseWorkerNode.svelte';
-	import { taskClassNamesStore } from '$lib/stores/classNameStore';
+	import { taskClassNamesStore } from '$lib/stores/classNameStore.svelte';
 	import { nodes as svelteFlowNodes } from '$lib/stores/graphStore';
 	import type { ToolNodeData } from '$lib/components/nodes/ToolNode.svelte';
 	import { getColorForType } from '$lib/utils/colorUtils';

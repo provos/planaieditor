@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Handle, Position, NodeResizer, type Node } from '@xyflow/svelte';
-	import { taskClassNamesStore } from '$lib/stores/classNameStore';
+	import { taskClassNamesStore } from '$lib/stores/classNameStore.svelte';
 	import { getColorForType } from '$lib/utils/colorUtils';
 	import EditableCodeSection from '../EditableCodeSection.svelte';
 	import { onDestroy, onMount, untrack, tick } from 'svelte';

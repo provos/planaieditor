@@ -1,4 +1,5 @@
 import { persistedState } from '$lib/utils/persist.svelte';
+import { toolNamesStore } from './classNameStore.svelte';
 
 export interface Tool {
 	id: string;
@@ -24,3 +25,12 @@ export function updateTool(tool: Tool) {
 export function getToolByName(name: string): Tool | undefined {
 	return tools.find((tool: Tool) => tool.name === name);
 }
+
+// Update the tool names store when the tools change
+$effect.root(() => {
+	$effect(() => {
+		const toolNames = new Set(tools.map((tool: Tool) => tool.name));
+		toolNamesStore.clear();
+		toolNames.forEach(name => toolNamesStore.add(name));
+	});
+});

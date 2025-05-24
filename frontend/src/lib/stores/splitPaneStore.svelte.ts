@@ -1,7 +1,7 @@
 interface SplitePaneConfig {
 	size: number;
 	selectedNodeId: string | null;
-	upperNodeType: 'tool' | 'task' | null;
+	upperNodeType: 'tool' | 'task' | 'taskimport' | null;
 	upperNodeId: string | null;
 }
 

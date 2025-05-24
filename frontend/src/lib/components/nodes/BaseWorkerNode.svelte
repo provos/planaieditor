@@ -3,7 +3,7 @@
 	import type { Node } from '@xyflow/svelte';
 	import { isValidPythonClassName } from '$lib/utils/validation';
 	import { getColorForType, calculateHandlePosition } from '$lib/utils/colorUtils';
-	import { taskClassNamesStore } from '$lib/stores/classNameStore';
+	import { taskClassNamesStore } from '$lib/stores/classNameStore.svelte';
 	import HeaderIcon from '../HeaderIcon.svelte';
 	import EditableCodeSection from '../EditableCodeSection.svelte';
 	import InputHandle from '../InputHandle.svelte';

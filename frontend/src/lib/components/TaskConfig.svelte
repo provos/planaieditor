@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { isValidPythonClassName, isValidPythonIdentifier } from '$lib/utils/validation';
-	import { allClassNames } from '$lib/stores/classNameStore';
-	import { taskClassNamesStore } from '$lib/stores/classNameStore';
+	import { allClassNames } from '$lib/stores/classNameStore.svelte';
+	import { taskClassNamesStore } from '$lib/stores/classNameStore.svelte';
 	import {
 		tasks as tasksStore,
 		updateTask,

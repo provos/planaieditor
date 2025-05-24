@@ -2,7 +2,7 @@
 	import BaseWorkerNode from '$lib/components/nodes/BaseWorkerNode.svelte';
 	import EditableCodeSection from '$lib/components/EditableCodeSection.svelte';
 	import type { BaseWorkerData } from '$lib/components/nodes/BaseWorkerNode.svelte';
-	import { allClassNames } from '$lib/stores/classNameStore'; // Import store for worker names
+	import { allClassNames } from '$lib/stores/classNameStore.svelte'; // Import store for worker names
 	import { get } from 'svelte/store'; // To get store value
 	import { useStore, useUpdateNodeInternals } from '@xyflow/svelte';
 	import type { Node, Edge } from '@xyflow/svelte';

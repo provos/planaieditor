@@ -12,8 +12,8 @@ export const allClassNames = writable<Map<string, string>>(new Map());
 export const taskClassNamesStore = writable<Set<string>>(new Set());
 
 /**
- * A Svelte store that holds a Set of all known Tool names in the current graph.
+ * A Svelte 5 rune that holds a Set of all known Tool names in the current graph.
  * This is used by ToolNode to populate the type dropdown, allowing fields to reference
  * other defined Tool functions.
  */
-export const toolNamesStore = writable<Set<string>>(new Set());
+export const toolNamesStore = $state<Set<string>>(new Set());

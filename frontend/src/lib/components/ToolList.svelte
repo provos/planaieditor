@@ -7,11 +7,15 @@
 	} from '$lib/stores/toolStore.svelte';
 	import { splitPaneConfig } from '$lib/stores/splitPaneStore.svelte';
 	import BaseList from './BaseList.svelte';
+	import { generateUniqueName } from '$lib/utils/utils';
+	import { toolNamesStore } from '$lib/stores/classNameStore.svelte';
 
 	function createNewTool() {
+		const baseName = 'new_tool';
+		const toolName = generateUniqueName(baseName, toolNamesStore);
 		const newTool: Tool = {
 			id: `tool-${Date.now()}`,
-			name: 'New Tool',
+			name: toolName,
 			description: 'Enter tool description',
 			code: `def new_tool_function():\n    pass`
 		};
