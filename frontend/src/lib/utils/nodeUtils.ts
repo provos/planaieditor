@@ -3,7 +3,6 @@ import type { Node, XYPosition } from '@xyflow/svelte';
 import { getDefaultMethodBody } from './defaults';
 import { debounce } from './utils';
 import type { DataInputNodeData } from '$lib/components/nodes/DataInputNode.svelte';
-import type { NodeData as TaskNodeData } from '$lib/components/nodes/TaskNode.svelte';
 import { generateUniqueName } from '$lib/utils/utils';
 import { allClassNames, toolNamesStore } from '$lib/stores/classNameStore.svelte';
 import { nodes } from '$lib/stores/graphStore';
@@ -15,6 +14,9 @@ import type { JoinedWorkerData } from '$lib/components/nodes/JoinedTaskWorkerNod
 import type { SubGraphWorkerData } from '$lib/components/nodes/SubGraphWorkerNode.svelte';
 import type { ChatWorkerData } from '$lib/components/nodes/ChatTaskWorkerNode.svelte';
 import type { DataOutputNodeData } from '$lib/components/nodes/DataOutputNode.svelte';
+import type { TaskImport as TaskImportType } from '$lib/stores/taskImportStore.svelte';
+import { taskImports as taskImportStore } from '$lib/stores/taskImportStore.svelte';
+import { tasks as taskStore } from '$lib/stores/taskStore.svelte';
 
 // Adds a method to the node with the given id
 export function addAvailableMethod(nodes: Writable<Node[]>, id: string, methodName: string) {
@@ -53,13 +55,13 @@ export function findDataInputForAssistant(nodes: Node[]): Node | null {
 		return null;
 	}
 
-	const taskNodes: Node[] = nodes.filter(
+	const taskNodes: TaskImportType[] = taskImportStore.filter(
 		(node) =>
 			node.type === 'taskimport' &&
-			(node.data as unknown as TaskNodeData)?.className === 'ChatTask' &&
-			(node.data as unknown as TaskNodeData)?.fields.length == 1 &&
-			(node.data as unknown as TaskNodeData)?.fields[0].type === 'ChatMessage' &&
-			(node.data as unknown as TaskNodeData)?.fields[0].isList
+			node.className === 'ChatTask' &&
+			node.fields.length == 1 &&
+			node.fields[0].type === 'ChatMessage' &&
+			node.fields[0].isList
 	);
 
 	if (taskNodes.length != 1) {
@@ -84,8 +86,6 @@ export function nodeDataFromType(
 	nodeType: string
 ):
 	| ModuleLevelImportData
-	| TaskNodeData
-	| TaskImportNodeData
 	| BaseWorkerData
 	| LLMTaskWorkerData
 	| JoinedWorkerData
@@ -100,24 +100,14 @@ export function nodeDataFromType(
 	// Get current existing names
 	let currentNameMap = allClassNames;
 	const existingNames = new Set(currentNameMap.values());
+	taskStore.forEach((task) => existingNames.add(task.className));
+	taskImportStore.forEach((taskImport) => existingNames.add(taskImport.className));
 
 	switch (nodeType) {
 		case 'task': {
-			const baseName = 'Task';
-			const uniqueName = generateUniqueName(baseName, existingNames);
-			nodeData = {
-				className: uniqueName,
-				fields: [],
-				nodeId: id
-			};
 			break;
 		}
 		case 'taskimport': {
-			nodeData = {
-				modulePath: '', // Initial empty module path
-				className: null,
-				nodeId: id
-			};
 			break;
 		}
 		case 'modulelevelimport': {

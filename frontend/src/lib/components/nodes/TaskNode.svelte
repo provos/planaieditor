@@ -1,13 +1,9 @@
 <script lang="ts">
 	import Bookmark from './Bookmark.svelte';
 
-	export interface TaskNodeData {
-		nodeId: string; // Should be populated with the node's id
-	}
-
 	let { id, data } = $props<{
 		id: string;
-		data: TaskNodeData;
+		data: any;
 	}>();
 </script>
 
