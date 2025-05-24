@@ -22,10 +22,13 @@
 			switch (selectedNode.type) {
 				case 'tool':
 					newActiveTab = 'tools';
+					break;
 				case 'task':
 					newActiveTab = 'tasks';
+					break;
 				case 'taskimport':
 					newActiveTab = 'taskimports';
+					break;
 			}
 			activeTab = newActiveTab;
 		}
