@@ -6,7 +6,7 @@
 	import { get } from 'svelte/store'; // To get store value
 	import { useStore, useUpdateNodeInternals } from '@xyflow/svelte';
 	import type { Node, Edge } from '@xyflow/svelte';
-	import { tick, onMount } from 'svelte';
+	import { tick } from 'svelte';
 	import { persistNodeDataDebounced, isWorkerTypeNode } from '$lib/utils/nodeUtils';
 	import { openFullScreenEditor } from '$lib/stores/fullScreenEditorStore.svelte';
 
@@ -47,31 +47,42 @@
 	}
 
 	// State for editing join_type
-	let availableWorkerClasses = $state<string[]>([]);
 	let joinedInputType = $state<string>(''); // Derived input type for consume_work_joined
+	let availableWorkerClasses = $state<string[]>([]);
 
 	// Local state for join_type
 	let joinType = $state(data.join_type);
 
-	// Combine hardcoded option with dynamic ones
-	let allJoinTypeOptions = $derived(['InitialTaskWorker', ...availableWorkerClasses]);
+	// Reactively update availableWorkerClasses when nodes or allClassNames change
+	$effect(() => {
+		let currentNodes: Node[] = [];
 
-	// Get available worker names from the store
-	onMount(() => {
-		const unsub = allClassNames.subscribe((nameMap) => {
+		// Subscribe to nodes store to track changes
+		const unsubNodes = nodes.subscribe((nodesValue: Node[]) => {
+			currentNodes = nodesValue || [];
+
+			// Recompute workers whenever nodes change
 			const workers: string[] = [];
-			const currentNodes = get(nodes); // Get current nodes directly from the nodes store
-			nameMap.forEach((name, nodeId) => {
-				const node = currentNodes.find((n: Node) => n.id === nodeId); // Add type annotation
+
+			// Iterate through allClassNames to find worker nodes
+			// This access to allClassNames creates reactive dependency
+			allClassNames.forEach((name, nodeId) => {
+				const node = currentNodes.find((n: Node) => n.id === nodeId);
 				// Check if it's a worker type (excluding self) and has a name
 				if (node && isWorkerTypeNode(node) && node.id !== id && name) {
 					workers.push(name);
 				}
 			});
+
 			availableWorkerClasses = workers;
 		});
-		return unsub;
+
+		// Return cleanup function
+		return unsubNodes;
 	});
+
+	// Combine hardcoded option with dynamic ones
+	let allJoinTypeOptions = $derived(['InitialTaskWorker', ...availableWorkerClasses]);
 
 	// Update derived input type based on incoming edges
 	$effect(() => {

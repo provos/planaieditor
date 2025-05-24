@@ -15,7 +15,6 @@ import type { JoinedWorkerData } from '$lib/components/nodes/JoinedTaskWorkerNod
 import type { SubGraphWorkerData } from '$lib/components/nodes/SubGraphWorkerNode.svelte';
 import type { ChatWorkerData } from '$lib/components/nodes/ChatTaskWorkerNode.svelte';
 import type { DataOutputNodeData } from '$lib/components/nodes/DataOutputNode.svelte';
-import { get } from 'svelte/store';
 
 // Adds a method to the node with the given id
 export function addAvailableMethod(nodes: Writable<Node[]>, id: string, methodName: string) {
@@ -99,7 +98,7 @@ export function nodeDataFromType(
 	let nodeData: any = {};
 
 	// Get current existing names
-	let currentNameMap = get(allClassNames);
+	let currentNameMap = allClassNames;
 	const existingNames = new Set(currentNameMap.values());
 
 	switch (nodeType) {

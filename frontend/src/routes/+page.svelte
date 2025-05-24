@@ -393,8 +393,11 @@
 				}
 			});
 
-			// Update the stores
-			allClassNames.set(nameMap);
+			// Update the store directly by modifying the Map
+			allClassNames.clear();
+			nameMap.forEach((value, key) => {
+				allClassNames.set(key, value);
+			});
 		});
 
 		return unsubNodes;
