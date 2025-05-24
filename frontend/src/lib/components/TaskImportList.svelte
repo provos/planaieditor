@@ -13,6 +13,7 @@
 	function createNewTaskImport() {
 		const newTask: TaskImport = {
 			id: `taskimport-${Date.now()}`,
+			type: 'taskimport',
 			className: '',
 			modulePath: '',
 			availableClasses: [],

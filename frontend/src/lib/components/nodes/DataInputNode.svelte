@@ -140,14 +140,14 @@
 		isLoading = true;
 		try {
 			// find the Task Class Node
-			let taskClassNode: TaskType | TaskImportType | undefined = tasksStore.find(
+			let taskClassEntry: TaskType | TaskImportType | undefined = tasksStore.find(
 				(task) => task.className === selectedClassName
 			);
-			if (!taskClassNode) {
-				taskClassNode = taskImportsStore.find((task) => task.className === selectedClassName);
+			if (!taskClassEntry) {
+				taskClassEntry = taskImportsStore.find((task) => task.className === selectedClassName);
 			}
 
-			if (!taskClassNode) {
+			if (!taskClassEntry) {
 				errorMessage = `No Task Class Node found for ${selectedClassName}`;
 				return;
 			}
@@ -157,7 +157,7 @@
 				headers: {
 					'Content-Type': 'application/json'
 				},
-				body: JSON.stringify({ node: taskClassNode, jsonData: data.jsonData })
+				body: JSON.stringify({ entry: taskClassEntry, jsonData: data.jsonData })
 			});
 			const result = await response.json();
 			jsonIsValid = result.success;

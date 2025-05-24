@@ -18,6 +18,7 @@ export interface Field {
 
 export interface Task {
 	id: string;
+	type: 'task' | 'taskimport';
 	className: string;
 	fields: Field[];
 	error?: string;

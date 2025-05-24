@@ -916,10 +916,10 @@ except Exception as e:
 def validate_pydantic_data():
     """Validates JSON data against a Pydantic model."""
     data = request.get_json()
-    node = data.get("node")
+    entry = data.get("entry")
     json_data = data.get("jsonData")
 
-    if not node or not json_data:
+    if not entry or not json_data:
         return (
             jsonify(
                 {"success": False, "error": "Missing 'node' or 'jsonData' in request"}
@@ -927,8 +927,8 @@ def validate_pydantic_data():
             400,
         )
 
-    className = node.get("data", {}).get("className")
-    if not className:
+    class_name = entry.get("className")
+    if not class_name:
         return (
             jsonify({"success": False, "error": "Missing 'className' in request"}),
             400,
@@ -944,19 +944,22 @@ def validate_pydantic_data():
         }
 
     task_import_state = {}
-    node_type = node.get("type")
+    node_type = entry.get("type")
     task_class = ""
     import_code = ""
     match node_type:
         case "task":
-            task_class = create_task_class(node)
+            task_class = create_task_class(entry)
         case "taskimport":
-            add_to_task_import_state(node, task_import_state)
+            add_to_task_import_state(entry, task_import_state)
             import_code = ""
             for module_path, classes in task_import_state.items():
                 import_code += f"from {module_path} import {', '.join(classes)}\n"
         case _:
-            return (jsonify({"success": False, "error": "Invalid node type"}), 400)
+            return (
+                jsonify({"success": False, "error": f"Invalid node type: {node_type}"}),
+                400,
+            )
 
     # Create a validation script with proper JSON output markers
     validation_script = f"""
@@ -970,12 +973,12 @@ from pydantic import Field
 
 try:
     # Parse and validate the JSON data against the model
-    validated_data = {className}.model_validate({json_data})
+    validated_data = {class_name}.model_validate({json_data})
 
     # Success case - output formatted JSON for the validation function to parse
     success_output = {{
         "success": True,
-        "message": "Data successfully validated against {className}"
+        "message": "Data successfully validated against {class_name}"
     }}
     print("##SUCCESS_JSON_START##")
     print(json.dumps(success_output))
@@ -991,7 +994,7 @@ except Exception as e:
         "success": False,
         "error": {{
             "message": error_message,
-            "nodeName": "{className}",
+            "nodeName": "{class_name}",
             "fullTraceback": error_traceback
         }}
     }}

@@ -72,6 +72,7 @@ export async function loadGraphFromJson(jsonContent: string): Promise<ExportStat
 					const task: TaskType = {
 						id: node.id,
 						className: node.data.className as string,
+						type: 'task',
 						fields: node.data.fields as FieldType[]
 					};
 					taskStore.push(task);
@@ -82,6 +83,7 @@ export async function loadGraphFromJson(jsonContent: string): Promise<ExportStat
 				taskImportNodes.forEach((node) => {
 					const taskImport: TaskImportType = {
 						id: node.id,
+						type: 'taskimport',
 						className: node.data.className as string,
 						fields: node.data.fields as FieldType[],
 						modulePath: node.data.modulePath as string,

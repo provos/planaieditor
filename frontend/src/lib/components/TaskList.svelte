@@ -16,6 +16,7 @@
 		const newTask: Task = {
 			id: `task-${Date.now()}`,
 			className: taskName,
+			type: 'task',
 			fields: []
 		};
 		addTask(newTask);

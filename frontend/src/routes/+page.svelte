@@ -30,13 +30,14 @@
 	import EditPane from '$lib/components/EditPane.svelte';
 	import ListPane from '$lib/components/ListPane.svelte';
 	import type { BaseWorkerData } from '$lib/components/nodes/BaseWorkerNode.svelte';
-	import type { NodeData } from '$lib/components/nodes/TaskNode.svelte';
-	import type { TaskImportNodeData } from '$lib/components/nodes/TaskImportNode.svelte';
+	import type { TaskImport as TaskImportType } from '$lib/stores/taskImportStore.svelte';
+	import { addTaskImport } from '$lib/stores/taskImportStore.svelte';
 	import type { DataOutputNodeData } from '$lib/components/nodes/DataOutputNode.svelte';
 	import type { DataInputNodeData } from '$lib/components/nodes/DataInputNode.svelte';
-	import type { ToolNodeData } from '$lib/components/nodes/ToolNode.svelte';
+	import { tasks as taskStore } from '$lib/stores/taskStore.svelte';
+	import { taskImports as taskImportStore } from '$lib/stores/taskImportStore.svelte';
 	import { get } from 'svelte/store';
-	import { allClassNames, taskClassNamesStore } from '$lib/stores/classNameStore.svelte';
+	import { allClassNames } from '$lib/stores/classNameStore.svelte';
 	import { socketStore } from '$lib/stores/socketStore.svelte';
 	import { startLspManager, stopLspManager } from '$lib/stores/monacoStore.svelte';
 	import {
@@ -419,28 +420,22 @@
 		if (nodeType === 'assistantinput') {
 			// We are potentially adding two nodes
 			// Check if we have a taskimport node of className "ChatTask"
-			const taskImportNode = getNodes().find(
-				(node) => node.type === 'taskimport' && node.data?.className === 'ChatTask'
+			const taskImportNode = taskImportStore.find(
+				(node) => node.type === 'taskimport' && node.className === 'ChatTask'
 			);
 			if (!taskImportNode) {
 				// We have a taskimport node, so we can add the assistantinput node
 				const id = `taskimport-${Date.now()}`;
-				const nodeData: TaskImportNodeData = nodeDataFromType(
-					id,
-					'taskimport'
-				) as TaskImportNodeData;
-				nodeData.modulePath = 'planai';
-				nodeData.isImplicit = false;
-				nodeData.availableClasses = ['ChatTask'];
-				nodeData.className = 'ChatTask';
-				nodeData.nodeId = id;
-
-				addNewNode(nodes, id, 'taskimport', position, nodeData);
-
-				position = {
-					x: position.x,
-					y: position.y + 200
+				const nodeData: TaskImportType = {
+					id: id,
+					type: 'taskimport',
+					className: 'ChatTask',
+					modulePath: 'planai',
+					isImplicit: false,
+					availableClasses: ['ChatTask'],
+					fields: []
 				};
+				addTaskImport(nodeData);
 			}
 
 			const id = `datainput-${Date.now()}`;
@@ -663,6 +658,8 @@
 			nodes.set([]);
 			edges.set([]);
 			toolStore.length = 0;
+			taskStore.length = 0;
+			taskImportStore.length = 0;
 			llmConfigs.set([]); // Clear user LLM configs
 			llmConfigsFromCode.set([]); // Clear code LLM configs
 			graphName.set('');
