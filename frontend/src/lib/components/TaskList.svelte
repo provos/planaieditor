@@ -6,12 +6,16 @@
 		type Task
 	} from '$lib/stores/taskStore.svelte';
 	import { splitPaneConfig } from '$lib/stores/splitPaneStore.svelte';
+	import { generateUniqueName } from '$lib/utils/utils';
+	import { taskClassNamesStore } from '$lib/stores/classNameStore.svelte';
 	import BaseList from './BaseList.svelte';
 
 	function createNewTask() {
+		const baseName = 'Task';
+		const taskName = generateUniqueName(baseName, taskClassNamesStore);
 		const newTask: Task = {
 			id: `task-${Date.now()}`,
-			className: 'NewTask',
+			className: taskName,
 			fields: []
 		};
 		addTask(newTask);

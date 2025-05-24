@@ -19,8 +19,9 @@
 	import { persistNodeDataDebounced } from '$lib/utils/nodeUtils';
 	import { onMount } from 'svelte';
 	import { openFullScreenEditor } from '$lib/stores/fullScreenEditorStore.svelte';
-	import type { NodeData } from './TaskNode.svelte';
-	import TaskNode from './TaskNode.svelte';
+	import { getTaskByName } from '$lib/stores/taskStore.svelte';
+	import { getTaskImportByName } from '$lib/stores/taskImportStore.svelte';
+	import TaskConfig from '../TaskConfig.svelte';
 
 	// Base interface for worker node data
 	export interface BaseWorkerData {
@@ -135,17 +136,15 @@
 			computeOutputTypeNodes();
 		});
 
-		// Subscribe to the taskClassNamesStore for output type selection
-		const unsubClassNames = taskClassNamesStore.subscribe((taskClasses) => {
-			// This now contains only Task classes, not worker classes
-			availableTaskClasses = Array.from(taskClasses);
-		});
-
 		// Cleanup function
 		return () => {
 			unsubNodes();
-			unsubClassNames();
 		};
+	});
+
+	// Watch for task class names
+	$effect(() => {
+		availableTaskClasses = Array.from(taskClassNamesStore);
 	});
 
 	function computeInputOutputTypes() {
@@ -437,7 +436,6 @@
 					class="z-10 w-full rounded border border-gray-200 bg-white px-1.5 py-0.5 text-xs font-medium {nameError
 						? 'border-red-500'
 						: ''}"
-					autofocus
 				/>
 				{#if nameError}
 					<div class="mt-0.5 text-xs text-red-500">{nameError}</div>
@@ -483,29 +481,27 @@
 			<div class="mt-1 space-y-1">
 				{#each inferredInputTypes as type (type)}
 					{@const color = getColorForType(type)}
-					{@const node = inputTypeNodes.find(
-						(n) => (n.data as unknown as NodeData).className === type
-					)}
+					{@const taskItem = getTaskByName(type) || getTaskImportByName(type)	}
 					<div
 						class="text-2xs group flex items-center justify-between rounded px-1 py-0.5"
 						style={`background-color: ${color}20; border-left: 3px solid ${color};`}
 					>
 						<div
 							class="flex flex-grow cursor-pointer items-center"
-							onclick={() => node && toggleTaskNodeVisibility(type)}
+							onclick={() => taskItem && toggleTaskNodeVisibility(type)}
 							role="button"
-							tabindex={node ? 0 : -1}
+							tabindex={taskItem ? 0 : -1}
 							onkeypress={(e) => {
-								if (node && (e.key === 'Enter' || e.key === ' ')) toggleTaskNodeVisibility(type);
+								if (taskItem && (e.key === 'Enter' || e.key === ' ')) toggleTaskNodeVisibility(type);
 							}}
-							title={node
+							title={taskItem
 								? taskNodeVisibility[type]
 									? `Collapse details for ${type}`
 									: `Expand details for ${type}`
 								: type}
 						>
 							<span class="font-mono">{type}</span>
-							{#if node}
+							{#if taskItem}
 								{#if taskNodeVisibility[type]}
 									<CaretUp size={10} class="ml-1 text-gray-500 group-hover:text-gray-700" />
 								{:else}
@@ -527,11 +523,10 @@
 							</button>
 						{/if}
 					</div>
-					{#if node && taskNodeVisibility[type]}
+					{#if taskItem && taskNodeVisibility[type]}
 						<div class="mt-0.5 ml-2 border-l-2 border-gray-200 pl-2">
-							<TaskNode
-								id={node.id}
-								data={node.data as unknown as NodeData}
+							<TaskConfig
+								id={taskItem.id}
 								showAsNode={false}
 								allowEditing={false}
 								styleClasses="p-0"

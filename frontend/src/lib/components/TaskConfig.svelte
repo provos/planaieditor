@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { isValidPythonClassName, isValidPythonIdentifier } from '$lib/utils/validation';
-	import { allClassNames } from '$lib/stores/classNameStore.svelte';
 	import { taskClassNamesStore } from '$lib/stores/classNameStore.svelte';
 	import {
 		tasks as tasksStore,
@@ -11,15 +10,15 @@
 	import Plus from 'phosphor-svelte/lib/Plus';
 	import Trash from 'phosphor-svelte/lib/Trash';
 	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
-	import { onDestroy } from 'svelte';
 
 	// Define basic field types
 	type BaseFieldType = 'string' | 'integer' | 'float' | 'boolean' | 'literal';
 	// Enhanced field type can be a basic type or a custom Task name
 	type FieldType = string;
 
-	let { id } = $props<{
+	let { id, allowEditing = true } = $props<{
 		id: string;
+		allowEditing?: boolean;
 	}>();
 
 	const task: Task | undefined = $derived(tasksStore.find((t) => t.id === id));
@@ -62,9 +61,9 @@
 	let literalValueInput = $state('');
 	let editingLiteralValues = $state<string[]>([]);
 
-	// Subscribe to task types store to get updates
-	const unsubTaskTypes = taskClassNamesStore.subscribe((taskTypes) => {
-		availableTaskTypes = Array.from(taskTypes);
+	// Watch for task types
+	$effect(() => {
+		availableTaskTypes = Array.from(taskClassNamesStore);
 	});
 
 	// Computed field type options for dropdowns
@@ -94,7 +93,7 @@
 	});
 
 	function startEditingClassName() {
-		if (!task) return;
+		if (!task || !allowEditing) return;
 		tempClassName = task.className;
 		editingClassName = true;
 	}
@@ -143,7 +142,7 @@
 	}
 
 	function startEditingField(index: number) {
-		if (!task) return;
+		if (!task || !allowEditing) return;
 		const field = task.fields[index];
 		editingFieldIndex = index;
 		editingFieldName = field.name;
@@ -156,7 +155,7 @@
 	}
 
 	function startAddingField() {
-		if (!task) return;
+		if (!task || !allowEditing) return;
 		editingFieldIndex = -1;
 		editingFieldName = '';
 		editingFieldType = 'string';
@@ -300,11 +299,6 @@
 			addLiteralValue();
 		}
 	}
-
-	// Clean up subscriptions
-	onDestroy(() => {
-		unsubTaskTypes();
-	});
 </script>
 
 {#if task}
@@ -326,7 +320,7 @@
 						<div class="mt-0.5 text-xs text-red-500">{classNameError}</div>
 					{/if}
 				</div>
-			{:else}
+			{:else if allowEditing}
 				<!-- svelte-ignore a11y_click_events_have_key_events -->
 				<div
 					class="w-full cursor-pointer rounded px-1.5 py-1 text-center text-sm font-medium hover:bg-gray-100"
@@ -334,6 +328,11 @@
 					role="button"
 					tabindex={0}
 				>
+					{task.className || 'Unnamed Task'}
+				</div>
+			{:else}
+				<!-- Read-only class name when editing is disabled -->
+				<div class="w-full rounded px-1.5 py-1 text-center text-sm font-medium text-gray-700">
 					{task.className || 'Unnamed Task'}
 				</div>
 			{/if}
@@ -468,10 +467,14 @@
 					{:else}
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<div
-							class="text-2xs group flex cursor-pointer items-center justify-between rounded bg-gray-50 px-1 py-0.5 hover:bg-gray-100"
-							onclick={() => startEditingField(index)}
-							role="button"
-							tabindex={0}
+							class="text-2xs group flex {allowEditing
+								? 'cursor-pointer'
+								: ''} items-center justify-between rounded bg-gray-50 px-1 py-0.5 {allowEditing
+								? 'hover:bg-gray-100'
+								: ''}"
+							onclick={allowEditing ? () => startEditingField(index) : undefined}
+							role={allowEditing ? 'button' : undefined}
+							tabindex={allowEditing ? 0 : undefined}
 						>
 							<div class="flex items-center gap-1">
 								<span class="font-medium">{field.name}</span>
@@ -489,28 +492,30 @@
 									<span class="text-gray-400">?</span>
 								{/if}
 							</div>
-							<div class="flex items-center">
-								<button
-									class="ml-1 flex h-3.5 w-3.5 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-gray-200 hover:text-blue-500 group-hover:opacity-100"
-									onclick={(e) => {
-										e.stopPropagation();
-										startEditingField(index);
-									}}
-									title="Edit field"
-								>
-									<PencilSimple size={8} weight="bold" />
-								</button>
-								<button
-									class="ml-1 flex h-3.5 w-3.5 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
-									onclick={(e) => {
-										e.stopPropagation();
-										deleteField(index);
-									}}
-									title="Remove field"
-								>
-									<Trash size={8} weight="bold" />
-								</button>
-							</div>
+							{#if allowEditing}
+								<div class="flex items-center">
+									<button
+										class="ml-1 flex h-3.5 w-3.5 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-gray-200 hover:text-blue-500 group-hover:opacity-100"
+										onclick={(e) => {
+											e.stopPropagation();
+											startEditingField(index);
+										}}
+										title="Edit field"
+									>
+										<PencilSimple size={8} weight="bold" />
+									</button>
+									<button
+										class="ml-1 flex h-3.5 w-3.5 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
+										onclick={(e) => {
+											e.stopPropagation();
+											deleteField(index);
+										}}
+										title="Remove field"
+									>
+										<Trash size={8} weight="bold" />
+									</button>
+								</div>
+							{/if}
 						</div>
 					{/if}
 				{/each}
@@ -639,7 +644,7 @@
 			</div>
 
 			<!-- Plus button at the bottom center -->
-			{#if editingFieldIndex === null}
+			{#if editingFieldIndex === null && allowEditing}
 				<div class="mt-2 flex justify-center">
 					<button
 						class="z-10 flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 text-blue-500 shadow-sm hover:bg-blue-200"

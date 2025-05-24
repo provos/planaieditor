@@ -380,34 +380,20 @@
 		layoutAttempts = 0;
 
 		let nameMap = new Map<string, string>();
-		let taskNameSet = new Set<string>(); // Set for task class names
-		let toolNameSet = new Set<string>(); // Set for tool names
 		// Subscribe to get current nodes
 		const unsubNodes = nodes.subscribe((currentNodes) => {
 			// Reset the map and set
 			nameMap = new Map();
-			taskNameSet = new Set<string>();
-			toolNameSet = new Set<string>();
 			// Add each node's class name or worker name with its ID
 			currentNodes.forEach((node) => {
 				const name = node.data?.className || node.data?.workerName;
 				if (name && typeof name === 'string') {
 					nameMap.set(node.id, name);
 				}
-				// Specifically add Task node class names to the task set
-				if ((node.type === 'task' || node.type === 'taskimport') && node.data?.className) {
-					// Cast to any first to avoid TypeScript error
-					const nodeData = node.data as any as NodeData;
-					taskNameSet.add(nodeData.className);
-				} else if (node.type === 'tool' && node.data?.name) {
-					const nodeData = node.data as unknown as ToolNodeData;
-					toolNameSet.add(nodeData.name);
-				}
 			});
 
 			// Update the stores
 			allClassNames.set(nameMap);
-			taskClassNamesStore.set(taskNameSet);
 		});
 
 		return unsubNodes;

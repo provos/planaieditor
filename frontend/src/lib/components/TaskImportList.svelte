@@ -7,11 +7,15 @@
 	} from '$lib/stores/taskImportStore.svelte';
 	import { splitPaneConfig } from '$lib/stores/splitPaneStore.svelte';
 	import BaseList from './BaseList.svelte';
+	import { generateUniqueName } from '$lib/utils/utils';
+	import { taskClassNamesStore } from '$lib/stores/classNameStore.svelte';
 
 	function createNewTaskImport() {
+		const baseName = 'TaskImport';
+		const taskName = generateUniqueName(baseName, taskClassNamesStore);
 		const newTask: TaskImport = {
 			id: `taskimport-${Date.now()}`,
-			className: 'NewTaskImport',
+			className: taskName,
 			fields: []
 		};
 		addTaskImport(newTask);

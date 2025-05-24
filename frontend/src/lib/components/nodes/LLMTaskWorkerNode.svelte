@@ -185,13 +185,9 @@
 		persistNodeDataDebounced();
 	}
 
-	// Subscribe to the taskClassNamesStore for output type selection
+	// Watch the taskClassNamesStore for output type selection
 	$effect(() => {
-		const unsubClassNames = taskClassNamesStore.subscribe((taskClasses) => {
-			availableTaskClasses = Array.from(taskClasses);
-		});
-
-		return unsubClassNames;
+		availableTaskClasses = Array.from(taskClassNamesStore);
 	});
 
 	$effect(() => {
@@ -384,7 +380,7 @@
 					>
 						<span class="font-mono">{currentLLMOutputType}</span>
 						<button
-							class="ml-1 flex h-3 w-3 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-50 hover:text-red-500"
+							class="ml-1 flex h-3 w-3 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
 							onclick={(e) => {
 								e.stopPropagation();
 								deleteLLMOutputType();
@@ -397,7 +393,7 @@
 				{:else}
 					<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
 					<div
-						class="text-2xs cursor-pointer py-0.5 text-gray-400 italic"
+						class="text-2xs cursor-pointer py-0.5 italic text-gray-400"
 						onclick={toggleLLMOutputTypeDropdown}
 						role="button"
 						tabindex="0"
@@ -407,7 +403,7 @@
 					</div>
 				{/if}
 			{:else}
-				<div class="text-2xs cursor-pointer py-0.5 text-gray-400 italic">
+				<div class="text-2xs cursor-pointer py-0.5 italic text-gray-400">
 					No output types defined
 				</div>
 			{/if}
@@ -490,7 +486,7 @@
 					>
 						<span class="font-mono">{toolInfo.name} - {toolInfo.description}</span>
 						<button
-							class="ml-1 flex h-3 w-3 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-50 hover:text-red-500"
+							class="ml-1 flex h-3 w-3 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
 							onclick={() => deselectTool(toolId)}
 							title={`Remove ${toolInfo.name}`}
 						>
@@ -499,7 +495,7 @@
 					</div>
 				{/each}
 				{#if selectedToolIds.length === 0}
-					<div class="text-2xs py-0.5 text-gray-400 italic">No tools selected</div>
+					<div class="text-2xs py-0.5 italic text-gray-400">No tools selected</div>
 				{/if}
 			</div>
 		</div>

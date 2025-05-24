@@ -5,11 +5,11 @@ import { writable } from 'svelte/store';
 export const allClassNames = writable<Map<string, string>>(new Map());
 
 /**
- * A Svelte store that holds a Set of all known Task class names in the current graph.
+ * A Svelte 5 rune that holds a Set of all known Task class names in the current graph.
  * This is used by TaskNode to populate the type dropdown, allowing fields to reference
  * other defined Task classes.
  */
-export const taskClassNamesStore = writable<Set<string>>(new Set());
+export const taskClassNamesStore = $state<Set<string>>(new Set());
 
 /**
  * A Svelte 5 rune that holds a Set of all known Tool names in the current graph.

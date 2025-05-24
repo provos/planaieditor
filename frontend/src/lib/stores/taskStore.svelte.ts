@@ -1,4 +1,6 @@
 import { persistedState } from '$lib/utils/persist.svelte';
+import { taskClassNamesStore } from './classNameStore.svelte';
+import { taskImports } from './taskImportStore.svelte';
 
 // Define basic field types
 export type BaseFieldType = 'string' | 'integer' | 'float' | 'boolean' | 'literal';
@@ -38,3 +40,24 @@ export function updateTask(task: Task) {
 export function getTaskByName(name: string): Task | undefined {
     return tasks.find((task: Task) => task.className === name);
 }
+
+// Update the task class names store when the tasks change
+$effect.root(() => {
+    $effect(() => {
+        // Get all currently defined task class names
+        const localTaskClassNames = new Set(tasks.map((task: Task) => task.className));
+
+        // Remove all local task names that are no longer present
+        const currentTaskClassNames = Array.from(taskClassNamesStore);
+        currentTaskClassNames.forEach(name => {
+            // Check if this name exists in taskImports to avoid removing imported names
+            const isImported = taskImports && Array.from(taskImports).some((taskImport: any) => taskImport.className === name);
+            if (!isImported && !localTaskClassNames.has(name)) {
+                taskClassNamesStore.delete(name);
+            }
+        });
+
+        // Add all current local task names
+        localTaskClassNames.forEach(name => taskClassNamesStore.add(name));
+    });
+});

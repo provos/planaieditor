@@ -6,7 +6,6 @@
 	import { onDestroy, onMount, untrack, tick } from 'svelte';
 	import { useUpdateNodeInternals } from '@xyflow/svelte';
 	import { formatErrorMessage, debounce } from '$lib/utils/utils';
-	import type { NodeData as TaskNodeData } from './TaskNode.svelte';
 	import { backendUrl } from '$lib/utils/backendUrl';
 	import Spinner from 'phosphor-svelte/lib/Spinner';
 	import HeaderIcon from '../HeaderIcon.svelte';
@@ -14,6 +13,11 @@
 	import { useStore } from '@xyflow/svelte';
 	import { persistNodeDataDebounced } from '$lib/utils/nodeUtils';
 	import type { Edge } from '@xyflow/svelte';
+	import { tasks as tasksStore, type Task as TaskType } from '$lib/stores/taskStore.svelte';
+	import {
+		taskImports as taskImportsStore,
+		type TaskImport as TaskImportType
+	} from '$lib/stores/taskImportStore.svelte';
 
 	// Define the interface for the node's data
 	export interface DataInputNodeData {
@@ -47,11 +51,11 @@
 
 	const updateNodeInternals = useUpdateNodeInternals();
 
-	// Subscribe to task class names
-	const unsubTaskTypes = taskClassNamesStore.subscribe((taskClasses) => {
-		availableTaskClasses = Array.from(taskClasses);
+	// Watch for task class names
+	$effect(() => {
+		availableTaskClasses = Array.from(taskClassNamesStore);
 		// If the current className is no longer valid, reset it
-		if (selectedClassName && !taskClasses.has(selectedClassName)) {
+		if (selectedClassName && !taskClassNamesStore.has(selectedClassName)) {
 			selectedClassName = null;
 			data.className = null;
 			persistNodeDataDebounced();
@@ -136,14 +140,12 @@
 		isLoading = true;
 		try {
 			// find the Task Class Node
-			let taskClassNode: Node | undefined;
-			nodes.subscribe((nodes) => {
-				taskClassNode = nodes.find(
-					(node) =>
-						(node.type === 'task' || node.type === 'taskimport') &&
-						(node.data as unknown as TaskNodeData).className === selectedClassName
-				);
-			})();
+			let taskClassNode: TaskType | TaskImportType | undefined = tasksStore.find(
+				(task) => task.className === selectedClassName
+			);
+			if (!taskClassNode) {
+				taskClassNode = taskImportsStore.find((task) => task.className === selectedClassName);
+			}
 
 			if (!taskClassNode) {
 				errorMessage = `No Task Class Node found for ${selectedClassName}`;
@@ -180,7 +182,7 @@
 
 	// --- Cleanup ---
 	onDestroy(() => {
-		unsubTaskTypes();
+		// $effect handles cleanup automatically
 	});
 </script>
 
@@ -239,7 +241,7 @@
 			initialCollapsed={false}
 			onUpdateSize={handleCollapse}
 		/>
-		<div class="absolute right-3 bottom-1 z-10">
+		<div class="absolute bottom-1 right-3 z-10">
 			{#if isLoading}
 				<div class="rounded-sm bg-white/50 px-1.5 py-1.5">
 					<Spinner size={12} class="animate-spin text-blue-500" />
