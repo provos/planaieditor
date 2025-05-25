@@ -184,21 +184,17 @@ export function convertNodeData(node: Node) {
 		}
 
 		// Convert inputTypes to llm_input_type
-		if (data.inputTypes) {
+		if (data.inputTypes && node.type === 'llmtaskworker') {
 			if (!processedData.classVars) {
 				processedData.classVars = {};
 			}
-			console.log('Input types:', data.inputTypes);
 			processedData.classVars['llm_input_type'] = data.inputTypes[0];
-			console.log('classVars:', processedData.classVars);
 			delete processedData.inputTypes;
 			delete processedData.llm_input_type;
 		}
 
 		// Clean up display-only properties
 		delete processedData.llmConfigDescription;
-
-		console.log('LLM Config Node', processedData);
 	}
 
 	// Consolidate known class variables into classVars for worker nodes
@@ -244,6 +240,11 @@ export function convertNodeData(node: Node) {
 	if (node.type === 'subgraphworker' && data?.isFactoryCreated) {
 		// Remove isFactoryCreated flag as it's frontend-specific
 		delete processedData.isFactoryCreated;
+	}
+
+	// ChatTaskWorker is special as it basically doesn't take anything
+	if (node.type === 'chattaskworker' && data?.classVars) {
+		delete data.classVars.prompt;
 	}
 
 	return { ...node, data: processedData };
