@@ -55,7 +55,22 @@ export function saveGraphToJson() {
 	console.log('Graph saved to JSON.');
 }
 
+async function clearGraph() {
+	nodesStore.set([]);
+	edgesStore.set([]);
+	llmConfigsStore.set([]);
+	llmConfigsFromCodeStore.set([]);
+	toolStore.length = 0;
+	taskStore.length = 0;
+	taskImportsStore.length = 0;
+	clearAssistantMessages();
+	graphNameStore.set('');
+	await new Promise((resolve) => setTimeout(resolve, 10));
+}
+
 export async function loadGraphFromJson(jsonContent: string): Promise<ExportStatus> {
+	await clearGraph();
+
 	try {
 		const loadedState: SavedGraphState = JSON.parse(jsonContent);
 
@@ -68,6 +83,8 @@ export async function loadGraphFromJson(jsonContent: string): Promise<ExportStat
 
 				// Convert task nodes to the task store
 				const taskNodes = loadedState.nodes.filter((node) => node.type === 'task');
+				console.log('taskNodes', taskNodes);
+				console.log('taskStore', taskStore);
 				taskNodes.forEach((node) => {
 					const task: TaskType = {
 						id: node.id,
@@ -97,6 +114,27 @@ export async function loadGraphFromJson(jsonContent: string): Promise<ExportStat
 				loadedState.nodes = loadedState.nodes.filter(
 					(node) => node.type !== 'task' && node.type !== 'taskimport'
 				);
+
+				// Convert old output handle IDs from output-{typename} to output-{id}
+				loadedState.edges = loadedState.edges.map((edge) => {
+					if (edge.sourceHandle && edge.sourceHandle.startsWith('output-')) {
+						const typeName = edge.sourceHandle.substring(7); // Remove 'output-' prefix
+
+						// Find the task by class name to get its ID
+						const task =
+							taskStore.find((t) => t.className === typeName) ||
+							taskImportsStore.find((t) => t.className === typeName);
+
+						if (task) {
+							// Update the handle ID to use the task ID instead of class name
+							return {
+								...edge,
+								sourceHandle: `output-${task.id}`
+							};
+						}
+					}
+					return edge;
+				});
 				break;
 			case 2:
 				break;
@@ -114,14 +152,6 @@ export async function loadGraphFromJson(jsonContent: string): Promise<ExportStat
 		) {
 			throw new Error('Invalid JSON file structure.');
 		}
-
-		nodesStore.set([]);
-		edgesStore.set([]);
-		llmConfigsStore.set([]);
-		llmConfigsFromCodeStore.set([]);
-		toolStore.length = 0;
-		clearAssistantMessages();
-		await new Promise((resolve) => setTimeout(resolve, 10));
 
 		nodesStore.set(loadedState.nodes);
 		edgesStore.set(loadedState.edges);
@@ -147,12 +177,7 @@ export async function loadGraphFromJson(jsonContent: string): Promise<ExportStat
 		return { type: 'success', message: 'Graph loaded successfully.' };
 	} catch (error: any) {
 		console.error('Error loading graph from JSON:', error);
-		nodesStore.set([]);
-		edgesStore.set([]);
-		llmConfigsStore.set([]);
-		llmConfigsFromCodeStore.set([]);
-		clearAssistantMessages();
-		graphNameStore.set('');
+		await clearGraph();
 		return {
 			type: 'error',
 			message: `Load failed: ${error.message || 'Invalid JSON format'}`

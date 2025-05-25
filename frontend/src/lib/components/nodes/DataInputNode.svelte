@@ -18,6 +18,7 @@
 		taskImports as taskImportsStore,
 		type TaskImport as TaskImportType
 	} from '$lib/stores/taskImportStore.svelte';
+	import { type InputType, inferInputTypeFromName } from '$lib/utils/nodeUtils';
 
 	// Define the interface for the node's data
 	export interface DataInputNodeData {
@@ -43,7 +44,9 @@
 
 	// --- State Variables ---
 	let availableTaskClasses = $state<string[]>([]);
-	let selectedClassName = $state<string | null>(data.className); // Use state for reactivity
+	let selectedClassName = $state<InputType | null>(
+		data.className ? inferInputTypeFromName(data.className) : null
+	); // Use InputType for reactivity
 	let errorMessage = $state<string | null>(null);
 	let jsonIsValid = $state<boolean>(false);
 	let isLoading = $state<boolean>(false);
@@ -55,7 +58,7 @@
 	$effect(() => {
 		availableTaskClasses = Array.from(taskClassNamesStore);
 		// If the current className is no longer valid, reset it
-		if (selectedClassName && !taskClassNamesStore.has(selectedClassName)) {
+		if (selectedClassName && !taskClassNamesStore.has(selectedClassName.className)) {
 			selectedClassName = null;
 			data.className = null;
 			persistNodeDataDebounced();
@@ -72,7 +75,7 @@
 	}
 
 	async function checkCanBeUsedForAssistant() {
-		if (selectedClassName != 'ChatTask') {
+		if (selectedClassName?.className != 'ChatTask') {
 			canBeUsedForAssistant = false;
 			return;
 		}
@@ -96,8 +99,9 @@
 
 	// Update data when selectedClassName changes
 	$effect(() => {
-		if (data.className !== selectedClassName) {
-			data.className = selectedClassName;
+		const newClassName = selectedClassName?.className || null;
+		if (data.className !== newClassName) {
+			data.className = newClassName;
 			checkCanBeUsedForAssistant(); // async function does not trigger reactivity
 			persistNodeDataDebounced();
 			deleteExistingEdges();
@@ -141,14 +145,16 @@
 		try {
 			// find the Task Class Node
 			let taskClassEntry: TaskType | TaskImportType | undefined = tasksStore.find(
-				(task) => task.className === selectedClassName
+				(task) => task.className === selectedClassName!.className
 			);
 			if (!taskClassEntry) {
-				taskClassEntry = taskImportsStore.find((task) => task.className === selectedClassName);
+				taskClassEntry = taskImportsStore.find(
+					(task) => task.className === selectedClassName!.className
+				);
 			}
 
 			if (!taskClassEntry) {
-				errorMessage = `No Task Class Node found for ${selectedClassName}`;
+				errorMessage = `No Task Class Node found for ${selectedClassName!.className}`;
 				return;
 			}
 
@@ -204,8 +210,8 @@
 		<Handle
 			type="source"
 			position={Position.Right}
-			id={`output-${selectedClassName}`}
-			style={`background-color: ${getColorForType(selectedClassName)};`}
+			id={`output-${selectedClassName.id}`}
+			style={`background-color: ${getColorForType(selectedClassName.className)};`}
 		/>
 	{/if}
 
@@ -220,11 +226,19 @@
 			extraText={canBeUsedForAssistant ? '(Assistant Ready)' : ''}
 		/>
 		<select
-			bind:value={selectedClassName}
+			value={selectedClassName?.className || ''}
+			onchange={(e) => {
+				const target = e.target as HTMLSelectElement;
+				if (target.value) {
+					selectedClassName = inferInputTypeFromName(target.value);
+				} else {
+					selectedClassName = null;
+				}
+			}}
 			class="w-full cursor-pointer rounded px-1 py-0.5 text-center text-xs font-medium hover:bg-gray-100"
 			title="Select the output Task type"
 		>
-			<option value={null}>Select Output Task Type...</option>
+			<option value="">Select Output Task Type...</option>
 			{#each availableTaskClasses as className (className)}
 				<option value={className}>{className}</option>
 			{/each}
