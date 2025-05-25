@@ -1,16 +1,16 @@
 import { backendUrl } from '$lib/utils/backendUrl';
 import type { Node, Edge } from '@xyflow/svelte';
-import { taskClassNamesStore } from '$lib/stores/classNameStore.svelte';
 import { allWorkerClassNames } from '$lib/stores/classNameStore.svelte';
 import ELK from 'elkjs/lib/elk.bundled.js';
 import { Position } from '@xyflow/svelte';
 import { getEdgeStyleProps } from '$lib/utils/edgeUtils';
 import { addLLMConfigFromCode } from '$lib/stores/llmConfigsStore';
 import { addTool, type Tool, getToolByName } from '$lib/stores/toolStore.svelte';
-import { addTask, type Task as TaskType } from '$lib/stores/taskStore.svelte';
+import { addTask, type Task as TaskType, getTaskByName } from '$lib/stores/taskStore.svelte';
 import {
 	addTaskImport,
-	type TaskImport as TaskImportType
+	type TaskImport as TaskImportType,
+	getTaskImportByName
 } from '$lib/stores/taskImportStore.svelte';
 
 // Type for the structured error from the backend
@@ -394,7 +394,13 @@ export async function importPythonCode(
 				};
 				// If the target has a specific input type, connect to the corresponding source handle
 				if (edge.targetInputType) {
-					svelteEdge.sourceHandle = `output-${edge.targetInputType}`;
+					const task =
+						getTaskByName(edge.targetInputType) || getTaskImportByName(edge.targetInputType);
+					if (!task) {
+						console.warn(`Task or TaskImport not found for ${edge.targetInputType}`);
+						return;
+					}
+					svelteEdge.sourceHandle = `output-${task.id}`;
 				}
 				// If targetInputType is not specified, sourceHandle remains undefined,
 				// connecting to the default source handle (if one exists).
