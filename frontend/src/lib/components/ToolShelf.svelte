@@ -325,7 +325,8 @@
 										side="bottom"
 									>
 										Define a PlanAI Task class that represents a specific data structure. Tasks are
-										Pydantic models that flow through the graph as inputs and outputs.
+										Pydantic models that flow through the graph as inputs and outputs. This node creates
+										a bookmark to open the side panel to add, remove, and edit tasks.
 										{#if taskTooltip}
 											<span class="text-red-700">{taskTooltip}</span>
 										{/if}
@@ -359,7 +360,8 @@
 										class="z-50 max-w-xs rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 shadow-md"
 										side="bottom"
 									>
-										Import existing Task classes from Python modules to use in your workflow.
+										Import existing Task classes from Python modules to use in your workflow. This node creates
+										a bookmark to open the side panel to add, remove, and edit task imports.
 										{#if taskImportTooltip}
 											<span class="text-red-700">{taskImportTooltip}</span>
 										{/if}
