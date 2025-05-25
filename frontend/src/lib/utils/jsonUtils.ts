@@ -28,6 +28,8 @@ export interface SavedGraphState {
 	nodes: Node[];
 	edges: Edge[];
 	tools: ToolType[];
+	tasks: TaskType[];
+	taskImports: TaskImportType[];
 	llmConfigs: LLMConfig[];
 	llmConfigsFromCode: LLMConfigFromCode[];
 }
@@ -45,6 +47,8 @@ export function saveGraphToJson() {
 		nodes: currentNodes,
 		edges: currentEdges,
 		tools: toolStore,
+		tasks: taskStore,
+		taskImports: taskImportsStore,
 		llmConfigs: currentUserLLMConfigs,
 		llmConfigsFromCode: currentCodeLLMConfigs
 	};
@@ -80,11 +84,15 @@ export async function loadGraphFromJson(jsonContent: string): Promise<ExportStat
 				if (!loadedState.tools) {
 					loadedState.tools = [];
 				}
+				if (!loadedState.tasks) {
+					loadedState.tasks = [];
+				}
+				if (!loadedState.taskImports) {
+					loadedState.taskImports = [];
+				}
 
 				// Convert task nodes to the task store
 				const taskNodes = loadedState.nodes.filter((node) => node.type === 'task');
-				console.log('taskNodes', taskNodes);
-				console.log('taskStore', taskStore);
 				taskNodes.forEach((node) => {
 					const task: TaskType = {
 						id: node.id,
@@ -92,7 +100,7 @@ export async function loadGraphFromJson(jsonContent: string): Promise<ExportStat
 						type: 'task',
 						fields: node.data.fields as FieldType[]
 					};
-					taskStore.push(task);
+					loadedState.tasks.push(task);
 				});
 
 				// Convert taskimport nodes to the taskimport store
@@ -107,7 +115,7 @@ export async function loadGraphFromJson(jsonContent: string): Promise<ExportStat
 						isImplicit: node.data.isImplicit as boolean,
 						availableClasses: node.data.availableClasses as string[]
 					};
-					taskImportsStore.push(taskImport);
+					loadedState.taskImports.push(taskImport);
 				});
 
 				// Remove task nodes from the graph
@@ -122,8 +130,8 @@ export async function loadGraphFromJson(jsonContent: string): Promise<ExportStat
 
 						// Find the task by class name to get its ID
 						const task =
-							taskStore.find((t) => t.className === typeName) ||
-							taskImportsStore.find((t) => t.className === typeName);
+							loadedState.tasks.find((t) => t.className === typeName) ||
+							loadedState.taskImports.find((t) => t.className === typeName);
 
 						if (task) {
 							// Update the handle ID to use the task ID instead of class name
@@ -148,16 +156,20 @@ export async function loadGraphFromJson(jsonContent: string): Promise<ExportStat
 			!Array.isArray(loadedState.edges) ||
 			!Array.isArray(loadedState.llmConfigs) ||
 			!Array.isArray(loadedState.llmConfigsFromCode) ||
-			!Array.isArray(loadedState.tools)
+			!Array.isArray(loadedState.tools) ||
+			!Array.isArray(loadedState.tasks) ||
+			!Array.isArray(loadedState.taskImports)
 		) {
 			throw new Error('Invalid JSON file structure.');
 		}
 
+		taskStore.push(...loadedState.tasks);
+		taskImportsStore.push(...loadedState.taskImports);
+		toolStore.push(...loadedState.tools);
 		nodesStore.set(loadedState.nodes);
 		edgesStore.set(loadedState.edges);
 		llmConfigsStore.set(loadedState.llmConfigs);
 		llmConfigsFromCodeStore.set(loadedState.llmConfigsFromCode);
-		toolStore.push(...loadedState.tools);
 		if (loadedState.name) {
 			graphNameStore.set(loadedState.name);
 		}

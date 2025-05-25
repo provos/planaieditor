@@ -9,7 +9,7 @@
 	import { useUpdateNodeInternals, useStore, type Node } from '@xyflow/svelte';
 	import { tick } from 'svelte';
 	import type { Action } from 'svelte/action';
-	import { addAvailableMethod } from '$lib/utils/nodeUtils';
+	import { addAvailableMethod, taskNameExists } from '$lib/utils/nodeUtils';
 	import type { Unsubscriber } from 'svelte/store';
 	import { persistNodeDataDebounced } from '$lib/utils/nodeUtils';
 	import { openFullScreenEditor } from '$lib/stores/fullScreenEditorStore.svelte';
@@ -189,7 +189,7 @@
 	});
 
 	$effect(() => {
-		if (currentLLMOutputType && !availableTaskClasses.includes(currentLLMOutputType)) {
+		if (currentLLMOutputType && !taskNameExists(currentLLMOutputType)) {
 			currentLLMOutputType = '';
 			data.llm_output_type = '';
 			persistNodeDataDebounced();

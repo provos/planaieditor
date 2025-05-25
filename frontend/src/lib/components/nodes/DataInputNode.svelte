@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { Handle, Position, NodeResizer, type Node } from '@xyflow/svelte';
-	import { taskClassNamesStore } from '$lib/stores/classNameStore.svelte';
 	import { getColorForType } from '$lib/utils/colorUtils';
 	import EditableCodeSection from '../EditableCodeSection.svelte';
 	import { onDestroy, onMount, untrack, tick } from 'svelte';
@@ -18,7 +17,7 @@
 		taskImports as taskImportsStore,
 		type TaskImport as TaskImportType
 	} from '$lib/stores/taskImportStore.svelte';
-	import { type InputType, inferInputTypeFromName } from '$lib/utils/nodeUtils';
+	import { type InputType, inferInputTypeFromName, taskNameExists } from '$lib/utils/nodeUtils';
 
 	// Define the interface for the node's data
 	export interface DataInputNodeData {
@@ -56,9 +55,8 @@
 
 	// Watch for task class names
 	$effect(() => {
-		availableTaskClasses = Array.from(taskClassNamesStore);
 		// If the current className is no longer valid, reset it
-		if (selectedClassName && !taskClassNamesStore.has(selectedClassName.className)) {
+		if (selectedClassName && !taskNameExists(selectedClassName.className)) {
 			selectedClassName = null;
 			data.className = null;
 			persistNodeDataDebounced();

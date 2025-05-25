@@ -104,6 +104,13 @@ export function isClassNameAvailable(className: string): boolean {
 	);
 }
 
+export function taskNameExists(name: string): boolean {
+	return (
+		taskStore.some((task) => task.className === name) ||
+		taskImportStore.some((taskImport) => taskImport.className === name)
+	);
+}
+
 export function nodeDataFromType(
 	id: string,
 	nodeType: string
