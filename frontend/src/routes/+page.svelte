@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { nodes, edges } from '$lib/stores/graphStore';
+	import { nodes, edges, getCurrentNodes, getCurrentEdges } from '$lib/stores/graphStore';
 	import { dev } from '$app/environment';
 	import { backendUrl } from '$lib/utils/backendUrl';
 	import { downloadFile } from '$lib/utils/utils';
@@ -243,7 +243,7 @@
 				validation_result?: any;
 			}) => {
 				// Get current nodes
-				const currentNodes = get(nodes);
+				const currentNodes = getCurrentNodes();
 
 				// Process the export result
 				const result = processExportResult(data, currentNodes);
@@ -537,10 +537,10 @@
 					contextMenuNode.type === 'subgraphworker' ||
 					contextMenuNode.type === 'chattaskworker')
 			) {
-				const inputEdges = get(edges).filter((edge) => edge.target === contextMenuNode?.id);
+				const inputEdges = getCurrentEdges().filter((edge) => edge.target === contextMenuNode?.id);
 				const inputNodes = inputEdges.map((edge) => edge.source);
 				const hasDataInput = inputNodes.some(
-					(node) => get(nodes).find((n) => n.id === node)?.type === 'datainput'
+					(node) => getCurrentNodes().find((n) => n.id === node)?.type === 'datainput'
 				);
 				if (!hasDataInput) {
 					baseNodeItems.unshift({
@@ -684,12 +684,8 @@
 		}
 
 		// Get current nodes and edges from the stores
-		let currentNodes: Node[] = [];
-		let currentEdges: Edge[] = [];
-		const unsubNodes = nodes.subscribe((value) => (currentNodes = value));
-		const unsubEdges = edges.subscribe((value) => (currentEdges = value));
-		unsubNodes();
-		unsubEdges();
+		const currentNodes = getCurrentNodes();
+		const currentEdges = getCurrentEdges();
 
 		// Call the export utility function
 		exportStatus = exportPythonCode(socketStore.socket, currentNodes, currentEdges, mode);
@@ -766,8 +762,8 @@
 	// Function to run ELK layout
 	async function runElkLayout() {
 		console.log('Running ELK layout...');
-		const currentNodes = get(nodes);
-		const currentEdges = get(edges);
+		const currentNodes = getCurrentNodes();
+		const currentEdges = getCurrentEdges();
 
 		// Basic check: Ensure nodes have dimensions before layout
 		const allNodesHaveDimensions = currentNodes.every(
@@ -820,9 +816,7 @@
 
 	// Function to check if a connection is valid
 	function isValidConnection(connection: Connection | Edge): boolean {
-		let currentNodes: Node[] = [];
-		const unsubNodes = nodes.subscribe((value) => (currentNodes = value));
-		unsubNodes();
+		const currentNodes = getCurrentNodes();
 		const targetNode = currentNodes.find((node) => node.id === connection.target);
 		const sourceNode = currentNodes.find((node) => node.id === connection.source);
 		if (!targetNode || !sourceNode) {
@@ -850,14 +844,14 @@
 
 	function handleConnect(connection: Connection) {
 		// find the newly created edge
-		const newEdge = get(edges).find(
+		const newEdge = getCurrentEdges().find(
 			(edge) => edge.source === connection.source && edge.target === connection.target
 		);
 		if (!newEdge) {
 			console.error('newEdge not found');
 			return;
 		}
-		const sourceNode = get(nodes).find((node) => node.id === newEdge.source);
+		const sourceNode = getCurrentNodes().find((node) => node.id === newEdge.source);
 		if (!sourceNode) {
 			console.error('sourceNode not found');
 			return;
@@ -865,7 +859,7 @@
 
 		// if the source node is a datainput, make the target node an entry point
 		if (sourceNode.type == 'datainput') {
-			const targetNode = get(nodes).find((node) => node.id === newEdge.target);
+			const targetNode = getCurrentNodes().find((node) => node.id === newEdge.target);
 			if (targetNode && !(targetNode.data as BaseWorkerData).entryPoint) {
 				nodes.update((nds) => {
 					return nds.map((node) => {

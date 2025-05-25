@@ -2,6 +2,7 @@
 	import { onMount, tick } from 'svelte';
 	import { useStore, useSvelteFlow } from '@xyflow/svelte';
 	import type { Node } from '@xyflow/svelte';
+	import { getCurrentNodes } from '$lib/stores/graphStore';
 	import EditableCodeSection from '$lib/components/EditableCodeSection.svelte';
 	import FloppyDisk from 'phosphor-svelte/lib/FloppyDisk';
 	import X from 'phosphor-svelte/lib/X';
@@ -25,14 +26,10 @@
 		isLoading = true;
 
 		// Get the node with the id from the store
-		let currentNode: Node | undefined = undefined;
-		let moduleLevelImport: Node | undefined = undefined;
-		let toolNodes: Node[] = [];
-		nodes.subscribe((nodes) => {
-			currentNode = nodes.find((node) => node.id === fullScreenEditorState.id);
-			moduleLevelImport = nodes.find((node) => node.type === 'modulelevelimport');
-			toolNodes = nodes.filter((node) => node.type === 'tool');
-		})();
+		const currentNodes = getCurrentNodes();
+		const currentNode = currentNodes.find((node) => node.id === fullScreenEditorState.id);
+		const moduleLevelImport = currentNodes.find((node) => node.type === 'modulelevelimport');
+		const toolNodes = currentNodes.filter((node) => node.type === 'tool');
 		if (!currentNode) {
 			console.error('Node not found');
 			return;

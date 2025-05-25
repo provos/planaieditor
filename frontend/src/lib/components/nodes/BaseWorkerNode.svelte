@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Handle, Position, NodeResizer, useStore, useUpdateNodeInternals } from '@xyflow/svelte';
 	import type { Node } from '@xyflow/svelte';
+	import { getCurrentNodes } from '$lib/stores/graphStore';
 	import { isValidPythonClassName } from '$lib/utils/validation';
 	import { getColorForType, calculateHandlePosition } from '$lib/utils/colorUtils';
 	import { taskClassNamesStore } from '$lib/stores/classNameStore.svelte';
@@ -164,12 +165,11 @@
 	});
 	// svelte-ignore non_reactive_update
 	let workerType: string | undefined = undefined;
-	store.nodes.subscribe((values: Node[]) => {
-		const node = values.find((n) => n.id === id);
-		if (node) {
-			workerType = node.type;
-		}
-	})();
+	const currentNodes = getCurrentNodes();
+	const node = currentNodes.find((n) => n.id === id);
+	if (node) {
+		workerType = node.type;
+	}
 	const allowedCacheTypes = ['taskworker', 'llmtaskworker', 'chattaskworker'];
 	const showCachedOption = workerType && allowedCacheTypes.includes(workerType);
 

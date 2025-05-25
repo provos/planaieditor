@@ -12,6 +12,7 @@
 	import { useStore } from '@xyflow/svelte';
 	import { persistNodeDataDebounced } from '$lib/utils/nodeUtils';
 	import type { Edge } from '@xyflow/svelte';
+	import { getCurrentEdges } from '$lib/stores/graphStore';
 	import { tasks as tasksStore, type Task as TaskType } from '$lib/stores/taskStore.svelte';
 	import {
 		taskImports as taskImportsStore,
@@ -65,10 +66,7 @@
 	});
 
 	function deleteExistingEdges() {
-		let currentEdges: Edge[] = [];
-		edges.subscribe((edges) => {
-			currentEdges = edges;
-		});
+		const currentEdges = getCurrentEdges();
 		edges.set(currentEdges.filter((edge) => edge.source !== id));
 	}
 
