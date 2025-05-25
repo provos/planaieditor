@@ -832,7 +832,7 @@
 		// Get source className based on node type
 		let sourceClassName = null;
 		if (sourceNode.type === 'datainput') {
-			sourceClassName = (sourceNode.data as unknown as NodeData).className;
+			sourceClassName = (sourceNode.data as unknown as DataInputNodeData).className;
 		} else if (connection.sourceHandle) {
 			sourceClassName = connection.sourceHandle.split('-')[1];
 		}
