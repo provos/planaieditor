@@ -1,6 +1,6 @@
 import type { Node, Edge, Connection } from '@xyflow/svelte';
 import { getColorForType } from '$lib/utils/colorUtils';
-import type { NodeData } from '$lib/components/nodes/TaskNode.svelte'; // Assuming TaskNode exports its data type
+import type { DataInputNodeData } from '$lib/components/nodes/DataInputNode.svelte';
 
 interface EdgeStyleProps {
 	style: string;
@@ -29,7 +29,7 @@ export function getEdgeStyleProps(
 	// Determine the task type based on the source node and edge/connection handle
 	if (isTaskSource) {
 		// The class name defines the type
-		taskType = (sourceNode.data as unknown as NodeData)?.className;
+		taskType = (sourceNode.data as unknown as DataInputNodeData)?.className;
 	} else if (edgeOrConnection.sourceHandle && edgeOrConnection.sourceHandle.startsWith('output-')) {
 		// For worker nodes, the output handle determines the type
 		taskType = edgeOrConnection.sourceHandle.split('-')[1];
