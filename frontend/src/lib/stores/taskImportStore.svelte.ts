@@ -30,6 +30,10 @@ export function getTaskImportByName(name: string): TaskImport | undefined {
 	return taskImports.find((item: TaskImport) => item.className === name);
 }
 
+export function getTaskImportById(id: string): TaskImport | undefined {
+	return taskImports.find((item: TaskImport) => item.id === id);
+}
+
 // Update the task class names store when the task imports change
 $effect.root(() => {
 	$effect(() => {

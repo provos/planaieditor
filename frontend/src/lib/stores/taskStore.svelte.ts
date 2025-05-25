@@ -45,6 +45,10 @@ export function getTaskByName(name: string): Task | undefined {
 	return tasks.find((task: Task) => task.className === name);
 }
 
+export function getTaskById(id: string): Task | undefined {
+	return tasks.find((task: Task) => task.id === id);
+}
+
 // Update the task class names store when the tasks change
 $effect.root(() => {
 	$effect(() => {
