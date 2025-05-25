@@ -112,7 +112,7 @@
 		{:else}
 			<div class="space-y-1">
 				{#each inferredInputTypes as type (type)}
-					{@const color = getColorForType(type.className)}
+					{@const color = getColorForType(type.id)}
 					<div
 						class="text-2xs rounded px-1 py-0.5 font-mono"
 						style={`background-color: ${color}20; border-left: 3px solid ${color};`}

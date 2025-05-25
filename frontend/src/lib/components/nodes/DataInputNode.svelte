@@ -209,7 +209,7 @@
 			type="source"
 			position={Position.Right}
 			id={`output-${selectedClassName.id}`}
-			style={`background-color: ${getColorForType(selectedClassName.className)};`}
+			style={`background-color: ${getColorForType(selectedClassName.id)};`}
 		/>
 	{/if}
 

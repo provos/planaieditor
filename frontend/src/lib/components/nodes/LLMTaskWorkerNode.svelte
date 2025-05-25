@@ -14,6 +14,8 @@
 	import { persistNodeDataDebounced } from '$lib/utils/nodeUtils';
 	import { openFullScreenEditor } from '$lib/stores/fullScreenEditorStore.svelte';
 	import { tools as toolsStore, type Tool } from '$lib/stores/toolStore.svelte';
+	import { getTaskByName } from '$lib/stores/taskStore.svelte';
+	import { getTaskImportByName } from '$lib/stores/taskImportStore.svelte';
 
 	// Extend the base data interface
 	export interface LLMWorkerData extends BaseWorkerData {
@@ -367,7 +369,9 @@
 		<div class="relative">
 			{#if availableTaskClasses.length > 0}
 				{#if currentLLMOutputType}
-					{@const color = getColorForType(currentLLMOutputType)}
+					{@const entry =
+						getTaskByName(currentLLMOutputType) || getTaskImportByName(currentLLMOutputType)}
+					{@const color = getColorForType(entry?.id || '')}
 					<div
 						class="text-2xs group flex cursor-pointer items-center justify-between rounded px-1 py-0.5"
 						style={`background-color: ${color}20; border-left: 3px solid ${color};`}
@@ -477,7 +481,7 @@
 			<div class="mt-1 space-y-1">
 				{#each selectedToolIds as toolId (toolId)}
 					{@const toolInfo = getToolInfoById(toolId)}
-					{@const color = getColorForType(toolInfo.name)}
+					{@const color = getColorForType(toolId)}
 					<div
 						class="text-2xs group flex items-center justify-between rounded px-1 py-0.5"
 						style={`background-color: ${color}20; border-left: 3px solid ${color};`}

@@ -438,7 +438,7 @@
 	<!-- Output Handles (Dynamically created) -->
 	{#each combinedOutputTypes as type, index (type)}
 		{@const handleId = `output-${type.id}`}
-		{@const color = getColorForType(type.className)}
+		{@const color = getColorForType(type.id)}
 		{@const topPos = calculateHandlePosition(index, combinedOutputTypes.length, currentHeight)}
 		<Handle
 			type="source"
@@ -531,7 +531,7 @@
 			{/if}
 			<div class="mt-1 space-y-1">
 				{#each inferredInputTypes as type (type)}
-					{@const color = getColorForType(type.className)}
+					{@const color = getColorForType(type.id)}
 					{@const taskItem = getTaskByName(type.className) || getTaskImportByName(type.className)}
 					<div
 						class="text-2xs group flex items-center justify-between rounded px-1 py-0.5"
@@ -612,8 +612,8 @@
 			{/if}
 			<div class="mt-1 space-y-1">
 				{#each currentOutputTypes as type, index (type)}
-					{@const color = getColorForType(type)}
 					{@const entry = getTaskByName(type) || getTaskImportByName(type)}
+					{@const color = getColorForType(entry?.id || '')}
 					{#if editingOutputType === index}
 						<!-- Output Type Edit Form -->
 						<div class="rounded border border-blue-200 bg-blue-50 p-1">

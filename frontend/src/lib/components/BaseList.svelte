@@ -39,7 +39,7 @@
 	{:else}
 		<div class="space-y-2">
 			{#each items as item (getId(item))}
-				{@const color = getColorForType(getName(item))}
+				{@const color = getColorForType(getId(item))}
 				{@const selected = isSelected(item)}
 				<div
 					class="group flex cursor-pointer items-center justify-between rounded p-2 shadow-sm transition-colors {selected

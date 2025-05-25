@@ -29,7 +29,7 @@
 
 	let handleColor = $derived(
 		getColorForType(
-			inferredInputTypes && inferredInputTypes.length > 0 ? inferredInputTypes[0].className : ''
+			inferredInputTypes && inferredInputTypes.length > 0 ? inferredInputTypes[0].id : ''
 		)
 	);
 

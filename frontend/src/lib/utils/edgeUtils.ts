@@ -23,33 +23,22 @@ export function getEdgeStyleProps(
 		return { style: 'stroke-width:3;', animated: false };
 	}
 
-	let taskType: string | undefined = undefined;
-	const isTaskSource = sourceNode.type === 'datainput';
+	let taskId: string | undefined = undefined;
 
 	// Determine the task type based on the source node and edge/connection handle
-	if (isTaskSource) {
-		// The class name defines the type
-		taskType = (sourceNode.data as unknown as DataInputNodeData)?.className;
-	} else if (edgeOrConnection.sourceHandle && edgeOrConnection.sourceHandle.startsWith('output-')) {
+	if (edgeOrConnection.sourceHandle && edgeOrConnection.sourceHandle.startsWith('output-')) {
 		// For worker nodes, the output handle determines the type
-		taskType = edgeOrConnection.sourceHandle.split('-')[1];
-	} else if (
-		// Fallback for workers with a single output type declared in data
-		sourceNode.data &&
-		Array.isArray(sourceNode.data.output_types) &&
-		sourceNode.data.output_types.length === 1
-	) {
-		taskType = sourceNode.data.output_types[0];
+		taskId = edgeOrConnection.sourceHandle.substring(7); // remove 'output-' prefix
 	}
 
 	let styleString = 'stroke-width:3;'; // Default thickness
-	if (taskType) {
-		const color = getColorForType(taskType);
+	if (taskId) {
+		const color = getColorForType(taskId);
 		styleString += `stroke:${color};`; // Add color if type found
 	}
 
 	// Edges originating from DataInput nodes are animated
-	const animated = isTaskSource;
+	const animated = sourceNode.type === 'datainput';
 
 	return {
 		style: styleString,
