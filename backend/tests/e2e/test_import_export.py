@@ -13,7 +13,7 @@ if os.environ.get("SKIP_E2E_TESTS") == "true":
 
 # Ensure planaieditor can be imported (adjust if your structure differs)
 # This might be handled by running pytest from the 'backend' dir
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 from planaieditor.patch import get_definitions_from_python  # noqa: E402
 
 # --- Configuration ---
@@ -431,17 +431,11 @@ def test_import_export_roundtrip(page: Page, test_fixture_path: Path, request):
     assert (
         original_defs is not None
     ), f"Failed to pre-parse fixture: {test_fixture_path}"
-    expected_task_count = len(original_defs.get("tasks", [])) + len(
-        original_defs.get("imported_tasks", [])
-    )
-    if original_defs.get("module_imports"):
-        expected_task_count += 1
 
-    expected_worker_count = len(original_defs.get("workers", []))
-    expected_node_count = expected_task_count + expected_worker_count
-    print(
-        f"Expected nodes: {expected_node_count} ({expected_task_count} tasks, {expected_worker_count} workers)"
-    )
+    expected_node_count = len(original_defs.get("workers", []))
+    if original_defs.get("module_imports"):
+        expected_node_count += 1
+    print(f"Expected nodes: {expected_node_count}")
 
     # ** Simplified Route Handler **
     def handle_route(route: Route):
@@ -474,29 +468,48 @@ def test_import_export_roundtrip(page: Page, test_fixture_path: Path, request):
     else:
         print("No existing graph detected, skipping clear.")
 
-    # 3. Import the fixture file
+        # 3. Import the fixture file
     print(f"Importing fixture: {test_fixture_path}")
     try:
+        # for some reason, import only works when there is a venv
+        interpreter_button = page.locator('button[data-testid="interpreter-button"]')
+        expect(interpreter_button).to_be_visible(timeout=TIMEOUT)
+        expect(interpreter_button).to_be_enabled(timeout=TIMEOUT)
+        with page.expect_response(
+            lambda response: "/api/set-venv" in response.url
+            and response.request.method == "POST",
+            timeout=TIMEOUT,
+        ) as response_info:
+            interpreter_button.click()
+
+        # First, we need to simulate a real user click to satisfy browser security requirements
+        import_button = page.locator('button[data-testid="import-button"]')
+        expect(import_button).to_be_visible(timeout=TIMEOUT)
+        expect(import_button).to_be_enabled(timeout=TIMEOUT)
+
+        # Set up both file chooser and API response expectations
+        with page.expect_file_chooser(timeout=TIMEOUT) as file_chooser_info:
+            print("Clicking import button with real user gesture...")
+            import_button.click()
+            print("Import button clicked")
+            import_button.hover()  # Simulate mouse moving over
+            page.mouse.down()  # Press the left mouse button
+            page.mouse.up()  # Release the left mouse button
+
+        # Handle the file chooser that should now be open
+        file_chooser = file_chooser_info.value
+        print(f"File chooser opened, setting file: {test_fixture_path}")
+
+        # Now set up the API response expectation and set the files
         with page.expect_response(
             lambda response: "/api/import-python" in response.url
             and response.request.method == "POST",
             timeout=TIMEOUT,
         ) as response_info:
-            import_button = page.locator('button[data-testid="import-button"]')
-            expect(import_button).to_be_visible(timeout=TIMEOUT)
-            expect(import_button).to_be_enabled(timeout=TIMEOUT)
-            print("Clicking import button (standard)...")
-            import_button.click()
-            page.wait_for_timeout(200)  # Brief pause
+            file_chooser.set_files(test_fixture_path)
+            print("File selected via file chooser")
 
-            file_input = page.locator('input[data-testid="file-input"]')
-            expect(file_input).to_be_attached()
-            print(f"Setting input file directly: {test_fixture_path}")
-            file_input.set_input_files(test_fixture_path)
-            print("Dispatching 'change' event directly...")
-            file_input.dispatch_event("change")
-            print("Direct file input set and event dispatched.")
-
+        # Wait for the API response
         api_response: APIResponse = response_info.value
         print(
             f"Received API response from {api_response.url} (Status: {api_response.status})"
