@@ -126,6 +126,7 @@
 		class:ring-red-300={error}
 		class:ring-yellow-300={!selectedInterpreterPath.value}
 		class:bg-yellow-50={!selectedInterpreterPath.value}
+		data-testid="interpreter-button"
 		onclick={toggleDropdown}
 	>
 		<span class={!selectedInterpreterPath.value ? 'text-yellow-600' : 'text-gray-500'}>
