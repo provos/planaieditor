@@ -11,7 +11,6 @@
 	import { selectedInterpreterPath } from '$lib/stores/pythonInterpreterStore.svelte';
 	import { useStore } from '@xyflow/svelte';
 	import { persistNodeDataDebounced } from '$lib/utils/nodeUtils';
-	import type { Edge } from '@xyflow/svelte';
 	import { getCurrentEdges } from '$lib/stores/graphStore';
 	import { tasks as tasksStore, type Task as TaskType } from '$lib/stores/taskStore.svelte';
 	import {
@@ -34,7 +33,7 @@
 		data: DataInputNodeData;
 	}>();
 
-	const { nodes, edges } = useStore();
+	const { edges } = useStore();
 
 	// Ensure jsonData is initialized
 	if (!data.jsonData) {

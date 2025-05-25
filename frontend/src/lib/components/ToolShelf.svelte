@@ -8,7 +8,7 @@
 	import FloppyDisk from 'phosphor-svelte/lib/FloppyDisk';
 	import FolderOpen from 'phosphor-svelte/lib/FolderOpen';
 	import Robot from 'phosphor-svelte/lib/Robot';
-	import { useStore, useSvelteFlow } from '@xyflow/svelte';
+	import { useStore } from '@xyflow/svelte';
 	import type { BaseWorkerData } from './nodes/BaseWorkerNode.svelte';
 	import { Tabs, Tooltip } from 'bits-ui';
 	import { getNodeIconStyle } from '$lib/utils/defaults';
@@ -53,7 +53,6 @@
 	let isExecutionReady = $state(false);
 	let isAssistantReady = $state(false);
 	const { edges, nodes } = useStore();
-	let { getNodes } = useSvelteFlow();
 
 	// Selected tab value
 	let selectedTab = $state('config');

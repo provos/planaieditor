@@ -15,7 +15,7 @@
 	import CaretDown from 'phosphor-svelte/lib/CaretDown';
 	import { Toggle } from 'bits-ui';
 	import type { Snippet } from 'svelte';
-	import { tick, untrack } from 'svelte';
+	import { tick } from 'svelte';
 	import { formatErrorMessage } from '$lib/utils/utils';
 	import { isClassNameAvailable, persistNodeDataDebounced } from '$lib/utils/nodeUtils';
 	import { onMount } from 'svelte';

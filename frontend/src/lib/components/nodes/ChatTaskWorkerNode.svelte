@@ -2,7 +2,6 @@
 	import BaseWorkerNode from '$lib/components/nodes/BaseWorkerNode.svelte';
 	import LLMConfigSelector from '$lib/components/LLMConfigSelector.svelte';
 	import type { BaseWorkerData } from '$lib/components/nodes/BaseWorkerNode.svelte';
-	import { useStore } from '@xyflow/svelte';
 	import { persistNodeDataDebounced } from '$lib/utils/nodeUtils';
 
 	export interface ChatWorkerData extends BaseWorkerData {
@@ -15,8 +14,6 @@
 		id: string;
 		data: ChatWorkerData;
 	}>();
-
-	const store = useStore();
 
 	// Handle LLM config changes
 	function handleLLMConfigChange(changes: {
