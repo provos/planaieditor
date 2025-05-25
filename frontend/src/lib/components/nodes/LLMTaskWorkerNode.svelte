@@ -4,8 +4,6 @@
 	import LLMConfigSelector from '$lib/components/LLMConfigSelector.svelte';
 	import type { BaseWorkerData } from '$lib/components/nodes/BaseWorkerNode.svelte';
 	import { taskClassNamesStore } from '$lib/stores/classNameStore.svelte';
-	import { nodes as svelteFlowNodes } from '$lib/stores/graphStore';
-	import type { ToolNodeData } from '$lib/components/nodes/ToolNode.svelte';
 	import { getColorForType } from '$lib/utils/colorUtils';
 	import Trash from 'phosphor-svelte/lib/Trash';
 	import { useUpdateNodeInternals, useStore, type Node } from '@xyflow/svelte';
