@@ -4,24 +4,32 @@
 
 	import type { BaseWorkerData } from '$lib/components/nodes/BaseWorkerNode.svelte';
 	import { getColorForType } from '$lib/utils/colorUtils';
+	import { getTaskById } from '$lib/stores/taskStore.svelte';
+	import { getTaskImportById } from '$lib/stores/taskImportStore.svelte';
 	import { onMount } from 'svelte';
+	import { inferInputTypeFromName, type InputType } from '$lib/utils/nodeUtils';
 
 	let { id, data, manuallySelectedInputType, isEditable, onUpdate } = $props<{
 		id: string;
 		data: BaseWorkerData;
 		manuallySelectedInputType: string | null;
 		isEditable: boolean;
-		onUpdate: (inferredInputTypes: string[]) => void;
+		onUpdate: (inferredInputTypes: InputType[]) => void;
 	}>();
 
-	let inferredInputTypes = $derived<string[]>(data.inputTypes || []);
+	let inferredInputTypes = $derived<InputType[]>(
+		data.inputTypes?.map((className: string) => ({
+			className,
+			id: '' // We'll need to find the actual ID when we have one
+		})) || []
+	);
 	let entryPoint = $derived(data.entryPoint || false);
 
 	const store = useStore();
 
 	let handleColor = $derived(
 		getColorForType(
-			inferredInputTypes && inferredInputTypes.length > 0 ? inferredInputTypes[0] : ''
+			inferredInputTypes && inferredInputTypes.length > 0 ? inferredInputTypes[0].className : ''
 		)
 	);
 
@@ -38,9 +46,11 @@
 	if (isEditable) {
 		$effect(() => {
 			if (manuallySelectedInputType && inferredInputTypes.length === 0) {
-				inferredInputTypes = [manuallySelectedInputType];
-				data.inputTypes = [manuallySelectedInputType];
-				onUpdate([manuallySelectedInputType]);
+				// Find the task by class name to get the ID
+				const newInferredType = inferInputTypeFromName(manuallySelectedInputType);
+				inferredInputTypes = [newInferredType];
+				data.inputTypes = [newInferredType.className];
+				onUpdate([newInferredType]);
 			}
 		});
 	}
@@ -79,39 +89,57 @@
 	// Function to calculate and update inferred input types
 	function updateInferredTypes(nodes: Node[], edges: Edge[]) {
 		if (!edges || !nodes) {
-			inferredInputTypes = manuallySelectedInputType ? [manuallySelectedInputType] : [];
+			if (manuallySelectedInputType) {
+				const inferredType = inferInputTypeFromName(manuallySelectedInputType);
+				inferredInputTypes = [inferredType];
+			} else {
+				inferredInputTypes = [];
+			}
 			return;
 		}
 
 		const incomingEdges = edges.filter((edge: Edge) => edge.target === id);
-		const sourceNodeIds = incomingEdges.map((edge: Edge) => edge.source);
-		const sourceClassNames: string[] = sourceNodeIds
-			.map((nodeId: string) => {
-				const sourceNode = nodes.find((node: Node) => node.id === nodeId);
-				const edge = incomingEdges.find((e) => e.source === nodeId);
-				const sourceHandleId = edge?.sourceHandle;
-				if (sourceHandleId && sourceHandleId.startsWith('output-')) {
-					return sourceHandleId.substring(7);
-				}
-				// Fallback if handle ID is missing/unexpected
-				return sourceNode?.data?.className;
-			})
-			.filter(Boolean) as string[];
+		const sourceClassNames: InputType[] = [];
 
-		// make sourceClassNames unique
-		const uniqueSourceClassNames = [...new Set(sourceClassNames)];
+		for (const edge of incomingEdges) {
+			const sourceHandleId = edge.sourceHandle;
+			if (sourceHandleId && sourceHandleId.startsWith('output-')) {
+				// Extract the task/taskimport ID from the handle
+				const taskId = sourceHandleId.substring(7); // Remove 'output-' prefix
+
+				// Look up the task by ID to get the className
+				const task = getTaskById(taskId) || getTaskImportById(taskId);
+				if (task) {
+					sourceClassNames.push({
+						className: task.className,
+						id: task.id
+					});
+				}
+			}
+		}
+
+		// Make sourceClassNames unique by ID
+		const uniqueSourceClassNames = sourceClassNames.filter(
+			(item, index, self) => index === self.findIndex((t) => t.id === item.id)
+		);
+
 		if (uniqueSourceClassNames.length === 0 && manuallySelectedInputType) {
-			uniqueSourceClassNames.push(manuallySelectedInputType);
+			uniqueSourceClassNames.push(inferInputTypeFromName(manuallySelectedInputType));
 		}
 
 		// Update only if there are changes in the inferred input types
 		if (
 			uniqueSourceClassNames.length !== inferredInputTypes.length ||
-			uniqueSourceClassNames.some((type, index) => type !== inferredInputTypes[index])
+			uniqueSourceClassNames.some(
+				(type, index) =>
+					!inferredInputTypes[index] ||
+					type.className !== inferredInputTypes[index].className ||
+					type.id !== inferredInputTypes[index].id
+			)
 		) {
 			inferredInputTypes = uniqueSourceClassNames;
-			data.inputTypes = uniqueSourceClassNames;
-			onUpdate(uniqueSourceClassNames);
+			data.inputTypes = inferredInputTypes.map((type) => type.className);
+			onUpdate(inferredInputTypes);
 		}
 	}
 </script>

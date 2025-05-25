@@ -9,6 +9,7 @@
 	import HeaderIcon from '../HeaderIcon.svelte';
 	import { useStore } from '@xyflow/svelte';
 	import { persistNodeDataDebounced } from '$lib/utils/nodeUtils';
+	import { type InputType } from '$lib/utils/nodeUtils';
 
 	// Define the interface for the node's data
 	export interface DataOutputNodeData {
@@ -41,11 +42,13 @@
 	const updateNodeInternals = useUpdateNodeInternals();
 
 	// --- State Variables ---
-	let inferredInputTypes = $state<string[]>(data.inputTypes || []);
+	let inferredInputTypes = $state<InputType[]>([]);
 
 	// Callback for InputHandle to update inferred types
-	function updateInferredInputTypes(updatedTypes: string[]) {
+	function updateInferredInputTypes(updatedTypes: InputType[]) {
 		inferredInputTypes = updatedTypes;
+		data.inputTypes = updatedTypes.map((type) => type.className);
+		persistNodeDataDebounced();
 	}
 
 	// Update node internals when content potentially changes height
@@ -109,12 +112,12 @@
 		{:else}
 			<div class="space-y-1">
 				{#each inferredInputTypes as type (type)}
-					{@const color = getColorForType(type)}
+					{@const color = getColorForType(type.className)}
 					<div
 						class="text-2xs rounded px-1 py-0.5 font-mono"
 						style={`background-color: ${color}20; border-left: 3px solid ${color};`}
 					>
-						{type}
+						{type.className}
 					</div>
 				{/each}
 			</div>

@@ -21,7 +21,16 @@
 	import { openFullScreenEditor } from '$lib/stores/fullScreenEditorStore.svelte';
 	import { getTaskByName } from '$lib/stores/taskStore.svelte';
 	import { getTaskImportByName } from '$lib/stores/taskImportStore.svelte';
+	import { getTaskById } from '$lib/stores/taskStore.svelte';
+	import { getTaskImportById } from '$lib/stores/taskImportStore.svelte';
+	import { arraysEqual } from '$lib/utils/utils';
 	import TaskConfig from '../TaskConfig.svelte';
+	import { type InputType, inferInputTypeFromName } from '$lib/utils/nodeUtils';
+
+	export interface NodeData {
+		className: string;
+		[key: string]: any;
+	}
 
 	// Base interface for worker node data
 	export interface BaseWorkerData {
@@ -30,6 +39,7 @@
 		nodeId: string;
 		inputTypes: string[];
 		output_types: string[]; // we are exporting this back to python and are using python naming convention
+		output_type_ids?: string[]; // IDs of selected output tasks/task imports
 		requiredMembers?: string[];
 		isCached?: boolean;
 		methods?: Record<string, string>;
@@ -72,6 +82,25 @@
 		persistNodeDataDebounced();
 	}
 
+	// Initialize output_type_ids if not present
+	if (!data.output_type_ids) {
+		data.output_type_ids = [];
+
+		// Migration: if we have existing output_types but no output_type_ids, migrate them
+		if (data.output_types && data.output_types.length > 0) {
+			const migratedIds: string[] = [];
+			for (const typeName of data.output_types) {
+				const task = getTaskByName(typeName) || getTaskImportByName(typeName);
+				if (task) {
+					migratedIds.push(task.id);
+				}
+			}
+			data.output_type_ids = migratedIds;
+		}
+
+		persistNodeDataDebounced();
+	}
+
 	// --- State Variables ---
 	let nodeVersion = $derived(data._lastUpdated || 0);
 	let editingWorkerName = $state(false);
@@ -81,12 +110,24 @@
 	let tempType = $state('');
 	let typeError = $state('');
 	let availableTaskClasses = $state<string[]>([]);
-	let inferredInputTypes = $derived<string[]>(data.inputTypes);
+	let inferredInputTypes = $derived<InputType[]>(data.inputTypes.map(inferInputTypeFromName));
 	let taskNodeVisibility = $state<Record<string, boolean>>({});
 	let manuallySelectedInputType = $derived<string>(
 		data.inputTypes.length > 0 ? data.inputTypes[0] : ''
 	);
-	let currentOutputTypes = $derived<string[]>([...(data.output_types || [])]);
+	let currentOutputTypes = $derived.by<string[]>(() => {
+		// Derive output types from IDs
+		const typeNames: string[] = [];
+		if (data.output_type_ids) {
+			for (const id of data.output_type_ids) {
+				const task = getTaskById(id) || getTaskImportById(id);
+				if (task) {
+					typeNames.push(task.className);
+				}
+			}
+		}
+		return typeNames;
+	});
 	let currentHeight = $state(minHeight); // State for reactive height
 	let localIsCached = $state(data.isCached ?? false); // Local state for the toggle
 
@@ -96,13 +137,31 @@
 	let customMethods = $derived(availableMethods.filter((m) => !coreMethods.includes(m)));
 	let otherMembersSource = $derived(data?.otherMembersSource ?? undefined);
 
-	let combinedOutputTypes = $derived(
-		currentOutputTypes.length > 0
-			? currentOutputTypes
-			: additionalOutputType
-				? [additionalOutputType]
-				: []
-	);
+	let combinedOutputTypes = $derived.by<Array<{ className: string; id: string }>>(() => {
+		const outputTypes: Array<{ className: string; id: string }> = [];
+
+		// Add types from output_type_ids
+		if (data.output_type_ids) {
+			for (const id of data.output_type_ids) {
+				const task = getTaskById(id) || getTaskImportById(id);
+				if (task) {
+					outputTypes.push({ className: task.className, id: task.id });
+				}
+			}
+			return outputTypes;
+		}
+
+		// Fallback to additionalOutputType if provided
+		if (additionalOutputType) {
+			const additionalTask =
+				getTaskByName(additionalOutputType) || getTaskImportByName(additionalOutputType);
+			if (additionalTask && !outputTypes.some((t) => t.id === additionalTask.id)) {
+				outputTypes.push({ className: additionalTask.className, id: additionalTask.id });
+			}
+		}
+
+		return outputTypes;
+	});
 	// svelte-ignore non_reactive_update
 	let workerType: string | undefined = undefined;
 	store.nodes.subscribe((values: Node[]) => {
@@ -113,9 +172,6 @@
 	})();
 	const allowedCacheTypes = ['taskworker', 'llmtaskworker', 'chattaskworker'];
 	const showCachedOption = workerType && allowedCacheTypes.includes(workerType);
-
-	let inputTypeNodes = $state<Node[]>([]);
-	let outputTypeNodes = $state<Node[]>([]);
 
 	// --- Effects for Reactivity ---
 	onMount(() => {
@@ -131,9 +187,6 @@
 			if (thisNode) {
 				currentHeight = thisNode.measured?.height ?? thisNode.height ?? minHeight;
 			}
-
-			computeInputOutputTypes();
-			computeOutputTypeNodes();
 		});
 
 		// Cleanup function
@@ -147,28 +200,6 @@
 		availableTaskClasses = Array.from(taskClassNamesStore);
 	});
 
-	function computeInputOutputTypes() {
-		store.nodes.subscribe((nodes) => {
-			inputTypeNodes = nodes.filter(
-				(n) =>
-					(n.type === 'task' || n.type === 'taskimport') &&
-					n.data?.className &&
-					inferredInputTypes.includes((n.data as unknown as NodeData).className)
-			);
-		})();
-	}
-
-	function computeOutputTypeNodes() {
-		store.nodes.subscribe((nodes) => {
-			outputTypeNodes = nodes.filter(
-				(n) =>
-					(n.type === 'task' || n.type === 'taskimport') &&
-					n.data?.className &&
-					combinedOutputTypes.includes((n.data as unknown as NodeData).className)
-			);
-		})();
-	}
-
 	if (isEditable) {
 		// Effect to sync localIsCached back to data.isCached
 		$effect(() => {
@@ -178,12 +209,11 @@
 			}
 		});
 
-		// Effect to recompute input/output types when combinedOutputTypes changes
+		// Effect to sync currentOutputTypes back to data.output_types for backward compatibility
 		$effect(() => {
-			if (combinedOutputTypes.length > 0) {
-				untrack(() => {
-					computeOutputTypeNodes();
-				});
+			if (!arraysEqual(data.output_types, currentOutputTypes)) {
+				data.output_types = [...currentOutputTypes];
+				persistNodeDataDebounced();
 			}
 		});
 	}
@@ -229,7 +259,14 @@
 
 	// --- Output Type Handling Logic ---
 	function startEditingOutputType(index: number = -1) {
-		tempType = index >= 0 ? data.output_types[index] : '';
+		if (index >= 0 && data.output_type_ids && data.output_type_ids[index]) {
+			// Get the class name from the ID for editing
+			const task =
+				getTaskById(data.output_type_ids[index]) || getTaskImportById(data.output_type_ids[index]);
+			tempType = task ? task.className : '';
+		} else {
+			tempType = '';
+		}
 		editingOutputType = index;
 		typeError = '';
 	}
@@ -249,23 +286,33 @@
 
 	function saveOutputType() {
 		if (!validateType(tempType)) return;
-		let tmpOutputTypes = [...data.output_types];
-		if (editingOutputType === -1) {
-			tmpOutputTypes.push(tempType);
-		} else if (editingOutputType !== null) {
-			tmpOutputTypes[editingOutputType] = tempType;
+
+		// Find the task/task import by class name to get its ID
+		const task = getTaskByName(tempType) || getTaskImportByName(tempType);
+		if (!task) {
+			typeError = 'Task class not found';
+			return;
 		}
-		data.output_types = tmpOutputTypes;
-		currentOutputTypes = tmpOutputTypes;
+
+		let tmpOutputTypeIds = [...(data.output_type_ids || [])];
+		if (editingOutputType === -1) {
+			// Adding new output type
+			if (!tmpOutputTypeIds.includes(task.id)) {
+				tmpOutputTypeIds.push(task.id);
+			}
+		} else if (editingOutputType !== null) {
+			// Editing existing output type
+			tmpOutputTypeIds[editingOutputType] = task.id;
+		}
+		data.output_type_ids = tmpOutputTypeIds;
 		persistNodeDataDebounced();
 		cancelTypeEditing();
 	}
 
 	function deleteOutputType(index: number) {
-		let tmpOutputTypes = [...data.output_types];
-		tmpOutputTypes = tmpOutputTypes.filter((_: string, i: number) => i !== index);
-		data.output_types = tmpOutputTypes;
-		currentOutputTypes = tmpOutputTypes;
+		let tmpOutputTypeIds = [...(data.output_type_ids || [])];
+		tmpOutputTypeIds = tmpOutputTypeIds.filter((_: string, i: number) => i !== index);
+		data.output_type_ids = tmpOutputTypeIds;
 		persistNodeDataDebounced();
 		typeError = '';
 	}
@@ -299,17 +346,17 @@
 		manuallySelectedInputType = '';
 		data.inputTypes = [];
 		inferredInputTypes = [];
-		computeInputOutputTypes();
 		persistNodeDataDebounced();
 	}
 
 	function addOutputTypeFromSelect(event: Event) {
 		const select = event.target as HTMLSelectElement;
 		if (select && select.value) {
-			const newType = select.value;
-			if (!data.output_types.includes(newType)) {
-				data.output_types = [...data.output_types, newType];
-				currentOutputTypes = [...data.output_types];
+			const newTypeName = select.value;
+			// Find the task/task import by class name to get its ID
+			const task = getTaskByName(newTypeName) || getTaskImportByName(newTypeName);
+			if (task && !(data.output_type_ids || []).includes(task.id)) {
+				data.output_type_ids = [...(data.output_type_ids || []), task.id];
 				persistNodeDataDebounced();
 			}
 			select.value = ''; // Reset select
@@ -358,10 +405,10 @@
 		updateNodeInternals(id);
 	}
 
-	function updateInferredInputTypes(updatedInputTypes: string[]) {
+	function updateInferredInputTypes(updatedInputTypes: Array<{ className: string; id: string }>) {
 		inferredInputTypes = updatedInputTypes;
+		data.inputTypes = updatedInputTypes.map((type) => type.className);
 		persistNodeDataDebounced();
-		computeInputOutputTypes();
 	}
 
 	function handleFullScreen() {
@@ -390,8 +437,8 @@
 
 	<!-- Output Handles (Dynamically created) -->
 	{#each combinedOutputTypes as type, index (type)}
-		{@const handleId = `output-${type}`}
-		{@const color = getColorForType(type)}
+		{@const handleId = `output-${type.id}`}
+		{@const color = getColorForType(type.className)}
 		{@const topPos = calculateHandlePosition(index, combinedOutputTypes.length, currentHeight)}
 		<Handle
 			type="source"
@@ -484,37 +531,37 @@
 			{/if}
 			<div class="mt-1 space-y-1">
 				{#each inferredInputTypes as type (type)}
-					{@const color = getColorForType(type)}
-					{@const taskItem = getTaskByName(type) || getTaskImportByName(type)}
+					{@const color = getColorForType(type.className)}
+					{@const taskItem = getTaskByName(type.className) || getTaskImportByName(type.className)}
 					<div
 						class="text-2xs group flex items-center justify-between rounded px-1 py-0.5"
 						style={`background-color: ${color}20; border-left: 3px solid ${color};`}
 					>
 						<div
 							class="flex flex-grow cursor-pointer items-center"
-							onclick={() => taskItem && toggleTaskNodeVisibility(type)}
+							onclick={() => taskItem && toggleTaskNodeVisibility(type.className)}
 							role="button"
 							tabindex={taskItem ? 0 : -1}
 							onkeypress={(e) => {
 								if (taskItem && (e.key === 'Enter' || e.key === ' '))
-									toggleTaskNodeVisibility(type);
+									toggleTaskNodeVisibility(type.className);
 							}}
 							title={taskItem
-								? taskNodeVisibility[type]
-									? `Collapse details for ${type}`
-									: `Expand details for ${type}`
-								: type}
+								? taskNodeVisibility[type.className]
+									? `Collapse details for ${type.className}`
+									: `Expand details for ${type.className}`
+								: type.className}
 						>
-							<span class="font-mono">{type}</span>
+							<span class="font-mono">{type.className}</span>
 							{#if taskItem}
-								{#if taskNodeVisibility[type]}
+								{#if taskNodeVisibility[type.className]}
 									<CaretUp size={10} class="ml-1 text-gray-500 group-hover:text-gray-700" />
 								{:else}
 									<CaretDown size={10} class="ml-1 text-gray-500 group-hover:text-gray-700" />
 								{/if}
 							{/if}
 						</div>
-						{#if manuallySelectedInputType === type && isEditable}
+						{#if manuallySelectedInputType === type.className && isEditable}
 							<!-- Delete button for manually selected input type -->
 							<button
 								class="ml-1 flex h-3 w-3 flex-shrink-0 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity duration-150 ease-in-out group-hover:opacity-100 hover:bg-red-50 hover:text-red-500"
@@ -528,7 +575,7 @@
 							</button>
 						{/if}
 					</div>
-					{#if taskItem && taskNodeVisibility[type]}
+					{#if taskItem && taskNodeVisibility[type.className]}
 						<div class="mt-0.5 ml-2 border-l-2 border-gray-200 pl-2">
 							<TaskConfig
 								id={taskItem.id}

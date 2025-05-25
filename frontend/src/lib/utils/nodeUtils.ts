@@ -14,8 +14,24 @@ import type { SubGraphWorkerData } from '$lib/components/nodes/SubGraphWorkerNod
 import type { ChatWorkerData } from '$lib/components/nodes/ChatTaskWorkerNode.svelte';
 import type { DataOutputNodeData } from '$lib/components/nodes/DataOutputNode.svelte';
 import type { TaskImport as TaskImportType } from '$lib/stores/taskImportStore.svelte';
-import { taskImports as taskImportStore } from '$lib/stores/taskImportStore.svelte';
-import { tasks as taskStore } from '$lib/stores/taskStore.svelte';
+import {
+	getTaskImportByName,
+	taskImports as taskImportStore
+} from '$lib/stores/taskImportStore.svelte';
+import { getTaskByName, tasks as taskStore } from '$lib/stores/taskStore.svelte';
+
+export interface InputType {
+	className: string;
+	id: string;
+}
+
+export function inferInputTypeFromName(name: string): InputType {
+	const task = getTaskByName(name) || getTaskImportByName(name);
+	return {
+		className: name,
+		id: task?.id || ''
+	};
+}
 
 // Adds a method to the node with the given id
 export function addAvailableMethod(nodes: Writable<Node[]>, id: string, methodName: string) {
