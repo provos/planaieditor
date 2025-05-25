@@ -483,6 +483,7 @@
 						</div>
 					{:else}
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
+						<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 						<div
 							class="text-2xs group flex {allowEditing
 								? 'cursor-pointer'
@@ -491,7 +492,7 @@
 								: ''}"
 							onclick={allowEditing ? () => startEditingField(index) : undefined}
 							role={allowEditing ? 'button' : undefined}
-							tabindex={allowEditing ? 0 : undefined}
+							tabindex={allowEditing ? 0 : -1}
 						>
 							<div class="flex items-center gap-1">
 								<span class="font-medium">{field.name}</span>
