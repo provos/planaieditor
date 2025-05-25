@@ -21,7 +21,7 @@
 
 	// Define the interface for the node's data
 	export interface DataInputNodeData {
-		className: string | null; // Can be null initially
+		className: string | undefined;
 		jsonData: string;
 		isJsonValid?: boolean;
 		nodeId: string;
