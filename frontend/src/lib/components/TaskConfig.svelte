@@ -549,7 +549,6 @@
 								class="text-2xs w-full flex-grow rounded border border-gray-200 px-1 py-0.5 {fieldNameError
 									? 'border-red-500'
 									: ''}"
-								autofocus
 							/>
 
 							<select
