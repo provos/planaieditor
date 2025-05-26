@@ -55,7 +55,7 @@
 	const { edges, nodes } = useStore();
 
 	// Selected tab value
-	let selectedTab = $state('config');
+	let selectedTab = $state('workers');
 
 	let unconnectedWorkersTooltip = $state<string | null>(null);
 	let moduleLevelImportTooltip = $state<string | null>(null);
@@ -228,7 +228,7 @@
 	<div class="flex min-w-[300px] flex-1 items-start gap-4">
 		<!-- Draggable Nodes Section -->
 		<div
-			class="flex w-full flex-shrink-0 items-center gap-2 border-r border-gray-300/70 pr-4 md:w-1/3 lg:w-[30%]"
+			class="flex w-full flex-shrink-0 items-center gap-2 border-r border-gray-300/70 pr-4 md:w-1/2 lg:w-[50%]"
 		>
 			<div class="w-full">
 				<Tooltip.Provider>
