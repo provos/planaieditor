@@ -76,10 +76,15 @@ def test_simple_connection_workflow(page: Page):
     # Wait for the connection to be established
     page.wait_for_timeout(1000)
 
-    # Verify that an edge was created
-    edges = page.locator(".svelte-flow__edge")
-    expect(edges).to_have_count(1, timeout=helper.timeout)
-    print("Edge created successfully.")
+    # Verify that exactly one edge was created
+    connection_succeeded = helper.verify_connection_succeeded(expected_edge_count=1)
+    assert (
+        connection_succeeded
+    ), "Expected exactly 1 edge to be created, but connection verification failed"
+
+    # Get detailed edge information
+    all_edges = helper.get_all_edges()
+    print(f"Connection successful! Created {len(all_edges)} edge(s).")
 
     # Click on TaskWorker2 to check its input types
     helper.click_node(taskworker2_selector)
@@ -178,6 +183,15 @@ def test_connection_fails_with_incompatible_types(page: Page):
     assert (
         connection_failed
     ), "Expected connection to fail due to incompatible types, but an edge was created"
+
+    # Get detailed edge information to confirm
+    all_edges = helper.get_all_edges()
+    assert (
+        len(all_edges) == 0
+    ), f"Expected 0 edges after failed connection, but found {len(all_edges)} edges"
+    print(
+        f"Connection correctly failed! No edges created (found {len(all_edges)} edges)."
+    )
 
     # Verify that TaskWorker2 still has "Task2" as its input type (unchanged)
     helper.click_node(taskworker2_selector)

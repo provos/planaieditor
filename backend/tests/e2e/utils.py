@@ -494,6 +494,64 @@ class E2ETestHelper:
         # Wait for the UI to update
         self.page.wait_for_timeout(500)
 
+    def get_all_edges(self) -> List[Dict[str, Any]]:
+        """
+        Retrieve all edges from the graph.
+
+        Returns:
+            List of edge information dictionaries
+        """
+        print("Retrieving all edges from the graph...")
+
+        # Get edges from the browser's localStorage and edge elements
+        edge_data = self.page.evaluate(
+            """
+            () => {
+                const edges_raw = JSON.parse(localStorage.getItem('edges') || '[]');
+                const edge_elements = document.querySelectorAll('.svelte-flow__edge');
+                
+                return {
+                    edges_from_storage: edges_raw,
+                    edge_count_in_dom: edge_elements.length,
+                    edge_elements_info: Array.from(edge_elements).map(el => ({
+                        id: el.getAttribute('data-id'),
+                        source: el.getAttribute('data-source'),
+                        target: el.getAttribute('data-target'),
+                        sourceHandle: el.getAttribute('data-sourcehandle'),
+                        targetHandle: el.getAttribute('data-targethandle')
+                    }))
+                };
+            }
+            """
+        )
+
+        edges_from_storage = edge_data.get("edges_from_storage", [])
+        edge_count_in_dom = edge_data.get("edge_count_in_dom", 0)
+
+        print(f"Found {len(edges_from_storage)} edges in localStorage")
+        print(f"Found {edge_count_in_dom} edge elements in DOM")
+
+        if edges_from_storage:
+            print("Edges from storage:")
+            for i, edge in enumerate(edges_from_storage):
+                print(
+                    f"  Edge {i+1}: {edge.get('source', 'unknown')} -> {edge.get('target', 'unknown')}"
+                )
+                print(f"    Source Handle: {edge.get('sourceHandle', 'unknown')}")
+                print(f"    Target Handle: {edge.get('targetHandle', 'unknown')}")
+
+        return edges_from_storage
+
+    def get_edge_count(self) -> int:
+        """
+        Get the number of edges in the graph.
+
+        Returns:
+            Number of edges
+        """
+        edges = self.get_all_edges()
+        return len(edges)
+
     def verify_connection_failed(self) -> bool:
         """
         Verify that no new edge was created (connection failed).
@@ -502,13 +560,26 @@ class E2ETestHelper:
             True if no edges exist (connection failed), False otherwise
         """
         print("Verifying that connection failed...")
-
-        # Check if any edges exist
-        edges = self.page.locator(".svelte-flow__edge")
-        edge_count = edges.count()
-
+        edge_count = self.get_edge_count()
         print(f"Found {edge_count} edges")
         return edge_count == 0
+
+    def verify_connection_succeeded(self, expected_edge_count: int = 1) -> bool:
+        """
+        Verify that the expected number of edges were created (connection succeeded).
+
+        Args:
+            expected_edge_count: Expected number of edges (default: 1)
+
+        Returns:
+            True if the expected number of edges exist, False otherwise
+        """
+        print(
+            f"Verifying that connection succeeded with {expected_edge_count} edge(s)..."
+        )
+        edge_count = self.get_edge_count()
+        print(f"Found {edge_count} edges")
+        return edge_count == expected_edge_count
 
 
 # --- Standalone Utility Functions ---
