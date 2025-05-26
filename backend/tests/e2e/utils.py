@@ -581,6 +581,121 @@ class E2ETestHelper:
         print(f"Found {edge_count} edges")
         return edge_count == expected_edge_count
 
+    def set_output_type(self, node_selector: str, output_type: str) -> None:
+        """
+        Set the output type for a specific node using the output type dropdown.
+
+        Args:
+            node_selector: CSS selector for the node
+            output_type: The output type to set (e.g., "FinalOutput")
+        """
+        print(f"Setting output type for node {node_selector} to {output_type}")
+
+        # Click on the node to select it
+        node = self.page.locator(node_selector)
+        expect(node).to_be_visible(timeout=self.timeout)
+        node.click()
+        self.page.wait_for_timeout(500)  # Wait for UI to update
+
+        # Find the output type dropdown within the node
+        output_type_dropdown = node.locator('[data-testid="output-type-dropdown"]')
+        expect(output_type_dropdown).to_be_visible(timeout=self.timeout)
+
+        # Select the desired output type
+        output_type_dropdown.select_option(value=output_type)
+        print(f"Selected output type: {output_type}")
+
+        # Wait for the UI to update
+        self.page.wait_for_timeout(500)
+
+    def set_llm_output_type(self, node_selector: str, llm_output_type: str) -> None:
+        """
+        Set the LLM output type for a specific LLMTaskWorker node.
+
+        Args:
+            node_selector: CSS selector for the node
+            llm_output_type: The LLM output type to set (e.g., "LLMOutput")
+        """
+        print(f"Setting LLM output type for node {node_selector} to {llm_output_type}")
+
+        # Click on the node to select it
+        node = self.page.locator(node_selector)
+        expect(node).to_be_visible(timeout=self.timeout)
+        node.click()
+        self.page.wait_for_timeout(500)  # Wait for UI to update
+
+        # Debug: Check available task classes
+        available_tasks = get_available_tasks_from_browser(self.page)
+        print(f"Available task classes: {available_tasks}")
+
+        # Find the LLM Output Type section header first
+        llm_output_section = node.locator('h3:has-text("LLM Output Type")')
+        expect(llm_output_section).to_be_visible(timeout=self.timeout)
+        print("Found LLM Output Type section")
+
+        # Find the trigger within the same parent div as the header
+        llm_output_parent = llm_output_section.locator("..")
+
+        # Look for the specific trigger text (not the dropdown options)
+        llm_output_trigger = llm_output_parent.locator(
+            'div[role="button"]:has-text("Select LLM output type if it should be different")'
+        )
+
+        # Debug: Check if trigger exists
+        trigger_count = llm_output_trigger.count()
+        print(f"Found {trigger_count} LLM output triggers")
+
+        if trigger_count > 0:
+            # Click the trigger to open the dropdown
+            llm_output_trigger.click()
+            self.page.wait_for_timeout(1000)  # Wait for dropdown to open
+            print("Clicked LLM output trigger")
+        else:
+            print("No trigger found, dropdown might already be open")
+
+        # Select the desired LLM output type from the dropdown
+        # Look for the specific option within the LLM output section
+        llm_output_option = llm_output_parent.locator(
+            f'div[role="button"]:has-text("{llm_output_type}")'
+        ).first
+        expect(llm_output_option).to_be_visible(timeout=self.timeout)
+        llm_output_option.click()
+        self.page.wait_for_timeout(500)  # Wait for UI to update
+
+        # Verify that the LLM output type was set correctly
+        expect(node.locator(f'.font-mono:has-text("{llm_output_type}")')).to_be_visible(
+            timeout=self.timeout
+        )
+        print(f"LLM output type successfully set to: {llm_output_type}")
+
+    def verify_output_type_set(self, node_selector: str, output_type: str) -> bool:
+        """
+        Verify that an output type is set for a specific node.
+
+        Args:
+            node_selector: CSS selector for the node
+            output_type: The expected output type
+
+        Returns:
+            True if the output type is found, False otherwise
+        """
+        print(f"Verifying output type {output_type} for node {node_selector}")
+
+        node = self.page.locator(node_selector)
+        expect(node).to_be_visible(timeout=self.timeout)
+
+        # Look for the output type in the Output Types section
+        output_types_section = node.locator('[data-testid="output-types-section"]')
+        try:
+            expect(output_types_section).to_contain_text(
+                output_type, timeout=self.timeout
+            )
+            print(f"✓ Output type {output_type} verified")
+            return True
+        except Exception:
+            print(f"✗ Output type {output_type} not found")
+            return False
+
 
 # --- Standalone Utility Functions ---
 

@@ -1,0 +1,82 @@
+{
+  "version": 2,
+  "name": "simple-llmtaskworker",
+  "nodes": [
+    {
+      "id": "llmtaskworker-680898fb-3b6a-4384-a3eb-1c9c842b38f6",
+      "type": "llmtaskworker",
+      "position": {
+        "x": 1457.0994281939604,
+        "y": 398.2258346671903
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": true,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "workerName": "LLMTaskWorker1",
+        "requiredMembers": [
+          "prompt",
+          "system_prompt"
+        ],
+        "entryPoint": false,
+        "inputTypes": [],
+        "output_types": [],
+        "prompt": "# Process the task using an LLM\nAnalyze the following information and provide a response.",
+        "system_prompt": "You are a helpful task processing assistant.",
+        "extraValidation": "return None",
+        "formatPrompt": "return self.prompt",
+        "preProcess": "return task",
+        "postProcess": "return task",
+        "enabledFunctions": {
+          "extraValidation": false,
+          "formatPrompt": false,
+          "preProcess": false,
+          "postProcess": false
+        },
+        "nodeId": "llmtaskworker-680898fb-3b6a-4384-a3eb-1c9c842b38f6",
+        "llm_output_type": "",
+        "use_xml": false,
+        "debug_mode": false,
+        "tools": [],
+        "output_type_ids": [],
+        "isCached": false
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 627,
+        "height": 502
+      }
+    }
+  ],
+  "edges": [],
+  "tools": [],
+  "tasks": [
+    {
+      "id": "task-2a28df89-76fa-42ee-bae9-41dd5e107c9c",
+      "className": "LLMInput",
+      "type": "task",
+      "fields": []
+    },
+    {
+      "id": "task-afdfd79f-5820-44ed-9b69-62c65db7ac88",
+      "className": "LLMOutput",
+      "type": "task",
+      "fields": []
+    },
+    {
+      "id": "task-07621d4b-93ea-49ce-a9a8-bb10e0b2b01e",
+      "className": "FinalOutput",
+      "type": "task",
+      "fields": []
+    }
+  ],
+  "taskImports": [],
+  "llmConfigs": [],
+  "llmConfigsFromCode": []
+}
