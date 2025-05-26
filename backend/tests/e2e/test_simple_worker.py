@@ -1,19 +1,12 @@
 import os
 
 import pytest
-from playwright.sync_api import APIResponse, Page, Route, expect
+from playwright.sync_api import Page, expect
+from utils import setup_basic_test_environment
 
 # Skip e2e tests if SKIP_E2E_TESTS is set
 if os.environ.get("SKIP_E2E_TESTS") == "true":
     pytest.skip("Skipping e2e tests as SKIP_E2E_TESTS is set", allow_module_level=True)
-
-# --- Configuration ---
-FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
-# Use a different port for the test backend server to avoid conflicts
-BACKEND_TEST_PORT = os.environ.get("BACKEND_TEST_PORT", "5001")
-BACKEND_TEST_URL = f"http://localhost:{BACKEND_TEST_PORT}"
-# Timeout for waiting for elements or status changes (in milliseconds)
-TIMEOUT = 15000
 
 
 def test_simple_worker_drag_and_drop_workflow(page: Page):
@@ -27,147 +20,48 @@ def test_simple_worker_drag_and_drop_workflow(page: Page):
     6. Selecting the new task as output type for the task worker
     """
 
-    # Set up route handler for debugging
-    def handle_route(route: Route):
-        if "/api/" in route.request.url:
-            print(f"Intercepted request: {route.request.method} {route.request.url}")
-        route.continue_()
-
-    page.route("**/*", handle_route)
-
-    # 1. Navigate to the frontend
-    print(f"Navigating to frontend: {FRONTEND_URL}")
-    page.goto(FRONTEND_URL)
-    expect(page.locator('[data-testid="toolshelf-container"]')).to_be_visible(
-        timeout=TIMEOUT
-    )
-    print("Frontend loaded.")
-
-    # 2. Clear any existing graph
-    clear_button = page.locator('button[title="Clear Graph"]')
-    if page.locator(".svelte-flow__node").first.is_visible(timeout=2000):
-        print("Clearing existing graph...")
-        clear_button.click(force=True)
-        page.once("dialog", lambda dialog: dialog.accept())
-        expect(page.locator(".svelte-flow__node")).to_have_count(0, timeout=TIMEOUT)
-        print("Graph cleared.")
-    else:
-        print("No existing graph detected, skipping clear.")
-
-    # 3. Set up virtual environment (required for UI interactions to work)
-    print("Setting up virtual environment...")
-    interpreter_button = page.locator('button[data-testid="interpreter-button"]')
-    expect(interpreter_button).to_be_visible(timeout=TIMEOUT)
-    expect(interpreter_button).to_be_enabled(timeout=TIMEOUT)
-
-    with page.expect_response(
-        lambda response: "/api/set-venv" in response.url
-        and response.request.method == "POST",
-        timeout=TIMEOUT,
-    ) as response_info:
-        interpreter_button.click()
-
-    api_response: APIResponse = response_info.value
-    print(f"Virtual environment setup response: {api_response.status}")
-    assert (
-        api_response.ok
-    ), f"Virtual environment setup failed with status {api_response.status}"
+    # Set up basic test environment (navigate, clear graph, setup venv)
+    helper = setup_basic_test_environment(page)
 
     # 4. Switch to Configuration tab in ToolShelf to access task and worker nodes
-    print("Switching to Configuration tab...")
-    config_tab = page.locator('[data-testid="config-tab"]')
-    expect(config_tab).to_be_visible(timeout=TIMEOUT)
-    config_tab.click()
-
-    # Wait for the tab content to be visible
-    expect(
-        page.locator('[data-testid="config-tab"][data-state="active"]')
-    ).to_be_visible(timeout=TIMEOUT)
+    helper.switch_to_tab("config")
 
     # 5. Drag a task node onto the canvas
-    print("Dragging task node onto canvas...")
-    task_node_draggable = page.locator('[data-testid="draggable-task"]')
-    expect(task_node_draggable).to_be_visible(timeout=TIMEOUT)
-
-    # Get the canvas area for dropping
-    canvas = page.locator(".svelte-flow")
-    expect(canvas).to_be_visible(timeout=TIMEOUT)
-
-    # Get bounding boxes for drag and drop
-    task_box = task_node_draggable.bounding_box()
-    canvas_box = canvas.bounding_box()
-
-    assert task_box is not None, "Task node bounding box not found"
-    assert canvas_box is not None, "Canvas bounding box not found"
-
-    # Calculate drop position (center of canvas)
-    drop_x = canvas_box["x"] + canvas_box["width"] / 2
-    drop_y = canvas_box["y"] + canvas_box["height"] / 2
-
-    # Perform drag and drop
-    page.mouse.move(
-        task_box["x"] + task_box["width"] / 2, task_box["y"] + task_box["height"] / 2
-    )
-    page.mouse.down()
-    page.mouse.move(drop_x, drop_y)
-    page.mouse.up()
+    drop_x, drop_y = helper.drag_element_to_canvas('[data-testid="draggable-task"]')
 
     # Wait for task node to appear on canvas
-    expect(page.locator('[data-testid="task-node"]')).to_be_visible(timeout=TIMEOUT)
+    expect(page.locator('[data-testid="task-node"]')).to_be_visible(
+        timeout=helper.timeout
+    )
     print("Task node successfully added to canvas.")
 
     # 6. Switch to Workers tab and drag a TaskWorker onto the canvas
-    print("Switching to Workers tab...")
-    workers_tab = page.locator('[data-testid="workers-tab"]')
-    expect(workers_tab).to_be_visible(timeout=TIMEOUT)
-    workers_tab.click()
+    helper.switch_to_tab("workers")
 
-    # Wait for workers tab content
-    expect(
-        page.locator('[data-testid="workers-tab"][data-state="active"]')
-    ).to_be_visible(timeout=TIMEOUT)
-
-    print("Dragging TaskWorker node onto canvas...")
-    taskworker_draggable = page.locator('[data-testid="draggable-taskworker"]')
-    expect(taskworker_draggable).to_be_visible(timeout=TIMEOUT)
-
-    # Get bounding box for TaskWorker
-    taskworker_box = taskworker_draggable.bounding_box()
-    assert taskworker_box is not None, "TaskWorker bounding box not found"
-
-    # Calculate different drop position for TaskWorker (offset from task node)
-    drop_x_worker = drop_x + 200  # Offset to the right
-    drop_y_worker = drop_y
-
-    # Perform drag and drop for TaskWorker
-    page.mouse.move(
-        taskworker_box["x"] + taskworker_box["width"] / 2,
-        taskworker_box["y"] + taskworker_box["height"] / 2,
+    # Drag TaskWorker with offset to the right of the task node
+    drop_x_worker, drop_y_worker = helper.drag_element_to_canvas(
+        '[data-testid="draggable-taskworker"]', offset_x=200
     )
-    page.mouse.down()
-    page.mouse.move(drop_x_worker, drop_y_worker)
-    page.mouse.up()
 
     # Wait for TaskWorker node to appear on canvas
     expect(page.locator('[data-testid="taskworker-node"]')).to_be_visible(
-        timeout=TIMEOUT
+        timeout=helper.timeout
     )
     print("TaskWorker node successfully added to canvas.")
 
     # Verify we now have 2 nodes on the canvas
-    expect(page.locator(".svelte-flow__node")).to_have_count(2, timeout=TIMEOUT)
+    helper.wait_for_nodes(2)
 
     # 7. Click on the task node to open the side pane
-    print("Clicking on task node to open side pane...")
-    task_node_on_canvas = page.locator('[data-testid="task-node"]')
-    expect(task_node_on_canvas).to_be_visible(timeout=TIMEOUT)
-    task_node_on_canvas.click()
+    helper.click_node('[data-testid="task-node"]')
 
     # Wait for side pane to open and verify Task Definitions tab is active
-    expect(page.locator('[data-testid="tasks-tab"]')).to_be_visible(timeout=TIMEOUT)
+    expect(page.locator('[data-testid="tasks-tab"]')).to_be_visible(
+        timeout=helper.timeout
+    )
     expect(
         page.locator('[data-testid="tasks-tab"][data-state="active"]')
-    ).to_be_visible(timeout=TIMEOUT)
+    ).to_be_visible(timeout=helper.timeout)
     print("Side pane opened with Task Definitions tab active.")
 
     # 8. Create a new task in the list pane
@@ -177,18 +71,20 @@ def test_simple_worker_drag_and_drop_workflow(page: Page):
     add_task_button = tasks_tab_content.locator(
         '[data-testid="create-new-item-button"]'
     )
-    expect(add_task_button).to_be_visible(timeout=TIMEOUT)
+    expect(add_task_button).to_be_visible(timeout=helper.timeout)
     add_task_button.click()
 
     # Wait for the task to be created and the edit pane to show TaskConfig
-    expect(page.locator('input[type="text"]').first).to_be_visible(timeout=TIMEOUT)
+    expect(page.locator('input[type="text"]').first).to_be_visible(
+        timeout=helper.timeout
+    )
     print("New task created and TaskConfig opened in edit pane.")
 
     # 9. Verify TaskConfig is displayed with editable fields
     print("Verifying TaskConfig interface...")
     # Check for class name input field
     class_name_input = page.locator('[data-testid="task-name-value"]')
-    expect(class_name_input).to_be_visible(timeout=TIMEOUT)
+    expect(class_name_input).to_be_visible(timeout=helper.timeout)
 
     # Get the current task name
     current_task_name = class_name_input.text_content()
@@ -213,21 +109,21 @@ def test_simple_worker_drag_and_drop_workflow(page: Page):
     ), f"Task name is empty or invalid: '{current_task_name}'"
 
     # Verify we can see field editing interface
-    expect(page.locator("text=No fields")).to_be_visible(timeout=TIMEOUT)
+    expect(page.locator("text=No fields")).to_be_visible(timeout=helper.timeout)
 
     # Add a simple field to make the task more realistic
     add_field_button = page.locator('button[title="Add field"]')
-    expect(add_field_button).to_be_visible(timeout=TIMEOUT)
+    expect(add_field_button).to_be_visible(timeout=helper.timeout)
     add_field_button.click()
 
     # Fill in field details
     field_name_input = page.locator('input[placeholder="field_name"]')
-    expect(field_name_input).to_be_visible(timeout=TIMEOUT)
+    expect(field_name_input).to_be_visible(timeout=helper.timeout)
     field_name_input.fill("message")
 
     # Save the field
     save_field_button = page.locator('button:has-text("Add")')
-    expect(save_field_button).to_be_visible(timeout=TIMEOUT)
+    expect(save_field_button).to_be_visible(timeout=helper.timeout)
     save_field_button.click()
 
     print("Field added to task successfully.")
@@ -238,14 +134,11 @@ def test_simple_worker_drag_and_drop_workflow(page: Page):
     page.wait_for_timeout(500)
 
     # 10. Click on the TaskWorker node to configure it
-    print("Clicking on TaskWorker node...")
-    taskworker_node_on_canvas = page.locator('[data-testid="taskworker-node"]')
-    expect(taskworker_node_on_canvas).to_be_visible(timeout=TIMEOUT)
-    taskworker_node_on_canvas.click()
+    helper.click_node('[data-testid="taskworker-node"]')
 
     # Wait for TaskWorker configuration to appear
     expect(page.locator('[data-testid="output-types-section"]')).to_be_visible(
-        timeout=TIMEOUT
+        timeout=helper.timeout
     )
     print("TaskWorker configuration opened.")
 
@@ -254,13 +147,13 @@ def test_simple_worker_drag_and_drop_workflow(page: Page):
 
     # Look for the Output Types section within the TaskWorker node
     output_types_section = page.locator('[data-testid="output-types-section"]')
-    expect(output_types_section).to_be_visible(timeout=TIMEOUT)
+    expect(output_types_section).to_be_visible(timeout=helper.timeout)
 
     # Find the dropdown with "Add output type..." option within the output types section
     output_type_dropdown = output_types_section.locator(
         '[data-testid="output-type-dropdown"]'
     )
-    expect(output_type_dropdown).to_be_visible(timeout=TIMEOUT)
+    expect(output_type_dropdown).to_be_visible(timeout=helper.timeout)
 
     # Click the dropdown to open it
     output_type_dropdown.click()
@@ -294,7 +187,7 @@ def test_simple_worker_drag_and_drop_workflow(page: Page):
         target_option = output_type_dropdown.locator(
             f'option:has-text("{current_task_name}")'
         )
-        expect(target_option).to_be_attached(timeout=TIMEOUT)
+        expect(target_option).to_be_attached(timeout=helper.timeout)
 
         # Use a more reliable method to trigger the selection and change event
         # Instead of select_option(), we'll use evaluate to trigger the change event properly
@@ -328,7 +221,7 @@ def test_simple_worker_drag_and_drop_workflow(page: Page):
         print(f"Dropdown selection result: {result}")
 
         if result.get("error"):
-            raise Exception(
+            raise ValueError(
                 f"Dropdown selection failed: {result['error']}. Available options: {result.get('availableOptions', 'unknown')}"
             )
 
@@ -339,7 +232,7 @@ def test_simple_worker_drag_and_drop_workflow(page: Page):
         # Wait a moment for the UI to update
         page.wait_for_timeout(1000)
 
-    except Exception as e:
+    except ValueError as e:
         # If selection fails, it means the option doesn't exist
         print(
             f"Failed to select '{current_task_name}' - option may not exist in dropdown"
@@ -362,7 +255,7 @@ def test_simple_worker_drag_and_drop_workflow(page: Page):
 
     # Add some debugging if the element is not found
     try:
-        expect(output_type_item).to_be_visible(timeout=TIMEOUT)
+        expect(output_type_item).to_be_visible(timeout=helper.timeout)
         print(f"✓ Task '{current_task_name}' now appears in the output types list.")
     except Exception as e:
         print(f"Failed to find task '{current_task_name}' in output types list")
