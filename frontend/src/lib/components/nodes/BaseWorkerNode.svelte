@@ -89,6 +89,16 @@
 		persistNodeDataDebounced();
 	}
 
+	// On first load, we need to convert output_types to output_type_ids
+	if (data.output_types && data.output_types.length > data.output_type_ids.length) {
+		data.output_type_ids = data.output_types.map((type: string) => {
+			const task = getTaskByName(type) || getTaskImportByName(type);
+			return task?.id || '';
+		});
+		console.log('Populated output_type_ids:', data.output_type_ids);
+		persistNodeDataDebounced();
+	}
+
 	// --- State Variables ---
 	let nodeVersion = $derived(data._lastUpdated || 0);
 	let editingWorkerName = $state(false);
