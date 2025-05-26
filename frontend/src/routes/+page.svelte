@@ -34,8 +34,11 @@
 	import { addTaskImport } from '$lib/stores/taskImportStore.svelte';
 	import type { DataOutputNodeData } from '$lib/components/nodes/DataOutputNode.svelte';
 	import type { DataInputNodeData } from '$lib/components/nodes/DataInputNode.svelte';
-	import { tasks as taskStore } from '$lib/stores/taskStore.svelte';
-	import { taskImports as taskImportStore } from '$lib/stores/taskImportStore.svelte';
+	import { tasks as taskStore, getTaskById } from '$lib/stores/taskStore.svelte';
+	import {
+		taskImports as taskImportStore,
+		getTaskImportById
+	} from '$lib/stores/taskImportStore.svelte';
 	import { get } from 'svelte/store';
 	import { allWorkerClassNames } from '$lib/stores/classNameStore.svelte';
 	import { socketStore } from '$lib/stores/socketStore.svelte';
@@ -828,7 +831,9 @@
 		if (sourceNode.type === 'datainput') {
 			sourceClassName = (sourceNode.data as unknown as DataInputNodeData).className;
 		} else if (connection.sourceHandle) {
-			sourceClassName = connection.sourceHandle.split('-')[1];
+			const sourceClassId = connection.sourceHandle.substring(7); // remove output- prefix
+			const sourceClass = getTaskById(sourceClassId) || getTaskImportById(sourceClassId);
+			sourceClassName = sourceClass?.className;
 		}
 
 		if (
