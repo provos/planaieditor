@@ -477,6 +477,7 @@
 											role="button"
 											tabindex="0"
 											draggable="true"
+											data-testid="draggable-assistantinput"
 											ondragstart={(e) => onDragStart(e, 'assistantinput')}
 										>
 											<div class="flex items-center gap-1 xl:gap-1.5">
@@ -759,6 +760,7 @@
 					onclick={onClearGraph}
 					class="flex items-center rounded bg-red-600 px-2 py-1 text-xs font-medium text-white shadow-sm transition-colors hover:bg-red-700 xl:px-3 xl:py-1.5 xl:text-sm"
 					title="Clear the entire graph"
+					data-testid="clear-button"
 				>
 					<Eraser size={16} class="mr-1 xl:mr-1.5 xl:size-[18px]" />
 					Clear

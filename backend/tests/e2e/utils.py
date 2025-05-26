@@ -64,11 +64,11 @@ class E2ETestHelper:
 
     def clear_graph(self) -> None:
         """Clear any existing graph from the canvas."""
-        clear_button = self.page.locator('button[title="Clear Graph"]')
+        clear_button = self.page.locator('[data-testid="clear-button"]')
         if self.page.locator(".svelte-flow__node").first.is_visible(timeout=2000):
             print("Clearing existing graph...")
-            clear_button.click(force=True)
-            self.page.once("dialog", lambda dialog: dialog.accept())
+            self.page.on("dialog", lambda dialog: dialog.accept())
+            clear_button.click()
             expect(self.page.locator(".svelte-flow__node")).to_have_count(
                 0, timeout=self.timeout
             )
@@ -920,6 +920,19 @@ def get_available_tasks_from_browser(page: Page) -> List[str]:
             // Fallback: check localStorage for tasks
             const tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
             return tasks.map(task => task.className || 'Unknown');
+        }
+        """
+    )
+
+
+def get_task_imports_from_browser(page: Page) -> List[Dict[str, Any]]:
+    """Get list of task imports from the browser store for debugging."""
+    return page.evaluate(
+        """
+        () => {
+            // Check localStorage for taskImports
+            const taskImports = JSON.parse(localStorage.getItem('taskImports') || '[]');
+            return taskImports;
         }
         """
     )

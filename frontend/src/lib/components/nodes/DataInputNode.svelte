@@ -189,6 +189,7 @@
 
 <div
 	class="datainput-node flex h-full flex-col overflow-auto rounded-md border border-gray-300 bg-white shadow-md"
+	data-testid="datainput-node"
 >
 	<!-- Node Resizer -->
 	<NodeResizer
