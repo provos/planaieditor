@@ -339,6 +339,131 @@ class E2ETestHelper:
         print("Successfully received exported code from backend API.")
         return exported_code
 
+    def load_json_file(self, json_file_path: Path) -> None:
+        """
+        Load a JSON file into the graph using the Load button.
+
+        Args:
+            json_file_path: Path to the JSON file to load
+        """
+        print(f"Loading JSON file: {json_file_path}")
+
+        # Click the Load button to trigger the file chooser
+        load_button = self.page.locator('[data-testid="load-button"]')
+        expect(load_button).to_be_visible(timeout=self.timeout)
+        expect(load_button).to_be_enabled(timeout=self.timeout)
+
+        # Set up file chooser expectation and click the load button
+        with self.page.expect_file_chooser(timeout=self.timeout) as file_chooser_info:
+            print("Clicking load button...")
+            load_button.click()
+
+        # Handle the file chooser
+        file_chooser = file_chooser_info.value
+        print(f"File chooser opened, setting file: {json_file_path}")
+        file_chooser.set_files(json_file_path)
+
+        # Wait for the load to complete by checking for success status
+        print("Waiting for load to complete...")
+        success_status = self.page.locator(
+            'span.rounded.bg-green-100:has-text("Graph loaded successfully")'
+        )
+        expect(success_status).to_be_visible(timeout=self.timeout)
+        print("JSON file loaded successfully.")
+
+    def drag_from_handle_to_handle(
+        self,
+        source_node_selector: str,
+        source_handle_id: str,
+        target_node_selector: str,
+        target_handle_id: str,
+    ) -> None:
+        """
+        Drag from an output handle of one node to an input handle of another node.
+
+        Args:
+            source_node_selector: CSS selector for the source node
+            source_handle_id: ID of the source handle (e.g., "output-task-id")
+            target_node_selector: CSS selector for the target node
+            target_handle_id: ID of the target handle (e.g., "input")
+        """
+        print(
+            f"Dragging from {source_node_selector} handle {source_handle_id} to {target_node_selector} handle {target_handle_id}"
+        )
+
+        # Find the source and target nodes
+        source_node = self.page.locator(source_node_selector)
+        target_node = self.page.locator(target_node_selector)
+
+        expect(source_node).to_be_visible(timeout=self.timeout)
+        expect(target_node).to_be_visible(timeout=self.timeout)
+
+        # Find the specific handles within the nodes using Svelte Flow's handle structure
+        # Svelte Flow handles have the format: .svelte-flow__handle[data-handleid="handle-id"]
+        source_handle = source_node.locator(
+            f'.svelte-flow__handle[data-handleid="{source_handle_id}"]'
+        )
+        target_handle = target_node.locator(
+            f'.svelte-flow__handle[data-handleid="{target_handle_id}"]'
+        )
+
+        expect(source_handle).to_be_visible(timeout=self.timeout)
+        expect(target_handle).to_be_visible(timeout=self.timeout)
+
+        # Get bounding boxes for the handles
+        source_box = source_handle.bounding_box()
+        target_box = target_handle.bounding_box()
+
+        assert (
+            source_box is not None
+        ), f"Source handle {source_handle_id} bounding box not found"
+        assert (
+            target_box is not None
+        ), f"Target handle {target_handle_id} bounding box not found"
+
+        # Calculate center points of the handles
+        source_x = source_box["x"] + source_box["width"] / 2
+        source_y = source_box["y"] + source_box["height"] / 2
+        target_x = target_box["x"] + target_box["width"] / 2
+        target_y = target_box["y"] + target_box["height"] / 2
+
+        # Perform the drag operation
+        print(f"Dragging from ({source_x}, {source_y}) to ({target_x}, {target_y})")
+        self.page.mouse.move(source_x, source_y)
+        self.page.mouse.down()
+        self.page.mouse.move(target_x, target_y)
+        self.page.mouse.up()
+
+        print("Drag operation completed.")
+
+    def get_node_input_types(self, node_selector: str) -> List[str]:
+        """
+        Get the input types displayed for a specific node.
+
+        Args:
+            node_selector: CSS selector for the node
+
+        Returns:
+            List of input type names
+        """
+        print(f"Getting input types for node {node_selector}")
+
+        node = self.page.locator(node_selector)
+        expect(node).to_be_visible(timeout=self.timeout)
+
+        # Look for input type spans within the node
+        input_type_spans = node.locator(".font-mono")
+        input_types = []
+
+        count = input_type_spans.count()
+        for i in range(count):
+            text = input_type_spans.nth(i).text_content()
+            if text and text.strip():
+                input_types.append(text.strip())
+
+        print(f"Found input types: {input_types}")
+        return input_types
+
 
 # --- Standalone Utility Functions ---
 

@@ -1,0 +1,97 @@
+{
+  "version": 2,
+  "name": "two-workers",
+  "nodes": [
+    {
+      "id": "taskworker-658e1ee3-16e3-4f71-8eb8-ecb7c9d5f675",
+      "type": "taskworker",
+      "position": {
+        "x": 737.5070282156879,
+        "y": 474.4976990113276
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": false,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "workerName": "TaskWorker1",
+        "requiredMembers": [
+          "consume_work"
+        ],
+        "entryPoint": false,
+        "inputTypes": [],
+        "output_types": [
+          "Task1"
+        ],
+        "methods": {
+          "consume_work": "# Process the input task and produce output\n# self.publish_work(output_task, input_task=task)\npass"
+        },
+        "nodeId": "taskworker-658e1ee3-16e3-4f71-8eb8-ecb7c9d5f675",
+        "output_type_ids": [
+          "task-952d1928-5a93-4569-9f9b-ec8acfa11daf"
+        ],
+        "isCached": false
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 627,
+        "height": 262
+      }
+    },
+    {
+      "id": "taskworker-c0d03e66-c5b8-44f3-8ff5-09338670934f",
+      "type": "taskworker",
+      "position": {
+        "x": 1590.5105030340385,
+        "y": 471.22574102444986
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": true,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "workerName": "TaskWorker2",
+        "requiredMembers": [
+          "consume_work"
+        ],
+        "entryPoint": false,
+        "inputTypes": [],
+        "output_types": [],
+        "methods": {
+          "consume_work": "# Process the input task and produce output\n# self.publish_work(output_task, input_task=task)\npass"
+        },
+        "nodeId": "taskworker-c0d03e66-c5b8-44f3-8ff5-09338670934f",
+        "output_type_ids": [],
+        "isCached": false
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 627,
+        "height": 266
+      }
+    }
+  ],
+  "edges": [],
+  "tools": [],
+  "tasks": [
+    {
+      "id": "task-952d1928-5a93-4569-9f9b-ec8acfa11daf",
+      "className": "Task1",
+      "type": "task",
+      "fields": []
+    }
+  ],
+  "taskImports": [],
+  "llmConfigs": [],
+  "llmConfigsFromCode": []
+}
