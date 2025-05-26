@@ -29,6 +29,7 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <div
 	class="{type}-node flex h-full cursor-pointer flex-col overflow-auto rounded-md border border-gray-300 bg-white shadow-md"
+	data-testid="{type}-node"
 	onclick={handleNodeClick}
 	role="button"
 	tabindex="0"

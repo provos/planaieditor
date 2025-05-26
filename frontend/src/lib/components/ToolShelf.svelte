@@ -238,6 +238,7 @@
 								<Tooltip.Trigger class="flex-1">
 									<Tabs.Trigger
 										value="config"
+										data-testid="config-tab"
 										class="flex-1 rounded-md px-2 py-1 text-xs font-medium transition-colors duration-150 data-[state=active]:bg-white data-[state=active]:shadow-sm xl:px-3 xl:py-1.5 xl:text-sm"
 									>
 										{#snippet child({ props }: { props: Record<string, unknown> })}
@@ -258,6 +259,7 @@
 								<Tooltip.Trigger class="flex-1">
 									<Tabs.Trigger
 										value="data"
+										data-testid="data-tab"
 										class="flex-1 rounded-md px-2 py-1 text-xs font-medium transition-colors duration-150 data-[state=active]:bg-white data-[state=active]:shadow-sm xl:px-3 xl:py-1.5 xl:text-sm"
 									>
 										{#snippet child({ props }: { props: Record<string, unknown> })}
@@ -277,6 +279,7 @@
 								<Tooltip.Trigger class="flex-1">
 									<Tabs.Trigger
 										value="workers"
+										data-testid="workers-tab"
 										class="flex-1 rounded-md px-2 py-1 text-xs font-medium transition-colors duration-150 data-[state=active]:bg-white data-[state=active]:shadow-sm xl:px-3 xl:py-1.5 xl:text-sm"
 									>
 										{#snippet child({ props }: { props: Record<string, unknown> })}
@@ -311,6 +314,7 @@
 											role="button"
 											tabindex="0"
 											draggable={canAddTask}
+											data-testid="draggable-task"
 											ondragstart={(e) => onDragStart(e, 'task')}
 										>
 											<div class="flex items-center gap-1 xl:gap-1.5">
@@ -537,6 +541,7 @@
 											role="button"
 											tabindex="0"
 											draggable="true"
+											data-testid="draggable-taskworker"
 											ondragstart={(e) => onDragStart(e, 'taskworker')}
 										>
 											<div class="flex items-center gap-1 xl:gap-1.5">

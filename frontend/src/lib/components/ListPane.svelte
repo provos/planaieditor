@@ -51,6 +51,7 @@
 		<Tabs.List class="mb-1 flex shrink-0 rounded-md bg-gray-200/70 p-0">
 			<Tabs.Trigger
 				value="tasks"
+				data-testid="tasks-tab"
 				class="flex-1 rounded-md px-3 py-1.5 text-center text-sm font-medium transition-colors duration-150 hover:bg-gray-300/50 data-[state=active]:bg-white data-[state=active]:shadow-sm"
 			>
 				Task Definitions
@@ -71,6 +72,7 @@
 
 		<Tabs.Content
 			value="tasks"
+			data-testid="tasks-tab-content"
 			class="min-h-0 flex-1 overflow-hidden rounded-md bg-white shadow-inner"
 		>
 			<div class="h-full overflow-auto p-3">

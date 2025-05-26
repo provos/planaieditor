@@ -86,19 +86,6 @@
 	// Initialize output_type_ids if not present
 	if (!data.output_type_ids) {
 		data.output_type_ids = [];
-
-		// Migration: if we have existing output_types but no output_type_ids, migrate them
-		if (data.output_types && data.output_types.length > 0) {
-			const migratedIds: string[] = [];
-			for (const typeName of data.output_types) {
-				const task = getTaskByName(typeName) || getTaskImportByName(typeName);
-				if (task) {
-					migratedIds.push(task.id);
-				}
-			}
-			data.output_type_ids = migratedIds;
-		}
-
 		persistNodeDataDebounced();
 	}
 
@@ -110,21 +97,20 @@
 	let editingOutputType = $state<number | null>(null);
 	let tempType = $state('');
 	let typeError = $state('');
-	let availableTaskClasses = $state<string[]>([]);
+	let availableTaskClasses = $derived(Array.from(taskClassNamesStore));
 	let inferredInputTypes = $derived<InputType[]>(data.inputTypes.map(inferInputTypeFromName));
 	let taskNodeVisibility = $state<Record<string, boolean>>({});
 	let manuallySelectedInputType = $derived<string>(
 		data.inputTypes.length > 0 ? data.inputTypes[0] : ''
 	);
+	let currentOutputTypeIds = $derived(data.output_type_ids || []);
 	let currentOutputTypes = $derived.by<string[]>(() => {
-		// Derive output types from IDs
+		// Derive output types from IDs - ensure proper reactivity to data changes
 		const typeNames: string[] = [];
-		if (data.output_type_ids) {
-			for (const id of data.output_type_ids) {
-				const task = getTaskById(id) || getTaskImportById(id);
-				if (task) {
-					typeNames.push(task.className);
-				}
+		for (const id of currentOutputTypeIds) {
+			const task = getTaskById(id) || getTaskImportById(id);
+			if (task) {
+				typeNames.push(task.className);
 			}
 		}
 		return typeNames;
@@ -142,8 +128,8 @@
 		const outputTypes: Array<{ className: string; id: string }> = [];
 
 		// Add types from output_type_ids
-		if (data.output_type_ids) {
-			for (const id of data.output_type_ids) {
+		if (currentOutputTypeIds) {
+			for (const id of currentOutputTypeIds) {
 				const task = getTaskById(id) || getTaskImportById(id);
 				if (task) {
 					outputTypes.push({ className: task.className, id: task.id });
@@ -193,11 +179,6 @@
 		return () => {
 			unsubNodes();
 		};
-	});
-
-	// Watch for task class names
-	$effect(() => {
-		availableTaskClasses = Array.from(taskClassNamesStore);
 	});
 
 	if (isEditable) {
@@ -259,10 +240,10 @@
 
 	// --- Output Type Handling Logic ---
 	function startEditingOutputType(index: number = -1) {
-		if (index >= 0 && data.output_type_ids && data.output_type_ids[index]) {
+		if (index >= 0 && currentOutputTypeIds && currentOutputTypeIds[index]) {
 			// Get the class name from the ID for editing
 			const task =
-				getTaskById(data.output_type_ids[index]) || getTaskImportById(data.output_type_ids[index]);
+				getTaskById(currentOutputTypeIds[index]) || getTaskImportById(currentOutputTypeIds[index]);
 			tempType = task ? task.className : '';
 		} else {
 			tempType = '';
@@ -294,7 +275,7 @@
 			return;
 		}
 
-		let tmpOutputTypeIds = [...(data.output_type_ids || [])];
+		let tmpOutputTypeIds = [...(currentOutputTypeIds || [])];
 		if (editingOutputType === -1) {
 			// Adding new output type
 			if (!tmpOutputTypeIds.includes(task.id)) {
@@ -305,14 +286,16 @@
 			tmpOutputTypeIds[editingOutputType] = task.id;
 		}
 		data.output_type_ids = tmpOutputTypeIds;
+		currentOutputTypeIds = tmpOutputTypeIds;
 		persistNodeDataDebounced();
 		cancelTypeEditing();
 	}
 
 	function deleteOutputType(index: number) {
-		let tmpOutputTypeIds = [...(data.output_type_ids || [])];
+		let tmpOutputTypeIds = [...(currentOutputTypeIds || [])];
 		tmpOutputTypeIds = tmpOutputTypeIds.filter((_: string, i: number) => i !== index);
 		data.output_type_ids = tmpOutputTypeIds;
+		currentOutputTypeIds = tmpOutputTypeIds;
 		persistNodeDataDebounced();
 		typeError = '';
 	}
@@ -355,8 +338,9 @@
 			const newTypeName = select.value;
 			// Find the task/task import by class name to get its ID
 			const task = getTaskByName(newTypeName) || getTaskImportByName(newTypeName);
-			if (task && !(data.output_type_ids || []).includes(task.id)) {
-				data.output_type_ids = [...(data.output_type_ids || []), task.id];
+			if (task && !(currentOutputTypeIds || []).includes(task.id)) {
+				data.output_type_ids = [...(currentOutputTypeIds || []), task.id];
+				currentOutputTypeIds = [...(currentOutputTypeIds || []), task.id];
 				persistNodeDataDebounced();
 			}
 			select.value = ''; // Reset select
@@ -418,6 +402,7 @@
 
 <div
 	class="base-worker-node relative flex h-full flex-col rounded-md border border-gray-300 bg-white shadow-md {additionalClassStyle}"
+	data-testid="{workerType}-node"
 >
 	<NodeResizer
 		{minWidth}
@@ -590,13 +575,14 @@
 		</div>
 
 		<!-- Output Types -->
-		<div class="mb-2 flex-none">
+		<div class="mb-2 flex-none" data-testid="output-types-section">
 			<h3 class="text-2xs mb-1 font-semibold text-gray-600">Output Types</h3>
 			{#if availableTaskClasses.length > 0}
 				<div class="mb-1">
 					{#if isEditable}
 						<select
 							class="text-2xs w-full rounded border border-gray-200 px-1 py-0.5"
+							data-testid="output-type-dropdown"
 							onchange={addOutputTypeFromSelect}
 						>
 							<option value="">Add output type...</option>

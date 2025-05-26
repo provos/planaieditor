@@ -88,6 +88,7 @@
 			class="z-10 flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-blue-500 shadow-sm hover:bg-blue-200"
 			onclick={onCreate}
 			title={createButtonTitle}
+			data-testid="create-new-item-button"
 		>
 			<Plus size={16} weight="bold" />
 		</button>

@@ -339,6 +339,7 @@
 					<div
 						class="w-full cursor-pointer rounded px-1.5 py-1 text-center text-sm font-medium hover:bg-gray-100"
 						onclick={startEditingClassName}
+						data-testid="task-name-value"
 						role="button"
 						tabindex={0}
 					>
