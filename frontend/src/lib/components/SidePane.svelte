@@ -9,7 +9,7 @@
 <div class="relative h-full">
 	<button
 		onclick={closeSplitPane}
-		class="absolute right-2 top-2 z-10 rounded-sm p-1 text-gray-500 transition-colors duration-150 hover:bg-gray-300/50 hover:text-gray-700"
+		class="absolute top-2 right-2 z-10 rounded-sm p-1 text-gray-500 transition-colors duration-150 hover:bg-gray-300/50 hover:text-gray-700"
 		title="Close panel"
 	>
 		<X size={14} />
