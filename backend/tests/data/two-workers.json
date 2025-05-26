@@ -89,6 +89,12 @@
       "className": "Task1",
       "type": "task",
       "fields": []
+    },
+    {
+      "id": "task-0abd7191-6fd2-4065-a5b2-b61b17eab0b1",
+      "className": "Task2",
+      "type": "task",
+      "fields": []
     }
   ],
   "taskImports": [],

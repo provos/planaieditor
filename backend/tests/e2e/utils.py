@@ -464,6 +464,52 @@ class E2ETestHelper:
         print(f"Found input types: {input_types}")
         return input_types
 
+    def set_manual_input_type(self, node_selector: str, input_type: str) -> None:
+        """
+        Set the input type manually for a specific node using the dropdown.
+
+        Args:
+            node_selector: CSS selector for the node
+            input_type: The input type to set (e.g., "Task2")
+        """
+        print(f"Setting manual input type for node {node_selector} to {input_type}")
+
+        # Click on the node to select it
+        node = self.page.locator(node_selector)
+        expect(node).to_be_visible(timeout=self.timeout)
+        node.click()
+        self.page.wait_for_timeout(500)  # Wait for UI to update
+
+        # Find the input type dropdown within the node
+        # Look for the select element that has the "Connect Task nodes or set input type manually..." option
+        input_type_select = node.locator("select").filter(
+            has_text="Connect Task nodes or set input type manually..."
+        )
+        expect(input_type_select).to_be_visible(timeout=self.timeout)
+
+        # Select the desired input type
+        input_type_select.select_option(value=input_type)
+        print(f"Selected input type: {input_type}")
+
+        # Wait for the UI to update
+        self.page.wait_for_timeout(500)
+
+    def verify_connection_failed(self) -> bool:
+        """
+        Verify that no new edge was created (connection failed).
+
+        Returns:
+            True if no edges exist (connection failed), False otherwise
+        """
+        print("Verifying that connection failed...")
+
+        # Check if any edges exist
+        edges = self.page.locator(".svelte-flow__edge")
+        edge_count = edges.count()
+
+        print(f"Found {edge_count} edges")
+        return edge_count == 0
+
 
 # --- Standalone Utility Functions ---
 
