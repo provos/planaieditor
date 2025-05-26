@@ -27,8 +27,7 @@
 	import DataInputNode from '$lib/components/nodes/DataInputNode.svelte';
 	import DataOutputNode from '$lib/components/nodes/DataOutputNode.svelte';
 	import ToolNode from '$lib/components/nodes/ToolNode.svelte';
-	import EditPane from '$lib/components/EditPane.svelte';
-	import ListPane from '$lib/components/ListPane.svelte';
+	import SidePane from '$lib/components/SidePane.svelte';
 	import type { BaseWorkerData } from '$lib/components/nodes/BaseWorkerNode.svelte';
 	import type { TaskImport as TaskImportType } from '$lib/stores/taskImportStore.svelte';
 	import { addTaskImport } from '$lib/stores/taskImportStore.svelte';
@@ -1050,14 +1049,7 @@
 				</SvelteFlow>
 			</Pane>
 			<Pane maxSize={MAX_SPLIT_PANE_SIZE} bind:size={splitPaneConfig.size} snapSize={5}>
-				<Splitpanes horizontal={true}>
-					<Pane>
-						<EditPane />
-					</Pane>
-					<Pane minSize={25} maxSize={75}>
-						<ListPane />
-					</Pane>
-				</Splitpanes>
+				<SidePane />
 			</Pane>
 		</Splitpanes>
 
