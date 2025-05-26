@@ -1,8 +1,5 @@
 import { persistedState } from '$lib/utils/persist.svelte';
 import type { Task as TaskType } from './taskStore.svelte';
-import { taskClassNamesStore } from './classNameStore.svelte';
-import { tasks } from './taskStore.svelte';
-import { areArraysEqual } from '$lib/utils/utils';
 
 export interface TaskImport extends TaskType {
 	modulePath?: string;
