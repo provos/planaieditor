@@ -2,7 +2,7 @@ import os
 
 import pytest
 from playwright.sync_api import Page, expect
-from utils import setup_basic_test_environment
+from utils import setup_basic_test_environment, get_available_tasks_from_browser
 
 # Skip e2e tests if SKIP_E2E_TESTS is set
 if os.environ.get("SKIP_E2E_TESTS") == "true":
@@ -27,7 +27,7 @@ def test_simple_worker_drag_and_drop_workflow(page: Page):
     helper.switch_to_tab("config")
 
     # 5. Drag a task node onto the canvas
-    drop_x, drop_y = helper.drag_element_to_canvas('[data-testid="draggable-task"]')
+    helper.drag_element_to_canvas('[data-testid="draggable-task"]')
 
     # Wait for task node to appear on canvas
     expect(page.locator('[data-testid="task-node"]')).to_be_visible(
@@ -39,9 +39,7 @@ def test_simple_worker_drag_and_drop_workflow(page: Page):
     helper.switch_to_tab("workers")
 
     # Drag TaskWorker with offset to the right of the task node
-    drop_x_worker, drop_y_worker = helper.drag_element_to_canvas(
-        '[data-testid="draggable-taskworker"]', offset_x=200
-    )
+    helper.drag_element_to_canvas('[data-testid="draggable-taskworker"]', offset_x=200)
 
     # Wait for TaskWorker node to appear on canvas
     expect(page.locator('[data-testid="taskworker-node"]')).to_be_visible(
@@ -160,20 +158,7 @@ def test_simple_worker_drag_and_drop_workflow(page: Page):
 
     # Debug: Check what tasks are available in the browser
     print("Debugging: Checking available tasks in browser...")
-    available_tasks = page.evaluate(
-        """
-        () => {
-            // Check if taskClassNamesStore is available
-            if (window.taskClassNamesStore) {
-                return Array.from(window.taskClassNamesStore);
-            }
-            // Fallback: check localStorage for tasks
-            const nodes = JSON.parse(localStorage.getItem('nodes') || '[]');
-            const taskNodes = nodes.filter(node => node.type === 'task');
-            return taskNodes.map(node => node.data?.className || 'Unknown');
-        }
-    """
-    )
+    available_tasks = get_available_tasks_from_browser(page)
     print(f"Available tasks in browser: {available_tasks}")
 
     # Verify our new task appears as an option in the dropdown
