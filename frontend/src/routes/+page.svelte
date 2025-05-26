@@ -1016,7 +1016,7 @@
 
 	<div class="flex-grow">
 		<Splitpanes horizontal={false}>
-			<Pane maxSize={100} size={100}>
+			<Pane>
 				<SvelteFlow
 					{nodes}
 					{edges}
@@ -1048,7 +1048,7 @@
 					</Controls>
 				</SvelteFlow>
 			</Pane>
-			<Pane maxSize={MAX_SPLIT_PANE_SIZE} bind:size={splitPaneConfig.size} snapSize={5}>
+			<Pane maxSize={MAX_SPLIT_PANE_SIZE} bind:size={splitPaneConfig.size} snapSize={10}>
 				<SidePane />
 			</Pane>
 		</Splitpanes>
