@@ -5,7 +5,7 @@ import { tasks } from './taskStore.svelte';
 
 export interface TaskImport extends TaskType {
 	modulePath?: string;
-	isImplicit?: boolean;
+	isImplicit?: boolean;  // this is not user defined but was auto-magically added by the backend
 	availableClasses?: string[];
 }
 
