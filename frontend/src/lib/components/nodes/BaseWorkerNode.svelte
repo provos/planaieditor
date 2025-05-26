@@ -24,7 +24,7 @@
 	import { getTaskImportByName } from '$lib/stores/taskImportStore.svelte';
 	import { getTaskById } from '$lib/stores/taskStore.svelte';
 	import { getTaskImportById } from '$lib/stores/taskImportStore.svelte';
-	import { arraysEqual } from '$lib/utils/utils';
+	import { areArraysEqual } from '$lib/utils/utils';
 	import TaskConfig from '../TaskConfig.svelte';
 	import { type InputType, inferInputTypeFromName } from '$lib/utils/nodeUtils';
 	import { openSplitPane, isSplitPaneOpen } from '$lib/stores/splitPaneStore.svelte';
@@ -203,7 +203,7 @@
 
 		// Effect to sync currentOutputTypes back to data.output_types for backward compatibility
 		$effect(() => {
-			if (!arraysEqual(data.output_types, currentOutputTypes)) {
+			if (!areArraysEqual(data.output_types, currentOutputTypes)) {
 				data.output_types = [...currentOutputTypes];
 				persistNodeDataDebounced();
 			}

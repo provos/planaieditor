@@ -1,6 +1,8 @@
 import { persistedState } from '$lib/utils/persist.svelte';
 import { taskClassNamesStore } from './classNameStore.svelte';
-import { taskImports } from './taskImportStore.svelte';
+import { taskImports, type TaskImport } from './taskImportStore.svelte';
+import { areSetsEqual } from '$lib/utils/utils';
+import { untrack } from 'svelte';
 
 // Define basic field types
 export type BaseFieldType = 'string' | 'integer' | 'float' | 'boolean' | 'literal';
@@ -49,25 +51,23 @@ export function getTaskById(id: string): Task | undefined {
 	return tasks.find((task: Task) => task.id === id);
 }
 
-// Update the task class names store when the tasks change
+// Update the task class names store when the tasks or task imports change
 $effect.root(() => {
 	$effect(() => {
 		// Get all currently defined task class names
 		const localTaskClassNames = new Set(tasks.map((task: Task) => task.className));
+		const importedTaskClassNames = new Set(
+			taskImports.map((taskImport: TaskImport) => taskImport.className)
+		);
 
-		// Remove all local task names that are no longer present
-		const currentTaskClassNames = Array.from(taskClassNamesStore);
-		currentTaskClassNames.forEach((name) => {
-			// Check if this name exists in taskImports to avoid removing imported names
-			const isImported =
-				taskImports &&
-				Array.from(taskImports).some((taskImport: any) => taskImport.className === name);
-			if (!isImported && !localTaskClassNames.has(name)) {
-				taskClassNamesStore.delete(name);
+		untrack(() => {
+			// Merge the two sets
+			const allTaskClassNames = new Set([...localTaskClassNames, ...importedTaskClassNames]);
+
+			if (!areSetsEqual(allTaskClassNames, taskClassNamesStore)) {
+				taskClassNamesStore.clear();
+				allTaskClassNames.forEach((name) => taskClassNamesStore.add(name));
 			}
 		});
-
-		// Add all current local task names
-		localTaskClassNames.forEach((name) => taskClassNamesStore.add(name));
 	});
 });

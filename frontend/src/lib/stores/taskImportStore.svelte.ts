@@ -2,10 +2,11 @@ import { persistedState } from '$lib/utils/persist.svelte';
 import type { Task as TaskType } from './taskStore.svelte';
 import { taskClassNamesStore } from './classNameStore.svelte';
 import { tasks } from './taskStore.svelte';
+import { areArraysEqual } from '$lib/utils/utils';
 
 export interface TaskImport extends TaskType {
 	modulePath?: string;
-	isImplicit?: boolean;  // this is not user defined but was auto-magically added by the backend
+	isImplicit?: boolean; // this is not user defined but was auto-magically added by the backend
 	availableClasses?: string[];
 }
 
@@ -34,25 +35,4 @@ export function getTaskImportById(id: string): TaskImport | undefined {
 	return taskImports.find((item: TaskImport) => item.id === id);
 }
 
-// Update the task class names store when the task imports change
-$effect.root(() => {
-	$effect(() => {
-		// Get all currently imported task class names
-		const importedTaskClassNames = new Set(
-			taskImports.map((taskImport: TaskImport) => taskImport.className)
-		);
-
-		// Remove all imported task names that are no longer present
-		const currentTaskClassNames = Array.from(taskClassNamesStore);
-		currentTaskClassNames.forEach((name) => {
-			// Check if this name exists in local tasks to avoid removing local names
-			const isLocal = tasks && Array.from(tasks).some((task: any) => task.className === name);
-			if (!isLocal && !importedTaskClassNames.has(name)) {
-				taskClassNamesStore.delete(name);
-			}
-		});
-
-		// Add all current imported task names
-		importedTaskClassNames.forEach((name) => taskClassNamesStore.add(name));
-	});
-});
+// Update the task class names store when the task imports change - this happens in taskStore.svelte.ts

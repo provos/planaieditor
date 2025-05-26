@@ -11,7 +11,7 @@
 	} from '$lib/stores/taskImportStore.svelte';
 	import type { TaskImport as TaskImportType } from '$lib/stores/taskImportStore.svelte';
 	import TaskConfig from './TaskConfig.svelte';
-	import { arraysEqual } from '$lib/utils/utils';
+	import { areArraysEqual } from '$lib/utils/utils';
 
 	let { id } = $props<{
 		id: string;
@@ -51,7 +51,7 @@
 					modulePath: internalModulePath
 				};
 				if (
-					!arraysEqual(result.classes || [], taskImport?.availableClasses || []) ||
+					!areArraysEqual(result.classes || [], taskImport?.availableClasses || []) ||
 					internalModulePath != taskImport?.modulePath
 				) {
 					updateTaskImport(updatedTaskImport);
@@ -93,7 +93,7 @@
 					...taskImport,
 					fields: result.fields
 				};
-				if (!arraysEqual(result.fields || [], taskImport?.fields || [])) {
+				if (!areArraysEqual(result.fields || [], taskImport?.fields || [])) {
 					updateTaskImport(updatedTaskImport);
 					console.log('[fetchTaskFields] Success, updating fields.');
 				}

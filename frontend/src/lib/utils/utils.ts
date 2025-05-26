@@ -53,14 +53,28 @@ export function generateUniqueName(baseName: string, existingNames: Set<string>)
 	return uniqueName;
 }
 
-export function arraysEqual(arr1: any[], arr2: any[]): boolean {
+export function areArraysEqual<T>(arr1: T[], arr2: T[]): boolean {
 	if (arr1.length !== arr2.length) {
 		return false; // Arrays of different lengths cannot be equal
 	}
 	for (let i = 0; i < arr1.length; i++) {
-		if (arr1[i] !== arr2[i]) {
+		if (!Object.is(arr1[i], arr2[i])) {
 			return false; // Found a differing element
 		}
 	}
 	return true; // All elements matched
+}
+
+export function areSetsEqual<T>(set1: Set<T>, set2: Set<T>): boolean {
+	if (set1.size !== set2.size) {
+		return false;
+	}
+
+	for (const item of set1) {
+		if (!set2.has(item)) {
+			return false;
+		}
+	}
+
+	return true;
 }
