@@ -18,6 +18,10 @@ export function openSplitPane() {
 	splitPaneConfig.size = MAX_SPLIT_PANE_SIZE;
 }
 
+export function isSplitPaneOpen() {
+	return splitPaneConfig.size > 0;
+}
+
 export function closeSplitPane() {
 	splitPaneConfig.size = 0;
 }

@@ -27,6 +27,7 @@
 	import { arraysEqual } from '$lib/utils/utils';
 	import TaskConfig from '../TaskConfig.svelte';
 	import { type InputType, inferInputTypeFromName } from '$lib/utils/nodeUtils';
+	import { openSplitPane, isSplitPaneOpen } from '$lib/stores/splitPaneStore.svelte';
 
 	export interface NodeData {
 		className: string;
@@ -521,7 +522,18 @@
 						</select>
 					</div>
 				{:else}
-					<div class="text-2xs py-0.5 text-gray-400 italic">Create Task nodes</div>
+					<button
+						class="text-2xs cursor-pointer py-0.5 text-gray-400 italic hover:text-gray-600 disabled:text-gray-400"
+						onclick={openSplitPane}
+						disabled={isSplitPaneOpen()}
+						tabindex="0"
+					>
+						{#if isSplitPaneOpen()}
+							To select input types, create Tasks in the Task List on the right
+						{:else}
+							To create an input type, click here to open the Task List
+						{/if}
+					</button>
 				{/if}
 			{/if}
 			<div class="mt-1 space-y-1">
@@ -604,7 +616,18 @@
 				</div>
 			{/if}
 			{#if currentOutputTypes.length === 0}
-				<div class="text-2xs py-0.5 text-gray-400 italic">No output types defined</div>
+				<button
+					class="text-2xs cursor-pointer py-0.5 text-gray-400 italic hover:text-gray-600 disabled:text-gray-400"
+					onclick={openSplitPane}
+					disabled={isSplitPaneOpen()}
+					tabindex="0"
+				>
+					{#if isSplitPaneOpen()}
+						To select output types, create Tasks in the Task List on the right
+					{:else}
+						To create output types, click here to open the Task List
+					{/if}
+				</button>
 			{/if}
 			<div class="mt-1 space-y-1">
 				{#each currentOutputTypes as type, index (type)}
