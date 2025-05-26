@@ -2,7 +2,7 @@ import os
 
 import pytest
 from playwright.sync_api import Page, expect
-from utils import setup_basic_test_environment, get_available_tasks_from_browser
+from utils import get_available_tasks_from_browser, setup_basic_test_environment
 
 # Skip e2e tests if SKIP_E2E_TESTS is set
 if os.environ.get("SKIP_E2E_TESTS") == "true":
@@ -39,7 +39,9 @@ def test_simple_worker_drag_and_drop_workflow(page: Page):
     helper.switch_to_tab("workers")
 
     # Drag TaskWorker with offset to the right of the task node
-    helper.drag_element_to_canvas('[data-testid="draggable-taskworker"]', offset_x=200)
+    helper.drag_element_to_canvas(
+        '[data-testid="draggable-taskworker"]', offset_x=300, offset_y=100
+    )
 
     # Wait for TaskWorker node to appear on canvas
     expect(page.locator('[data-testid="taskworker-node"]')).to_be_visible(
