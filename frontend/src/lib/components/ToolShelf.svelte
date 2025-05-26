@@ -228,18 +228,18 @@
 	<div class="flex min-w-[300px] flex-1 items-start gap-4">
 		<!-- Draggable Nodes Section -->
 		<div
-			class="flex w-full flex-shrink-0 items-center gap-2 border-r border-gray-300/70 pr-4 md:w-1/2 lg:w-[50%]"
+			class="flex w-full flex-shrink-0 items-center gap-2 border-r border-gray-300/70 pr-4 md:w-2/3 lg:w-[60%]"
 		>
 			<div class="w-full">
 				<Tooltip.Provider>
 					<Tabs.Root value={selectedTab} class="w-full">
-						<Tabs.List class="flex w-full rounded-md bg-gray-300/80 p-0.5 xl:p-1">
+						<Tabs.List class="inline-flex w-auto rounded-md bg-gray-300/80 p-0.5 xl:p-1">
 							<Tooltip.Root delayDuration={800}>
-								<Tooltip.Trigger class="flex-1">
+								<Tooltip.Trigger>
 									<Tabs.Trigger
 										value="config"
 										data-testid="config-tab"
-										class="flex-1 rounded-md px-2 py-1 text-xs font-medium transition-colors duration-150 data-[state=active]:bg-white data-[state=active]:shadow-sm xl:px-3 xl:py-1.5 xl:text-sm"
+										class="rounded-md px-2 py-1 text-xs font-medium transition-colors duration-150 data-[state=active]:bg-white data-[state=active]:shadow-sm xl:px-3 xl:py-1.5 xl:text-sm"
 									>
 										{#snippet child({ props }: { props: Record<string, unknown> })}
 											<div {...props}>Configuration</div>
@@ -256,11 +256,11 @@
 							</Tooltip.Root>
 
 							<Tooltip.Root delayDuration={800}>
-								<Tooltip.Trigger class="flex-1">
+								<Tooltip.Trigger>
 									<Tabs.Trigger
 										value="data"
 										data-testid="data-tab"
-										class="flex-1 rounded-md px-2 py-1 text-xs font-medium transition-colors duration-150 data-[state=active]:bg-white data-[state=active]:shadow-sm xl:px-3 xl:py-1.5 xl:text-sm"
+										class="rounded-md px-2 py-1 text-xs font-medium transition-colors duration-150 data-[state=active]:bg-white data-[state=active]:shadow-sm xl:px-3 xl:py-1.5 xl:text-sm"
 									>
 										{#snippet child({ props }: { props: Record<string, unknown> })}
 											<div {...props}>Data</div>
@@ -276,11 +276,11 @@
 							</Tooltip.Root>
 
 							<Tooltip.Root delayDuration={800}>
-								<Tooltip.Trigger class="flex-1">
+								<Tooltip.Trigger>
 									<Tabs.Trigger
 										value="workers"
 										data-testid="workers-tab"
-										class="flex-1 rounded-md px-2 py-1 text-xs font-medium transition-colors duration-150 data-[state=active]:bg-white data-[state=active]:shadow-sm xl:px-3 xl:py-1.5 xl:text-sm"
+										class="rounded-md px-2 py-1 text-xs font-medium transition-colors duration-150 data-[state=active]:bg-white data-[state=active]:shadow-sm xl:px-3 xl:py-1.5 xl:text-sm"
 									>
 										{#snippet child({ props }: { props: Record<string, unknown> })}
 											<div {...props}>Workers</div>
@@ -691,22 +691,6 @@
 
 		<!-- Actions Section -->
 		<div class="flex min-w-0 shrink-[2] flex-col gap-2 border-r border-gray-300/70 pr-4 pl-4">
-			<!-- Graph Name Input -->
-			<div class="flex items-center gap-2">
-				<label for="graph-name" class="text-xs tracking-wider text-gray-500 uppercase"
-					>Graph Name</label
-				>
-				<input
-					id="graph-name"
-					type="text"
-					value={graphName}
-					placeholder="Unnamed Graph"
-					class="h-[30px] min-w-25 rounded-md border border-gray-300 px-2 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none xl:h-[34px] xl:px-3 xl:text-sm"
-					oninput={(e) => onGraphNameChange(e.currentTarget.value)}
-					onkeydown={handleGraphNameKeydown}
-				/>
-			</div>
-
 			<!-- Action Buttons -->
 			<div class="flex min-w-0 flex-1 flex-wrap gap-2">
 				<!-- Load Button -->
@@ -792,11 +776,30 @@
 		</div>
 	</div>
 
-	<!-- Interpreter Section -->
+	<!-- Graph Name and Interpreter Section -->
 	<div class="flex flex-none items-start gap-2">
 		<div class="flex flex-col items-start gap-2">
-			<span class="text-xs tracking-wider text-gray-500 uppercase">Interpreter</span>
-			<PythonInterpreterSelector />
+			<!-- Graph Name Input -->
+			<div class="flex items-center gap-2">
+				<label for="graph-name" class="text-xs tracking-wider text-gray-500 uppercase"
+					>Graph Name</label
+				>
+				<input
+					id="graph-name"
+					type="text"
+					value={graphName}
+					placeholder="Unnamed Graph"
+					class="h-[30px] min-w-25 rounded-md border border-gray-300 px-2 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none xl:h-[34px] xl:px-3 xl:text-sm"
+					oninput={(e) => onGraphNameChange(e.currentTarget.value)}
+					onkeydown={handleGraphNameKeydown}
+				/>
+			</div>
+
+			<!-- Interpreter -->
+			<div class="flex items-center gap-2">
+				<span class="text-xs tracking-wider text-gray-500 uppercase">Interpreter</span>
+				<PythonInterpreterSelector />
+			</div>
 		</div>
 	</div>
 </div>
