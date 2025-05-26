@@ -69,7 +69,7 @@
 					handleMouseWheel: false // Initially disable mouse wheel handling
 				},
 				theme: 'vs-light',
-				fixedOverflowWidgets: false
+				fixedOverflowWidgets: true // Allow tooltips to escape container bounds
 			});
 
 			// Listen for content changes *after* editor is created
@@ -183,7 +183,7 @@
 	});
 </script>
 
-<div class="flex h-full min-h-0 flex-col">
+<div class="flex min-h-0 flex-col">
 	<div class="mb-1 flex flex-none items-center justify-between">
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<div
@@ -228,7 +228,7 @@
 	>
 		<div
 			bind:this={editorContainer}
-			class="nodrag min-h-[3rem] w-full rounded border border-gray-300"
+			class="nodrag min-h-[3rem] rounded border border-gray-300"
 			style="height: {contentHeight ? Math.min(contentHeight, maxHeight) : 'auto'}px;"
 		></div>
 	</div>

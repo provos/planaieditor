@@ -412,15 +412,11 @@
 </script>
 
 <div
-	class="base-worker-node relative flex h-full flex-col rounded-md border border-gray-300 bg-white shadow-md {additionalClassStyle}"
+	class="base-worker-node relative flex flex-col rounded-md border border-gray-300 bg-white shadow-md {additionalClassStyle}"
 	data-testid="{workerType}-node"
+	style="width: max-content; min-width: 300px;"
 >
-	<NodeResizer
-		{minWidth}
-		{minHeight}
-		handleClass="resize-handle-custom"
-		lineClass="resize-line-custom"
-	/>
+	<!-- NodeResizer disabled when using max-content width to avoid conflicts -->
 
 	<!-- Input Handle (Single for now) -->
 	<InputHandle
@@ -503,7 +499,7 @@
 	</div>
 
 	<!-- Main Content Area -->
-	<div class="flex flex-col overflow-auto p-1.5">
+	<div class="flex flex-col p-1.5">
 		<!-- Input Types -->
 		<div class="mb-2 flex-none">
 			<h3 class="text-2xs font-semibold text-gray-600">Input Types (Auto)</h3>
@@ -807,17 +803,5 @@
 		right: -5px; /* Center the smaller handle */
 	}
 
-	/* Custom classes for NodeResizer passed via props */
-	:global(.resize-handle-custom) {
-		width: 12px !important; /* Increased size */
-		height: 12px !important;
-		border-radius: 3px !important; /* Slightly more rounded */
-		border: 2px solid cornflowerblue !important; /* Thicker border */
-		background-color: rgba(100, 149, 237, 0.2) !important; /* Subtle background */
-	}
-
-	:global(.resize-line-custom) {
-		border-color: cornflowerblue !important; /* Match handle color */
-		border-width: 2px !important; /* Thicker line */
-	}
+	/* NodeResizer styles removed - using auto-sizing based on content */
 </style>

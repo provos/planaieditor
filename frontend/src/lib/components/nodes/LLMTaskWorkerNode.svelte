@@ -525,7 +525,7 @@
 	</div>
 
 	<!-- Prompt and System Prompt Sections using new component -->
-	<div class="flex min-h-0 flex-grow flex-col space-y-3 overflow-auto p-1">
+	<div class="flex flex-col space-y-3 p-1">
 		<!-- Main prompt sections always shown -->
 		{#key nodeVersion}
 			<EditableCodeSection

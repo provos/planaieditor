@@ -1,11 +1,11 @@
 <script lang="ts">
 	import EditableCodeSection from '$lib/components/EditableCodeSection.svelte';
-	import { NodeResizer } from '@xyflow/svelte';
+	import { NodeResizer, useUpdateNodeInternals } from '@xyflow/svelte';
 	import HeaderIcon from '$lib/components/HeaderIcon.svelte';
 	import { backendUrl } from '$lib/utils/backendUrl';
 	import { debounce, formatErrorMessage } from '$lib/utils/utils';
 	import Spinner from 'phosphor-svelte/lib/Spinner';
-	import { onMount, untrack } from 'svelte';
+	import { onMount, untrack, tick } from 'svelte';
 	import { selectedInterpreterPath } from '$lib/stores/pythonInterpreterStore.svelte';
 	import { persistNodeDataDebounced } from '$lib/utils/nodeUtils';
 
@@ -24,6 +24,9 @@
 	let errorMessage = $state<string | null>(null);
 	let isValid = $state<boolean | null>(null); // null = unchecked, true = valid, false = invalid
 	let nodeVersion = $derived(data._lastUpdated || 0); // Key for re-rendering on external update
+
+	// Add node internals update hook for proper resizing
+	const updateNodeInternals = useUpdateNodeInternals();
 
 	async function validateImportCode() {
 		if (!data.code.trim()) {
@@ -72,6 +75,12 @@
 		persistNodeDataDebounced();
 	};
 
+	// Handle size updates to trigger node resizing
+	async function handleSizeUpdate() {
+		await tick();
+		updateNodeInternals(id);
+	}
+
 	onMount(() => {
 		validateImportCode(); // Validate initial code on mount
 	});
@@ -85,34 +94,31 @@
 </script>
 
 <div
-	class="modulelevelimport-node flex h-full flex-col rounded-md border border-gray-300 bg-white shadow-md"
+	class="modulelevelimport-node relative flex flex-col rounded-md border border-gray-300 bg-white shadow-md"
+	style="width: max-content; min-width: 300px;"
 >
-	<!-- Node Resizer -->
-	<NodeResizer
-		minWidth={200}
-		minHeight={150}
-		handleClass="resize-handle-modulelevelimport"
-		lineClass="resize-line-modulelevelimport"
-	/>
+	<!-- NodeResizer disabled when using max-content width to avoid conflicts -->
 
 	<!-- Header with Task Type Selector -->
 	<div class="flex-none border-b bg-emerald-100 p-1">
 		<HeaderIcon workerType={'modulelevelimport'} />
 		<div
-			class="w-full cursor-pointer rounded px-1 py-0.5 text-center text-xs font-medium hover:bg-gray-100"
+			class="cursor-pointer rounded px-1 py-0.5 text-center text-xs font-medium hover:bg-gray-100"
 		>
 			Module Level Import
 		</div>
 	</div>
 
-	<!-- JSON Data Editor -->
-	<div class="relative flex h-full min-h-0 flex-col p-1.5">
+	<!-- Code Editor Section -->
+	<div class="p-1.5">
 		{#key nodeVersion}
 			<EditableCodeSection
 				title="Module Level Import"
 				code={data.code}
 				language="python"
 				onUpdate={handleCodeUpdate}
+				onUpdateSize={handleSizeUpdate}
+				maxHeight={300}
 			/>
 		{/key}
 		<!-- Validation Status -->
@@ -144,19 +150,7 @@
 </div>
 
 <style>
-	/* Use global styles defined elsewhere for handles/resizers if consistent */
-	:global(.resize-handle-modulelevelimport) {
-		width: 12px !important;
-		height: 12px !important;
-		border-radius: 3px !important;
-		border: 2px solid var(--color-emerald-200) !important;
-		background-color: rgba(100, 149, 237, 0.2) !important;
-	}
-
-	:global(.resize-line-modulelevelimport) {
-		border-color: var(--color-emerald-200) !important;
-		border-width: 2px !important;
-	}
+	/* NodeResizer styles removed - using auto-sizing based on content */
 
 	.text-2xs {
 		font-size: 0.65rem;

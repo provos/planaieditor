@@ -81,7 +81,7 @@
 			: defaultTitle;
 	}
 
-	async function handleCollapse() {
+	async function handleSizeChange() {
 		await tick();
 		updateNodeInternals(id);
 	}
@@ -92,7 +92,7 @@
 </script>
 
 <BaseWorkerNode {id} {data} defaultName="TaskWorker">
-	<div class="flex min-h-0 flex-grow flex-col p-1">
+	<div class="flex flex-col p-1">
 		{#if data.methods?.consume_work}
 			{#key nodeVersion}
 				<EditableCodeSection
@@ -104,7 +104,7 @@
 						persistNodeDataDebounced();
 					}}
 					showReset={true}
-					onUpdateSize={handleCollapse}
+					onUpdateSize={handleSizeChange}
 					onFullScreen={triggerOpenFullScreenEditor}
 				/>
 			{/key}
