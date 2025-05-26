@@ -20,7 +20,7 @@
 			<div
 				class="flex h-full items-center justify-center rounded border-t border-gray-200 bg-white"
 			>
-				<p class="text-sm text-gray-500 italic">
+				<p class="p-2 text-center text-sm text-gray-500 italic">
 					Click on a tool, task, or task import in the list at the bottom to edit it.
 				</p>
 			</div>
