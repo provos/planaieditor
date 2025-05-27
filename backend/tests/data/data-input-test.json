@@ -1,0 +1,84 @@
+{
+  "version": 2,
+  "name": "DataInputTest",
+  "nodes": [
+    {
+      "id": "taskworker-c791f172-6599-4cd3-9a18-9ed309a66c14",
+      "type": "taskworker",
+      "position": {
+        "x": 381.75,
+        "y": -19.75
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": false,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "workerName": "TaskWorker1",
+        "requiredMembers": [
+          "consume_work"
+        ],
+        "entryPoint": false,
+        "inputTypes": [],
+        "output_types": [],
+        "methods": {
+          "consume_work": "# Process the input task and produce output\n# self.publish_work(output_task, input_task=task)\npass"
+        },
+        "nodeId": "taskworker-c791f172-6599-4cd3-9a18-9ed309a66c14",
+        "output_type_ids": [],
+        "isCached": false
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 627,
+        "height": 270
+      }
+    },
+    {
+      "id": "datainput-50af6ebe-5306-40e8-82c2-11b72568e186",
+      "type": "datainput",
+      "position": {
+        "x": -309.65874729370296,
+        "y": 32.530648417995195
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": true,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "className": null,
+        "jsonData": "{}",
+        "nodeId": "datainput-50af6ebe-5306-40e8-82c2-11b72568e186",
+        "isJsonValid": false
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 619,
+        "height": 123
+      }
+    }
+  ],
+  "edges": [],
+  "tools": [],
+  "tasks": [
+    {
+      "id": "task-76987e07-69d6-47b5-9429-35a392f5c520",
+      "className": "Task1",
+      "type": "task",
+      "fields": []
+    }
+  ],
+  "taskImports": [],
+  "llmConfigs": [],
+  "llmConfigsFromCode": []
+}

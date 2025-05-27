@@ -18,6 +18,7 @@
 		type TaskImport as TaskImportType
 	} from '$lib/stores/taskImportStore.svelte';
 	import { type InputType, inferInputTypeFromName, taskNameExists } from '$lib/utils/nodeUtils';
+	import { taskClassNamesStore } from '$lib/stores/classNameStore.svelte';
 
 	// Define the interface for the node's data
 	export interface DataInputNodeData {
@@ -42,7 +43,7 @@
 	}
 
 	// --- State Variables ---
-	let availableTaskClasses = $state<string[]>([]);
+	let availableTaskClasses = $derived(Array.from(taskClassNamesStore));
 	let selectedClassName = $state<InputType | null>(
 		data.className ? inferInputTypeFromName(data.className) : null
 	); // Use InputType for reactivity
@@ -233,6 +234,7 @@
 			}}
 			class="w-full cursor-pointer rounded px-1 py-0.5 text-center text-xs font-medium hover:bg-gray-100"
 			title="Select the output Task type"
+			data-testid="datainput-output-task-dropdown"
 		>
 			<option value="">Select Output Task Type...</option>
 			{#each availableTaskClasses as className (className)}
@@ -251,7 +253,7 @@
 			initialCollapsed={false}
 			onUpdateSize={handleCollapse}
 		/>
-		<div class="absolute right-3 bottom-1 z-10">
+		<div class="absolute bottom-1 right-3 z-10">
 			{#if isLoading}
 				<div class="rounded-sm bg-white/50 px-1.5 py-1.5">
 					<Spinner size={12} class="animate-spin text-blue-500" />
