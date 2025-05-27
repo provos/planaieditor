@@ -10,12 +10,28 @@ build/
 dist/
 .svelte-kit/
 node_modules/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
 
 # Generated files
 *.min.js
 *.min.css
 
+# Git
+.git/
+
+# IDE
+.vscode/
+.idea/
+
 # Other
 .env
 .env.*
 !.env.example
+*.log
