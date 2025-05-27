@@ -40,7 +40,7 @@
 		llmConfigName?: string;
 		llmConfigFromCode?: Record<string, any>;
 		llmConfigVar?: string;
-		tools?: string[];
+		tools?: string[]; // Tool IDs
 	}
 
 	const { id, data } = $props<{
