@@ -24,6 +24,7 @@ from planaieditor.patch import get_definitions_from_python  # noqa: E402
 TEST_FIXTURE_PATHS = [
     Path(__file__).parent / "fixtures/releasenotes_fixture.py",
     Path(__file__).parent / "fixtures/deepsearch_fixture.py",
+    Path(__file__).parent / "fixtures/tool_multiply_fixture.py",
 ]
 
 
