@@ -89,7 +89,7 @@ def test_data_input_connection_workflow(page: Page):
     print("Connection created between DataInput and TaskWorker.")
 
     # Wait for the connection to be established
-    page.wait_for_timeout(1000)
+    page.wait_for_timeout(250)
 
     # Verify that an edge was created
     assert helper.verify_connection_succeeded(

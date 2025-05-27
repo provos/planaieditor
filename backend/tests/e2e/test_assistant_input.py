@@ -52,7 +52,7 @@ def test_assistant_input_workflow(page: Page):
 
     # 3. Validate that a ChatTask was added to the taskImports store
     print("Checking that ChatTask was added to taskImports store...")
-    page.wait_for_timeout(500)  # Brief wait for store updates
+    page.wait_for_timeout(150)  # Brief wait for store updates
 
     task_imports = get_task_imports_from_browser(page)
     print(f"Task imports after adding assistant input: {task_imports}")
@@ -78,7 +78,7 @@ def test_assistant_input_workflow(page: Page):
 
     # 4. Wait about a second and then check for validation error
     print("Waiting for validation error to appear...")
-    page.wait_for_timeout(1000)  # Wait 1 second as specified
+    page.wait_for_timeout(250)  # Wait 1 second as specified
 
     # Look for error message in the datainput node
     datainput_node = page.locator('[data-testid="datainput-node"]')
@@ -109,7 +109,7 @@ def test_assistant_input_workflow(page: Page):
 
     # 6. Validate that task imports are also cleared
     print("Verifying task imports are cleared...")
-    page.wait_for_timeout(500)  # Brief wait for store cleanup
+    page.wait_for_timeout(150)  # Brief wait for store cleanup
 
     final_task_imports = get_task_imports_from_browser(page)
     print(f"Final task imports after clear: {final_task_imports}")

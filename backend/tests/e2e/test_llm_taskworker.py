@@ -45,7 +45,7 @@ def test_llm_taskworker_configuration_and_export(page: Page):
 
     # Click on the LLMTaskWorker node to select it
     helper.click_node(llm_taskworker_selector)
-    page.wait_for_timeout(500)  # Wait for UI to update
+    page.wait_for_timeout(150)  # Wait for UI to update
 
     # Step 1: Set Input Type to "LLMInput"
     print("Setting Input Type to 'LLMInput'...")
@@ -76,7 +76,7 @@ def test_llm_taskworker_configuration_and_export(page: Page):
     # Click away to deselect
     canvas = page.locator(".svelte-flow")
     canvas.click()
-    page.wait_for_timeout(500)
+    page.wait_for_timeout(150)
 
     # Step 4: Export the graph to Python and validate the generated code
     print("Exporting graph to Python...")

@@ -99,7 +99,7 @@ def test_simple_worker_drag_and_drop_workflow(page: Page):
         class_name_input.fill("MyTestTask")
         # Press Enter to save
         class_name_input.press("Enter")
-        page.wait_for_timeout(500)  # Wait for save
+        page.wait_for_timeout(150)  # Wait for save
         current_task_name = "MyTestTask"
         print(f"Set task name to: '{current_task_name}'")
 
@@ -131,7 +131,7 @@ def test_simple_worker_drag_and_drop_workflow(page: Page):
     print("Clicking outside the edit area...")
     canvas = page.locator(".svelte-flow")
     canvas.click()
-    page.wait_for_timeout(500)
+    page.wait_for_timeout(150)
 
     # 10. Click on the TaskWorker node to configure it
     helper.click_node('[data-testid="taskworker-node"]')
@@ -217,7 +217,7 @@ def test_simple_worker_drag_and_drop_workflow(page: Page):
         )
 
         # Wait a moment for the UI to update
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(250)
 
     except ValueError as e:
         # If selection fails, it means the option doesn't exist

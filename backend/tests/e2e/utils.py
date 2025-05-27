@@ -478,7 +478,7 @@ class E2ETestHelper:
         node = self.page.locator(node_selector)
         expect(node).to_be_visible(timeout=self.timeout)
         node.click()
-        self.page.wait_for_timeout(500)  # Wait for UI to update
+        self.page.wait_for_timeout(150)  # Wait for UI to update
 
         # Find the input type dropdown within the node
         # Look for the select element that has the "Connect Task nodes or set input type manually..." option
@@ -492,7 +492,7 @@ class E2ETestHelper:
         print(f"Selected input type: {input_type}")
 
         # Wait for the UI to update
-        self.page.wait_for_timeout(500)
+        self.page.wait_for_timeout(150)
 
     def get_all_edges(self) -> List[Dict[str, Any]]:
         """
@@ -595,7 +595,7 @@ class E2ETestHelper:
         node = self.page.locator(node_selector)
         expect(node).to_be_visible(timeout=self.timeout)
         node.click()
-        self.page.wait_for_timeout(500)  # Wait for UI to update
+        self.page.wait_for_timeout(150)  # Wait for UI to update
 
         # Find the output type dropdown within the node
         output_type_dropdown = node.locator('[data-testid="output-type-dropdown"]')
@@ -606,7 +606,7 @@ class E2ETestHelper:
         print(f"Selected output type: {output_type}")
 
         # Wait for the UI to update
-        self.page.wait_for_timeout(500)
+        self.page.wait_for_timeout(150)
 
     def set_llm_output_type(self, node_selector: str, llm_output_type: str) -> None:
         """
@@ -622,7 +622,7 @@ class E2ETestHelper:
         node = self.page.locator(node_selector)
         expect(node).to_be_visible(timeout=self.timeout)
         node.click()
-        self.page.wait_for_timeout(500)  # Wait for UI to update
+        self.page.wait_for_timeout(150)  # Wait for UI to update
 
         # Debug: Check available task classes
         available_tasks = get_available_tasks_from_browser(self.page)
@@ -648,7 +648,7 @@ class E2ETestHelper:
         if trigger_count > 0:
             # Click the trigger to open the dropdown
             llm_output_trigger.click()
-            self.page.wait_for_timeout(1000)  # Wait for dropdown to open
+            self.page.wait_for_timeout(250)  # Wait for dropdown to open
             print("Clicked LLM output trigger")
         else:
             print("No trigger found, dropdown might already be open")
@@ -660,7 +660,7 @@ class E2ETestHelper:
         ).first
         expect(llm_output_option).to_be_visible(timeout=self.timeout)
         llm_output_option.click()
-        self.page.wait_for_timeout(500)  # Wait for UI to update
+        self.page.wait_for_timeout(150)  # Wait for UI to update
 
         # Verify that the LLM output type was set correctly
         expect(node.locator(f'.font-mono:has-text("{llm_output_type}")')).to_be_visible(
@@ -758,7 +758,7 @@ def create_new_task_in_side_pane(
         class_name_input.click()
         class_name_input.fill(task_name)
         class_name_input.press("Enter")
-        helper.page.wait_for_timeout(500)  # Wait for save
+        helper.page.wait_for_timeout(150)  # Wait for save
         current_task_name = task_name
 
     # Add a simple field to make the task more realistic

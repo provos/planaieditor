@@ -52,7 +52,7 @@ def test_simple_connection_workflow(page: Page):
 
     # Before connecting, verify TaskWorker2 has no input types
     helper.click_node(taskworker2_selector)
-    page.wait_for_timeout(500)  # Wait for UI to update
+    page.wait_for_timeout(150)  # Wait for UI to update
 
     # Check initial state - TaskWorker2 should have no input types
     initial_input_types = helper.get_node_input_types(taskworker2_selector)
@@ -61,7 +61,7 @@ def test_simple_connection_workflow(page: Page):
     # Click away to deselect
     canvas = page.locator(".svelte-flow")
     canvas.click()
-    page.wait_for_timeout(500)
+    page.wait_for_timeout(150)
 
     # Now perform the connection by dragging from TaskWorker1's output handle to TaskWorker2's input handle
     print("Attempting to connect TaskWorker1 output to TaskWorker2 input...")
@@ -74,7 +74,7 @@ def test_simple_connection_workflow(page: Page):
     )
 
     # Wait for the connection to be established
-    page.wait_for_timeout(1000)
+    page.wait_for_timeout(250)
 
     # Verify that exactly one edge was created
     connection_succeeded = helper.verify_connection_succeeded(expected_edge_count=1)
@@ -88,7 +88,7 @@ def test_simple_connection_workflow(page: Page):
 
     # Click on TaskWorker2 to check its input types
     helper.click_node(taskworker2_selector)
-    page.wait_for_timeout(500)  # Wait for UI to update
+    page.wait_for_timeout(150)  # Wait for UI to update
 
     # Verify that TaskWorker2 now has "Task1" as its input type
     final_input_types = helper.get_node_input_types(taskworker2_selector)
@@ -156,7 +156,7 @@ def test_connection_fails_with_incompatible_types(page: Page):
     # Click away to deselect
     canvas = page.locator(".svelte-flow")
     canvas.click()
-    page.wait_for_timeout(500)
+    page.wait_for_timeout(150)
 
     # Get the Task1 ID from the JSON data to construct the correct handle ID
     task1_id = "task-952d1928-5a93-4569-9f9b-ec8acfa11daf"
@@ -176,7 +176,7 @@ def test_connection_fails_with_incompatible_types(page: Page):
     )
 
     # Wait for any potential connection attempt to complete
-    page.wait_for_timeout(1000)
+    page.wait_for_timeout(250)
 
     # Verify that the connection failed (no edge was created)
     connection_failed = helper.verify_connection_failed()
@@ -195,7 +195,7 @@ def test_connection_fails_with_incompatible_types(page: Page):
 
     # Verify that TaskWorker2 still has "Task2" as its input type (unchanged)
     helper.click_node(taskworker2_selector)
-    page.wait_for_timeout(500)  # Wait for UI to update
+    page.wait_for_timeout(150)  # Wait for UI to update
 
     final_input_types = helper.get_node_input_types(taskworker2_selector)
     print(f"Final input types for TaskWorker2: {final_input_types}")
