@@ -1,11 +1,11 @@
-import type { Node, Edge } from '@xyflow/svelte';
-import type { Socket } from 'socket.io-client';
-import type { BackendError } from './pythonImport';
-import { get } from 'svelte/store';
 import { llmConfigs, type LLMConfig } from '$lib/stores/llmConfigsStore';
-import { tools as toolStore, type Tool } from '$lib/stores/toolStore.svelte';
-import { tasks as taskStore } from '$lib/stores/taskStore.svelte';
 import { taskImports as taskImportStore } from '$lib/stores/taskImportStore.svelte';
+import { tasks as taskStore } from '$lib/stores/taskStore.svelte';
+import { tools as toolStore, type Tool } from '$lib/stores/toolStore.svelte';
+import type { Edge, Node } from '@xyflow/svelte';
+import type { Socket } from 'socket.io-client';
+import { get } from 'svelte/store';
+import type { BackendError } from './pythonImport';
 
 // Type for export status updates
 export interface ExportStatus {
@@ -206,7 +206,7 @@ export function convertNodeData(node: Node) {
 		'llm_output_type',
 		'join_type',
 		'output_types',
-		'tool_ids'
+		'tools'
 	];
 	if (node.type?.endsWith('worker')) {
 		// Apply only to worker node types
@@ -220,19 +220,16 @@ export function convertNodeData(node: Node) {
 			}
 		}
 
-		// If tool_ids were captured, convert them to tool names
-		if (processedData.classVars.tool_ids && Array.isArray(processedData.classVars.tool_ids)) {
-			const toolNames = processedData.classVars.tool_ids
+		// If tools were captured, convert them to tool names
+		if (processedData.classVars.tools && Array.isArray(processedData.classVars.tools)) {
+			const toolNames = processedData.classVars.tools
 				.map((toolId: string) => {
 					const toolNode = toolStore.find((t: Tool) => t.id === toolId);
 					return toolNode ? toolNode.name : null;
 				})
 				.filter((name: string | null) => name !== null);
 
-			if (toolNames.length > 0) {
-				processedData.classVars.tools = toolNames;
-			}
-			delete processedData.classVars.tool_ids; // Remove the original tool_ids
+			processedData.classVars.tools = toolNames;
 		}
 	}
 
