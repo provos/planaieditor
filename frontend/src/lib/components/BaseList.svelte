@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { splitPaneConfig } from '$lib/stores/splitPaneStore.svelte';
 	import { getColorForType } from '$lib/utils/colorUtils';
 	import Trash from 'phosphor-svelte/lib/Trash';
 	import Plus from 'phosphor-svelte/lib/Plus';

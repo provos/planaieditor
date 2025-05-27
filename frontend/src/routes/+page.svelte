@@ -104,7 +104,6 @@
 		saveGraphToJson,
 		loadGraphFromJson as loadGraphFromJsonUtil
 	} from '$lib/utils/jsonUtils';
-	import type { SavedGraphState } from '$lib/utils/jsonUtils';
 
 	// Support for Svelte Splitpanes
 	import { Splitpanes, Pane } from 'svelte-splitpanes';

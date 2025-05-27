@@ -6,14 +6,14 @@
 	import { taskClassNamesStore } from '$lib/stores/classNameStore.svelte';
 	import { getColorForType } from '$lib/utils/colorUtils';
 	import Trash from 'phosphor-svelte/lib/Trash';
-	import { useUpdateNodeInternals, useStore, type Node } from '@xyflow/svelte';
+	import { useUpdateNodeInternals, useStore } from '@xyflow/svelte';
 	import { tick } from 'svelte';
 	import type { Action } from 'svelte/action';
 	import { addAvailableMethod, taskNameExists } from '$lib/utils/nodeUtils';
 	import type { Unsubscriber } from 'svelte/store';
 	import { persistNodeDataDebounced } from '$lib/utils/nodeUtils';
 	import { openFullScreenEditor } from '$lib/stores/fullScreenEditorStore.svelte';
-	import { tools as toolsStore, type Tool } from '$lib/stores/toolStore.svelte';
+	import { tools as toolsStore } from '$lib/stores/toolStore.svelte';
 	import { getTaskByName } from '$lib/stores/taskStore.svelte';
 	import { getTaskImportByName } from '$lib/stores/taskImportStore.svelte';
 
@@ -415,7 +415,7 @@
 					class="absolute z-10 mt-1 w-full rounded border border-gray-200 bg-white shadow-md"
 					use:clickOutside={() => (showLLMOutputTypeDropdown = false)}
 				>
-					{#each availableTaskClasses as className}
+					{#each availableTaskClasses as className (className)}
 						<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
 						<div
 							class="text-2xs cursor-pointer p-1 hover:bg-gray-100 {currentLLMOutputType ===

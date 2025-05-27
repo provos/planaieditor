@@ -1,6 +1,6 @@
 <script lang="ts">
 	import EditableCodeSection from '$lib/components/EditableCodeSection.svelte';
-	import { NodeResizer, useUpdateNodeInternals } from '@xyflow/svelte';
+	import { useUpdateNodeInternals } from '@xyflow/svelte';
 	import HeaderIcon from '$lib/components/HeaderIcon.svelte';
 	import { backendUrl } from '$lib/utils/backendUrl';
 	import { debounce, formatErrorMessage } from '$lib/utils/utils';

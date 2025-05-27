@@ -1,26 +1,25 @@
 <script lang="ts">
-	import { onMount, tick } from 'svelte';
-	import { useStore, useSvelteFlow } from '@xyflow/svelte';
-	import type { Node } from '@xyflow/svelte';
-	import { getCurrentNodes } from '$lib/stores/graphStore';
 	import EditableCodeSection from '$lib/components/EditableCodeSection.svelte';
-	import FloppyDisk from 'phosphor-svelte/lib/FloppyDisk';
-	import X from 'phosphor-svelte/lib/X';
 	import {
+		closeFullScreenEditorStore,
 		fullScreenEditorState,
-		saveFullScreenEditor,
-		closeFullScreenEditorStore
+		saveFullScreenEditor
 	} from '$lib/stores/fullScreenEditorStore.svelte';
+	import { getCurrentNodes } from '$lib/stores/graphStore';
 	import { backendUrl } from '$lib/utils/backendUrl';
 	import { convertNodeData } from '$lib/utils/pythonExport';
 	import { convertWorkerToNodeData } from '$lib/utils/pythonImport';
+	import type { Node } from '@xyflow/svelte';
+	import { useStore } from '@xyflow/svelte';
+	import FloppyDisk from 'phosphor-svelte/lib/FloppyDisk';
+	import X from 'phosphor-svelte/lib/X';
+	import { onMount, tick } from 'svelte';
 
 	let isLoading = $state(true);
 	let currentCode = $state<string | undefined>(undefined);
 	let editorContainerRef: HTMLDivElement | undefined = $state();
 	let error = $state<string | undefined>(undefined);
 	const { nodes } = useStore();
-	const { getNodes } = useSvelteFlow();
 
 	async function handleLoad() {
 		isLoading = true;
@@ -80,11 +79,7 @@
 				error = data.error;
 				return;
 			}
-			const updatedNodeData = convertWorkerToNodeData(
-				data.worker,
-				fullScreenEditorState.id,
-				getNodes()
-			);
+			const updatedNodeData = convertWorkerToNodeData(data.worker, fullScreenEditorState.id);
 			updatedNodeData._lastUpdated = Date.now();
 			let updatedModuleImport: boolean = false;
 			const moduleLevelCode: string = data.module_imports || '';

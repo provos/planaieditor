@@ -6,9 +6,6 @@
 	import { useUpdateNodeInternals } from '@xyflow/svelte';
 	import { tick } from 'svelte';
 	import { persistNodeDataDebounced } from '$lib/utils/nodeUtils';
-	import { useStore } from '@xyflow/svelte';
-
-	const store = useStore();
 
 	// Define available factory functions with their types
 	const availableFactoryFunctions = [

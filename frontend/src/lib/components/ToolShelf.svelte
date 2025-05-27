@@ -27,7 +27,7 @@
 		onLoad,
 		onLoadJSON,
 		graphName = '',
-		onGraphNameChange = (name: string) => {}
+		onGraphNameChange = () => {}
 	}: {
 		onExport: () => void;
 		onExecute: () => void;

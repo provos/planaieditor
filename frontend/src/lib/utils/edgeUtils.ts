@@ -1,6 +1,5 @@
 import type { Node, Edge, Connection } from '@xyflow/svelte';
 import { getColorForType } from '$lib/utils/colorUtils';
-import type { DataInputNodeData } from '$lib/components/nodes/DataInputNode.svelte';
 
 interface EdgeStyleProps {
 	style: string;

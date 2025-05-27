@@ -5,7 +5,6 @@
 	import { formatErrorMessage, debounce } from '$lib/utils/utils';
 	import { selectedInterpreterPath } from '$lib/stores/pythonInterpreterStore.svelte';
 	import { toolNamesStore } from '$lib/stores/classNameStore.svelte';
-	import { get } from 'svelte/store';
 	import Spinner from 'phosphor-svelte/lib/Spinner';
 	import type { Tool } from '$lib/stores/toolStore.svelte';
 	import { tools as toolsStore } from '$lib/stores/toolStore.svelte';

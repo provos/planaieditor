@@ -338,7 +338,7 @@ export async function importPythonCode(
 			}
 
 			// Map backend data to frontend node data structure
-			const nodeData: any = convertWorkerToNodeData(worker, id, newNodes);
+			const nodeData: any = convertWorkerToNodeData(worker, id);
 
 			const newNode: Node = {
 				id,
@@ -440,7 +440,7 @@ export async function importPythonCode(
 	}
 }
 
-export function convertWorkerToNodeData(worker: ImportedWorker, id: string, nodes: Node[] = []) {
+export function convertWorkerToNodeData(worker: ImportedWorker, id: string) {
 	const nodeData: any = {
 		isCached: worker.isCached || false,
 		entryPoint: worker.entryPoint || false,

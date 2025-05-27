@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Handle, Position, NodeResizer, type Node } from '@xyflow/svelte';
+	import { Handle, Position, NodeResizer } from '@xyflow/svelte';
 	import { getColorForType } from '$lib/utils/colorUtils';
 	import EditableCodeSection from '../EditableCodeSection.svelte';
 	import { onDestroy, onMount, untrack, tick } from 'svelte';

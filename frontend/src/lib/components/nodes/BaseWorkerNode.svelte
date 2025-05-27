@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Handle, Position, NodeResizer, useStore, useUpdateNodeInternals } from '@xyflow/svelte';
+	import { Handle, Position, useStore, useUpdateNodeInternals } from '@xyflow/svelte';
 	import type { Node } from '@xyflow/svelte';
 	import { getCurrentNodes } from '$lib/stores/graphStore';
 	import { isValidPythonClassName } from '$lib/utils/validation';

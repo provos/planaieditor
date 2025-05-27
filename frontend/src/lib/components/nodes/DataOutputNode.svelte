@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { NodeResizer, Position } from '@xyflow/svelte';
+	import { NodeResizer } from '@xyflow/svelte';
 	import InputHandle from '../InputHandle.svelte';
 	import { tick } from 'svelte';
 	import { useUpdateNodeInternals } from '@xyflow/svelte';
@@ -7,7 +7,6 @@
 	import { getColorForType } from '$lib/utils/colorUtils';
 	import TrashSimple from 'phosphor-svelte/lib/TrashSimple';
 	import HeaderIcon from '../HeaderIcon.svelte';
-	import { useStore } from '@xyflow/svelte';
 	import { persistNodeDataDebounced } from '$lib/utils/nodeUtils';
 	import { type InputType } from '$lib/utils/nodeUtils';
 
@@ -24,8 +23,6 @@
 		id: string;
 		data: DataOutputNodeData;
 	}>();
-
-	const store = useStore();
 
 	// Ensure data fields are initialized
 	if (!data.receivedData) {
