@@ -1,13 +1,14 @@
 <script lang="ts">
 	import EditableCodeSection from '$lib/components/EditableCodeSection.svelte';
-	import { onMount, untrack } from 'svelte';
-	import { backendUrl } from '$lib/utils/backendUrl';
-	import { formatErrorMessage, debounce } from '$lib/utils/utils';
-	import { selectedInterpreterPath } from '$lib/stores/pythonInterpreterStore.svelte';
 	import { toolNamesStore } from '$lib/stores/classNameStore.svelte';
-	import Spinner from 'phosphor-svelte/lib/Spinner';
+	import { openFullScreenEditor } from '$lib/stores/fullScreenEditorStore.svelte';
+	import { selectedInterpreterPath } from '$lib/stores/pythonInterpreterStore.svelte';
 	import type { Tool } from '$lib/stores/toolStore.svelte';
 	import { tools as toolsStore } from '$lib/stores/toolStore.svelte';
+	import { backendUrl } from '$lib/utils/backendUrl';
+	import { debounce, formatErrorMessage } from '$lib/utils/utils';
+	import Spinner from 'phosphor-svelte/lib/Spinner';
+	import { onMount, untrack } from 'svelte';
 
 	const { id } = $props<{
 		id: string;
@@ -103,6 +104,11 @@
 
 	const debouncedValidateTool = debounce(validateTool, 1200);
 
+	function triggerOpenFullScreenEditor() {
+		if (!tool) return;
+		openFullScreenEditor(tool.id, 'python', 'tool');
+	}
+
 	$effect(() => {
 		if (selectedInterpreterPath) {
 			if (tool?.name && tool?.code) {
@@ -159,6 +165,7 @@
 				onUpdate={handleCodeUpdate}
 				showReset={false}
 				onUpdateSize={() => {}}
+				onFullScreen={triggerOpenFullScreenEditor}
 				additionalStyle="w-full"
 			/>
 			<div class="absolute right-3 bottom-1 z-10">

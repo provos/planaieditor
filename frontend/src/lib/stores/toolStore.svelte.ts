@@ -1,12 +1,13 @@
 import { persistedState } from '$lib/utils/persist.svelte';
-import { toolNamesStore } from './classNameStore.svelte';
 import { untrack } from 'svelte';
+import { toolNamesStore } from './classNameStore.svelte';
 
 export interface Tool {
 	id: string;
 	name: string;
 	description: string;
 	code: string;
+	_lastUpdated?: number;
 }
 
 export const tools = persistedState<Tool[]>('tools', [], { storage: 'local' });

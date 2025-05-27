@@ -6,6 +6,7 @@
 		saveFullScreenEditor
 	} from '$lib/stores/fullScreenEditorStore.svelte';
 	import { getCurrentNodes } from '$lib/stores/graphStore';
+	import { getToolById, updateTool } from '$lib/stores/toolStore.svelte';
 	import { backendUrl } from '$lib/utils/backendUrl';
 	import { convertNodeData } from '$lib/utils/pythonExport';
 	import { convertWorkerToNodeData } from '$lib/utils/pythonImport';
@@ -14,7 +15,6 @@
 	import FloppyDisk from 'phosphor-svelte/lib/FloppyDisk';
 	import X from 'phosphor-svelte/lib/X';
 	import { onMount, tick } from 'svelte';
-	import { getToolById } from '$lib/stores/toolStore.svelte';
 
 	let isLoading = $state(true);
 	let currentCode = $state<string | undefined>(undefined);
@@ -98,55 +98,83 @@
 				error = data.error;
 				return;
 			}
-			const updatedNodeData = convertWorkerToNodeData(data.worker, fullScreenEditorState.id);
-			updatedNodeData._lastUpdated = Date.now();
-			let updatedModuleImport: boolean = false;
-			const moduleLevelCode: string = data.module_imports || '';
-			nodes.update((nodes) => {
-				return nodes.map((node) => {
-					// there is a problem here with completely overwriting the node data; we lose some
-					// configuration information like llmConfig, etc.
-					if (node.id === fullScreenEditorState.id) {
-						const copiedData = { ...node.data };
-						delete copiedData?.otherMembersSource;
-						delete copiedData?.methods;
-						delete copiedData?.classVars;
-						return { ...node, data: { ...copiedData, ...updatedNodeData } };
-					} else if (node.type === 'modulelevelimport') {
-						updatedModuleImport = true;
-						return {
-							...node,
-							data: { ...node.data, code: moduleLevelCode, _lastUpdated: Date.now() }
-						};
-					}
-					return node;
-				});
-			});
 
-			// if there is no module level import node, create one
-			if (moduleLevelCode && !updatedModuleImport) {
-				const nodeData = {
-					code: moduleLevelCode
-				};
-				const moduleLevelImportNode: Node = {
-					id: `imported-module-level-${Date.now()}`,
-					type: 'modulelevelimport',
-					position: { x: 0, y: 0 },
-					draggable: true,
-					selectable: true,
-					deletable: true,
-					selected: false,
-					dragging: false,
-					zIndex: 0,
-					data: nodeData,
-					origin: [0, 0]
-				};
+			if (fullScreenEditorState.type === 'tool') {
+				// Handle tool update
+				const updatedTool = data.tool;
+				if (!updatedTool) {
+					error = 'No tool data returned from server';
+					return;
+				}
+
+				const tool = getToolById(fullScreenEditorState.id);
+				if (!tool) {
+					error = 'Tool not found in store';
+					return;
+				}
+
+				// Update the tool with the parsed data
+				tool.name = updatedTool.name;
+				tool.description = updatedTool.description || tool.description;
+				tool.code = updatedTool.code;
+				tool._lastUpdated = Date.now();
+				updateTool(tool);
+
+				saveFullScreenEditor(currentCode);
+			} else if (fullScreenEditorState.type === 'worker') {
+				// Handle worker update (existing logic)
+				const updatedNodeData = convertWorkerToNodeData(data.worker, fullScreenEditorState.id);
+				updatedNodeData._lastUpdated = Date.now();
+				let updatedModuleImport: boolean = false;
+				const moduleLevelCode: string = data.module_imports || '';
 				nodes.update((nodes) => {
-					return [...nodes, moduleLevelImportNode];
+					return nodes.map((node) => {
+						// there is a problem here with completely overwriting the node data; we lose some
+						// configuration information like llmConfig, etc.
+						if (node.id === fullScreenEditorState.id) {
+							const copiedData = { ...node.data };
+							delete copiedData?.otherMembersSource;
+							delete copiedData?.methods;
+							delete copiedData?.classVars;
+							return { ...node, data: { ...copiedData, ...updatedNodeData } };
+						} else if (node.type === 'modulelevelimport') {
+							updatedModuleImport = true;
+							return {
+								...node,
+								data: { ...node.data, code: moduleLevelCode, _lastUpdated: Date.now() }
+							};
+						}
+						return node;
+					});
 				});
-			}
 
-			saveFullScreenEditor(currentCode);
+				// if there is no module level import node, create one
+				if (moduleLevelCode && !updatedModuleImport) {
+					const nodeData = {
+						code: moduleLevelCode
+					};
+					const moduleLevelImportNode: Node = {
+						id: `imported-module-level-${Date.now()}`,
+						type: 'modulelevelimport',
+						position: { x: 0, y: 0 },
+						draggable: true,
+						selectable: true,
+						deletable: true,
+						selected: false,
+						dragging: false,
+						zIndex: 0,
+						data: nodeData,
+						origin: [0, 0]
+					};
+					nodes.update((nodes) => {
+						return [...nodes, moduleLevelImportNode];
+					});
+				}
+
+				saveFullScreenEditor(currentCode);
+			} else {
+				error = 'Unknown editor type';
+			}
 		} catch (e) {
 			console.error(e);
 			error = 'Failed to save code';

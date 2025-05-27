@@ -1130,10 +1130,8 @@ except Exception as e:
         if not script_output_data or not isinstance(script_output_data, dict):
             validation_result["success"] = False
             validation_result["error"] = {
-                {
-                    "message": "Tool validation script succeeded but did not return expected tool data.",
-                    "nodeName": ui_tool_name,
-                }
+                "message": "Tool validation script succeeded but did not return expected tool data.",
+                "nodeName": ui_tool_name,
             }
             validation_result.pop("tool_data", None)
         else:
@@ -1185,13 +1183,20 @@ from typing import Optional, List, Dict, Any, Type
         if module_level_import_code:
             preamble += module_level_import_code + "\n"
 
-    preamble += "\n# Please, make changes to your worker class below. The code above is just for auto-completion purposes.\n"
+    comment = "\n# Please, make changes to your code below. The code above is just for auto-completion purposes.\n"
 
-    python_code = ""
+    tool_code = ""
     if tools:
-        python_code += "\n".join(extract_tool_calls(tools))
+        tool_code = "\n".join(extract_tool_calls(tools))
+    worker_code = ""
     if worker:
-        python_code += "\n" + create_worker_class(worker, add_comment=False)
+        worker_code = create_worker_class(worker, add_comment=False)
+
+    if worker_code:
+        python_code = tool_code + "\n" + comment + worker_code
+    else:
+        python_code = comment + tool_code
+
     formatted_code = format_python_code(preamble + python_code)
 
     return (
@@ -1219,21 +1224,57 @@ def code_to_node():
         return jsonify({"success": False, "error": definitions["error"]}), 200
 
     workers = definitions.get("workers", [])
-    if len(workers) != 1:
-        return jsonify({"success": False, "error": "Expected exactly one worker"}), 200
+    tools = definitions.get("tools", [])
 
-    worker = workers[0]
-
-    return (
-        jsonify(
-            {
-                "success": True,
-                "worker": worker,
-                "module_imports": definitions.get("module_imports", ""),
-            }
-        ),
-        200,
-    )
+    # Check if we have exactly one worker
+    if len(workers) == 1:
+        # Worker case
+        worker = workers[0]
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "worker": worker,
+                    "module_imports": definitions.get("module_imports", ""),
+                }
+            ),
+            200,
+        )
+    elif len(tools) == 1 and len(workers) == 0:
+        # Tool case
+        tool = tools[0]
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "tool": tool,
+                    "module_imports": definitions.get("module_imports", ""),
+                }
+            ),
+            200,
+        )
+    else:
+        # Error case - wrong number of workers/tools
+        if len(workers) + len(tools) == 0:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": "Expected exactly one worker or tool, but found none",
+                    }
+                ),
+                200,
+            )
+        else:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": f"Expected exactly one worker or tool, but found {len(workers)} worker(s) and {len(tools)} tool(s)",
+                    }
+                ),
+                200,
+            )
 
 
 if is_development:
