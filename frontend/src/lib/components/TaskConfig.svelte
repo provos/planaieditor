@@ -18,7 +18,7 @@
 	// Enhanced field type can be a basic type or a custom Task name
 	type FieldType = string;
 
-	let {
+	const {
 		id,
 		allowEditing = true,
 		embedded = false,
@@ -56,7 +56,7 @@
 	});
 
 	// Track current fields for rendering
-	let currentFields = $derived<Field[]>(task?.fields || []);
+	const currentFields = $derived<Field[]>(task?.fields || []);
 
 	// Field type options
 	const BASE_TYPE_LABELS: Record<BaseFieldType, string> = {

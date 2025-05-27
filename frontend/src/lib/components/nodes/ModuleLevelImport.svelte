@@ -15,7 +15,7 @@
 		_lastUpdated: number;
 	}
 
-	let { id, data } = $props<{
+	const { id, data } = $props<{
 		id: string;
 		data: ModuleLevelImportData;
 	}>();
@@ -23,7 +23,7 @@
 	let isLoading = $state<boolean>(false);
 	let errorMessage = $state<string | null>(null);
 	let isValid = $state<boolean | null>(null); // null = unchecked, true = valid, false = invalid
-	let nodeVersion = $derived(data._lastUpdated || 0); // Key for re-rendering on external update
+	const nodeVersion = $derived(data._lastUpdated || 0); // Key for re-rendering on external update
 
 	// Add node internals update hook for proper resizing
 	const updateNodeInternals = useUpdateNodeInternals();
@@ -67,7 +67,7 @@
 
 	const debouncedValidate = debounce(validateImportCode, 1000);
 
-	let handleCodeUpdate = (code: string) => {
+	const handleCodeUpdate = (code: string) => {
 		data.code = code;
 		isValid = null; // Mark as unchecked when code changes
 		errorMessage = null;
@@ -101,7 +101,7 @@
 
 	<!-- Header with Task Type Selector -->
 	<div class="flex-none border-b bg-emerald-100 p-1">
-		<HeaderIcon workerType={'modulelevelimport'} />
+		<HeaderIcon workerType="modulelevelimport" />
 		<div
 			class="cursor-pointer rounded px-1 py-0.5 text-center text-xs font-medium hover:bg-gray-100"
 		>

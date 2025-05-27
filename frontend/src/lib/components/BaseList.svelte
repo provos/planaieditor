@@ -17,7 +17,7 @@
 		isSelected: (item: T) => boolean;
 	}
 
-	let {
+	const {
 		items,
 		onSelect,
 		onDelete,

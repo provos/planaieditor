@@ -32,7 +32,7 @@
 		factoryInvocation?: string; // Combined invocation string
 	}
 
-	let { id, data } = $props<{
+	const { id, data } = $props<{
 		id: string;
 		data: SubGraphWorkerData;
 	}>();

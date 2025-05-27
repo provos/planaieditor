@@ -10,7 +10,7 @@
 	import type { Tool } from '$lib/stores/toolStore.svelte';
 	import { tools as toolsStore } from '$lib/stores/toolStore.svelte';
 
-	let { id } = $props<{
+	const { id } = $props<{
 		id: string;
 	}>();
 

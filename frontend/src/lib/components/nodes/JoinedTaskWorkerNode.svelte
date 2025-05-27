@@ -14,7 +14,7 @@
 		join_type: string; // Class name of the worker to join on
 	}
 
-	let { id, data } = $props<{
+	const { id, data } = $props<{
 		id: string;
 		data: JoinedWorkerData;
 	}>();
@@ -81,7 +81,7 @@
 	});
 
 	// Combine hardcoded option with dynamic ones
-	let allJoinTypeOptions = $derived(['InitialTaskWorker', ...availableWorkerClasses]);
+	const allJoinTypeOptions = $derived(['InitialTaskWorker', ...availableWorkerClasses]);
 
 	// Update derived input type based on incoming edges
 	$effect(() => {
@@ -131,7 +131,7 @@
 	}
 
 	// Compute the title for the code section
-	let consumeWorkJoinedTitle = $derived(
+	const consumeWorkJoinedTitle = $derived(
 		`def consume_work_joined(self, tasks: list[${joinedInputType}]):`
 	);
 

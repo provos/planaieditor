@@ -8,7 +8,7 @@
 	import { listDirectory, type FilesystemItem as Item } from '$lib/utils/filesystemApi';
 
 	// --- Props ---
-	let {
+	const {
 		mode = 'open',
 		title = mode === 'open' ? 'Open File' : 'Save File',
 		initialPath = '/', // Default to root, backend should handle appropriately

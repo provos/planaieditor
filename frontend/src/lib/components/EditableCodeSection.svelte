@@ -8,7 +8,7 @@
 	import { tick } from 'svelte';
 	import { monacoInstance } from '$lib/stores/monacoStore.svelte'; // Import the shared instance
 
-	let {
+	const {
 		title = '',
 		code,
 		language = 'python',

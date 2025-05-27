@@ -101,21 +101,21 @@
 	}
 
 	// --- State Variables ---
-	let nodeVersion = $derived(data._lastUpdated || 0);
+	const nodeVersion = $derived(data._lastUpdated || 0);
 	let editingWorkerName = $state(false);
 	let nameError = $state('');
 	let tempWorkerName = $state(data.workerName || defaultName);
 	let editingOutputType = $state<number | null>(null);
 	let tempType = $state('');
 	let typeError = $state('');
-	let availableTaskClasses = $derived(Array.from(taskClassNamesStore));
+	const availableTaskClasses = $derived(Array.from(taskClassNamesStore));
 	let inferredInputTypes = $derived<InputType[]>(data.inputTypes.map(inferInputTypeFromName));
-	let taskNodeVisibility = $state<Record<string, boolean>>({});
+	const taskNodeVisibility = $state<Record<string, boolean>>({});
 	let manuallySelectedInputType = $derived<string>(
 		data.inputTypes.length > 0 ? data.inputTypes[0] : ''
 	);
 	let currentOutputTypeIds = $derived(data.output_type_ids || []);
-	let currentOutputTypes = $derived.by<string[]>(() => {
+	const currentOutputTypes = $derived.by<string[]>(() => {
 		// Derive output types from IDs - ensure proper reactivity to data changes
 		const typeNames: string[] = [];
 		for (const id of currentOutputTypeIds) {
@@ -131,11 +131,11 @@
 
 	// Define core methods that might have special display logic
 	const coreMethods = data.requiredMembers || ['consume_work', 'prompt', 'system_prompt'];
-	let availableMethods = $derived(Object.keys(data.methods || {}));
+	const availableMethods = $derived(Object.keys(data.methods || {}));
 	let customMethods = $derived(availableMethods.filter((m) => !coreMethods.includes(m)));
 	let otherMembersSource = $derived(data?.otherMembersSource ?? undefined);
 
-	let combinedOutputTypes = $derived.by<Array<{ className: string; id: string }>>(() => {
+	const combinedOutputTypes = $derived.by<Array<{ className: string; id: string }>>(() => {
 		const outputTypes: Array<{ className: string; id: string }> = [];
 
 		// Add types from output_type_ids
@@ -286,7 +286,7 @@
 			return;
 		}
 
-		let tmpOutputTypeIds = [...(currentOutputTypeIds || [])];
+		const tmpOutputTypeIds = [...(currentOutputTypeIds || [])];
 		if (editingOutputType === -1) {
 			// Adding new output type
 			if (!tmpOutputTypeIds.includes(task.id)) {

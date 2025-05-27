@@ -35,7 +35,7 @@
 			return;
 		}
 
-		let requestData = {
+		const requestData = {
 			worker: convertNodeData(currentNode),
 			moduleLevelImport: moduleLevelImport ? convertNodeData(moduleLevelImport) : undefined,
 			toolNodes: toolNodes.map((node) => convertNodeData(node))
@@ -93,7 +93,7 @@
 					// there is a problem here with completely overwriting the node data; we lose some
 					// configuration information like llmConfig, etc.
 					if (node.id === fullScreenEditorState.id) {
-						let copiedData = { ...node.data };
+						const copiedData = { ...node.data };
 						delete copiedData?.otherMembersSource;
 						delete copiedData?.methods;
 						delete copiedData?.classVars;

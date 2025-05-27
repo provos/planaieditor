@@ -128,7 +128,7 @@ export function nodeDataFromType(
 	let nodeData: any = {};
 
 	// Get current existing names
-	let currentNameMap = allWorkerClassNames;
+	const currentNameMap = allWorkerClassNames;
 	const existingNames = new Set(currentNameMap.values());
 	taskStore.forEach((task) => existingNames.add(task.className));
 	taskImportStore.forEach((taskImport) => existingNames.add(taskImport.className));

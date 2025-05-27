@@ -9,7 +9,7 @@
 	}
 
 	// Props
-	let { items, x, y, onClose } = $props<{
+	const { items, x, y, onClose } = $props<{
 		items: ContextMenuItem[];
 		x: number;
 		y: number;

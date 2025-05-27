@@ -13,7 +13,7 @@
 		consume_work: string;
 	}
 
-	let { id, data } = $props<{
+	const { id, data } = $props<{
 		id: string;
 		data: TaskWorkerData;
 		isCached?: boolean;
@@ -25,8 +25,8 @@
 	// Use $state for the title and code content to ensure reactivity
 	const defaultTitle = 'def consume_work(self, task):';
 	let reactiveTitle = $state(defaultTitle);
-	let consumeWorkCode = $derived(data.methods?.consume_work || '');
-	let nodeVersion = $derived(data._lastUpdated || 0); // Key for re-rendering on external update
+	const consumeWorkCode = $derived(data.methods?.consume_work || '');
+	const nodeVersion = $derived(data._lastUpdated || 0); // Key for re-rendering on external update
 
 	onMount(() => {
 		let currentNodes: Node[] = [];

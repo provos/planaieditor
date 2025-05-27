@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getNodeIconStyle } from '$lib/utils/defaults';
 
-	let { workerType, extraText } = $props<{ workerType: string; extraText?: string }>();
+	const { workerType, extraText } = $props<{ workerType: string; extraText?: string }>();
 
 	const nodeIconStyle = getNodeIconStyle(workerType || 'default');
 

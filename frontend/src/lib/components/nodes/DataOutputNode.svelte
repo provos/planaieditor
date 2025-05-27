@@ -20,7 +20,7 @@
 	}
 
 	// Props passed by SvelteFlow
-	let { id, data } = $props<{
+	const { id, data } = $props<{
 		id: string;
 		data: DataOutputNodeData;
 	}>();
@@ -89,7 +89,7 @@
 	<div
 		class="flex-none border-b border-gray-200 bg-emerald-200 p-1 text-center text-xs font-medium"
 	>
-		<HeaderIcon workerType={'dataoutput'} />
+		<HeaderIcon workerType="dataoutput" />
 		<div class="flex items-center justify-between">
 			<div class="w-6"><!-- Spacer to balance the layout --></div>
 			<div class="flex-grow">{data.workerName}</div>

@@ -5,7 +5,7 @@
 		nodeId: string; // Should be populated with the node's id
 	}
 
-	let { id, data } = $props<{
+	const { id, data } = $props<{
 		id: string;
 		data: TaskImportNodeData;
 	}>();

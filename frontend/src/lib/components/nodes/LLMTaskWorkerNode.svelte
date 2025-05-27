@@ -43,7 +43,7 @@
 		tools?: string[];
 	}
 
-	let { id, data } = $props<{
+	const { id, data } = $props<{
 		id: string;
 		data: LLMWorkerData;
 	}>();
@@ -52,14 +52,14 @@
 	const { nodes } = useStore();
 
 	// Create local state variables for reactivity
-	let nodeVersion = $derived(data._lastUpdated || 0);
+	const nodeVersion = $derived(data._lastUpdated || 0);
 	let availableTaskClasses = $state<string[]>([]);
 	let showLLMOutputTypeDropdown = $state(false);
 	let currentLLMOutputType = $state(data.llm_output_type || '');
 	let nodeOutputTypes = $state<string[]>([]);
 	let nodeUnsubscribe: Unsubscriber | null = null;
 
-	let availableTools = $derived<Array<{ id: string; name: string; description: string }>>(
+	const availableTools = $derived<Array<{ id: string; name: string; description: string }>>(
 		toolsStore.map((tool) => ({
 			id: tool.id,
 			name: tool.name,

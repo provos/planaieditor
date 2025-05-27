@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Bookmark from './Bookmark.svelte';
 
-	let { id, data } = $props<{
+	const { id, data } = $props<{
 		id: string;
 		data: any;
 	}>();

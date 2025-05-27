@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Dialog } from 'bits-ui';
 
-	let {
+	const {
 		open = false,
 		onSave = () => {},
 		onClose = () => {},

@@ -51,7 +51,7 @@
 	}
 
 	// Reactive visuals based on the selected identifier
-	let selectedConfigVisuals = $derived(getVisualsForIdentifier(selectedConfigName));
+	const selectedConfigVisuals = $derived(getVisualsForIdentifier(selectedConfigName));
 
 	// Effect to emit changes back to parent
 	$effect(() => {
@@ -62,7 +62,7 @@
 		localConfigName = selectedConfigName;
 
 		if (selectedConfigName) {
-			let sourceConfig = combinedConfigs.find((c) => c.name === selectedConfigName);
+			const sourceConfig = combinedConfigs.find((c) => c.name === selectedConfigName);
 			if (!sourceConfig) return;
 
 			if (sourceConfig.source !== 'code') {

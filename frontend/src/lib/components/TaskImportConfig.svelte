@@ -13,7 +13,7 @@
 	import TaskConfig from './TaskConfig.svelte';
 	import { areArraysEqual } from '$lib/utils/utils';
 
-	let { id } = $props<{
+	const { id } = $props<{
 		id: string;
 	}>();
 
@@ -26,7 +26,7 @@
 	let error = $state<string | null>(null);
 	let loading = $state(false);
 	let localSelectedClassName = $derived<string | undefined>(taskImport?.className); // Local reactive state
-	let availableClasses = $derived<string[]>(taskImport?.availableClasses || []); // Local state for classes
+	const availableClasses = $derived<string[]>(taskImport?.availableClasses || []); // Local state for classes
 	let hasFetchedFields = $state(false); // Track if fields have been fetched for the current class
 
 	// Placeholder functions for backend interaction

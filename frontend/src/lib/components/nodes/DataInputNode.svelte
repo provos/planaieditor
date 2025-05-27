@@ -29,7 +29,7 @@
 	}
 
 	// Props passed by SvelteFlow
-	let { id, data } = $props<{
+	const { id, data } = $props<{
 		id: string;
 		data: DataInputNodeData;
 	}>();
@@ -43,7 +43,7 @@
 	}
 
 	// --- State Variables ---
-	let availableTaskClasses = $derived(Array.from(taskClassNamesStore));
+	const availableTaskClasses = $derived(Array.from(taskClassNamesStore));
 	let selectedClassName = $state<InputType | null>(
 		data.className ? inferInputTypeFromName(data.className) : null
 	); // Use InputType for reactivity
@@ -219,7 +219,7 @@
 			: 'bg-orange-100'} p-1"
 	>
 		<HeaderIcon
-			workerType={'datainput'}
+			workerType="datainput"
 			extraText={canBeUsedForAssistant ? '(Assistant Ready)' : ''}
 		/>
 		<select

@@ -422,7 +422,7 @@
 		}
 
 		// Get the position using screenToFlowPosition
-		let position = screenToFlowPosition({
+		const position = screenToFlowPosition({
 			x: event.clientX,
 			y: event.clientY
 		});
@@ -457,7 +457,7 @@
 			const id = `${nodeType}-${crypto.randomUUID()}`;
 
 			// Configure node data based on node type
-			let nodeData: any = nodeDataFromType(id, nodeType);
+			const nodeData: any = nodeDataFromType(id, nodeType);
 			// Then add the node to the graph
 			addNewNode(nodes, id, nodeType, position, nodeData);
 		}
@@ -527,7 +527,7 @@
 	// Context menu items - now dynamic with Phosphor icons
 	const getContextMenuItems = (): ContextMenuItem[] => {
 		if (contextMenuNode) {
-			let baseNodeItems = [
+			const baseNodeItems = [
 				{
 					label: 'Delete Node',
 					iconComponent: Trash,

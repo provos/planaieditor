@@ -17,7 +17,7 @@
 	import { untrack } from 'svelte';
 	import { findDataInputForAssistant } from '$lib/utils/nodeUtils';
 
-	let {
+	const {
 		onExport,
 		onExecute,
 		onClearGraph,
@@ -55,7 +55,7 @@
 	const { edges, nodes } = useStore();
 
 	// Selected tab value
-	let selectedTab = $state('workers');
+	const selectedTab = $state('workers');
 
 	let unconnectedWorkersTooltip = $state<string | null>(null);
 	let moduleLevelImportTooltip = $state<string | null>(null);

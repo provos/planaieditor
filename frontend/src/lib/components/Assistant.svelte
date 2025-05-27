@@ -22,7 +22,7 @@
 	let inputMessage: string = $state('');
 	let chatContainer: HTMLElement;
 
-	let { getNodes, getEdges } = useSvelteFlow();
+	const { getNodes, getEdges } = useSvelteFlow();
 
 	onMount(() => {
 		// validate that the messages follow the interface

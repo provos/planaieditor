@@ -2,7 +2,7 @@
 	import HeaderIcon from '$lib/components/HeaderIcon.svelte';
 	import { splitPaneConfig, openSplitPane } from '$lib/stores/splitPaneStore.svelte';
 
-	let { id, data, type, title, description } = $props<{
+	const { id, data, type, title, description } = $props<{
 		id: string;
 		data: any;
 		type: 'tool' | 'task' | 'taskimport';

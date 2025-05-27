@@ -9,7 +9,7 @@
 	import { onMount } from 'svelte';
 	import { inferInputTypeFromName, type InputType } from '$lib/utils/nodeUtils';
 
-	let { id, data, manuallySelectedInputType, isEditable, onUpdate } = $props<{
+	const { id, data, manuallySelectedInputType, isEditable, onUpdate } = $props<{
 		id: string;
 		data: BaseWorkerData;
 		manuallySelectedInputType: string | null;
@@ -23,17 +23,17 @@
 			id: '' // We'll need to find the actual ID when we have one
 		})) || []
 	);
-	let entryPoint = $derived(data.entryPoint || false);
+	const entryPoint = $derived(data.entryPoint || false);
 
 	const store = useStore();
 
-	let handleColor = $derived(
+	const handleColor = $derived(
 		getColorForType(
 			inferredInputTypes && inferredInputTypes.length > 0 ? inferredInputTypes[0].id : ''
 		)
 	);
 
-	let handleStyle = $derived.by(() => {
+	const handleStyle = $derived.by(() => {
 		if (entryPoint) {
 			// Triangle style for entry point - larger
 			return `width: 0; height: 0; border-top: 16px solid transparent; border-bottom: 16px solid transparent; border-left: 20px solid ${handleColor}; background-color: transparent; border-radius: 0; left: -10px; border-right: none;`;

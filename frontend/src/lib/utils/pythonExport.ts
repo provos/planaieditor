@@ -48,7 +48,7 @@ interface GraphData {
 }
 
 function convertLLMConfigToBackendFormat(config: LLMConfig): Record<string, any> {
-	let convertedConfig: Record<string, any> = {};
+	const convertedConfig: Record<string, any> = {};
 
 	// Process each property in the config object
 	Object.entries(config).forEach(([key, value]) => {
@@ -129,7 +129,7 @@ export function convertGraphtoJSON(
  */
 export function convertNodeData(node: Node) {
 	const data = node.data as any; // Use any for easier manipulation
-	let processedData = { ...data };
+	const processedData = { ...data };
 
 	// Standardize workerName to className for worker nodes
 	if (data?.workerName) {
