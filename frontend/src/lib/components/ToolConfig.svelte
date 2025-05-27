@@ -159,6 +159,7 @@
 				onUpdate={handleCodeUpdate}
 				showReset={false}
 				onUpdateSize={() => {}}
+				additionalStyle="w-full"
 			/>
 			<div class="absolute right-3 bottom-1 z-10">
 				{#if isValidatingTool}

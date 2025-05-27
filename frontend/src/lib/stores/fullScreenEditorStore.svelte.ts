@@ -1,7 +1,9 @@
 export type SupportedLanguage = 'python' | 'markdown' | 'json' | 'javascript' | 'typescript';
+export type FullScreenEditorType = 'tool' | 'task' | 'taskimport' | 'worker';
 
 interface FullScreenEditorState {
 	id: string | undefined;
+	type?: FullScreenEditorType;
 	isOpen: boolean;
 	language: SupportedLanguage;
 	_onSave?: (newCode: string) => void;
@@ -10,6 +12,7 @@ interface FullScreenEditorState {
 
 export const fullScreenEditorState = $state<FullScreenEditorState>({
 	id: undefined,
+	type: undefined,
 	isOpen: false,
 	language: 'python',
 	_onSave: undefined,
@@ -19,10 +22,12 @@ export const fullScreenEditorState = $state<FullScreenEditorState>({
 export function openFullScreenEditor(
 	id: string,
 	language: SupportedLanguage = 'python',
+	type: FullScreenEditorType = 'worker',
 	onSave: (newCode: string) => void = () => {},
 	onClose: () => void = () => {}
 ) {
 	fullScreenEditorState.id = id;
+	fullScreenEditorState.type = type;
 	fullScreenEditorState.language = language;
 	fullScreenEditorState._onSave = onSave;
 	fullScreenEditorState._onClose = onClose;

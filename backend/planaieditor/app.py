@@ -32,6 +32,7 @@ from planaieditor.python import (
     add_to_task_import_state,
     create_task_class,
     create_worker_class,
+    extract_tool_calls,
     format_python_code,
     generate_python_module,
 )
@@ -1167,6 +1168,7 @@ def get_node_code():
 
     module_level_import = node_data.get("moduleLevelImport")
 
+    tools = node_data.get("tools")
     worker = node_data.get("worker")
     preamble = """
 from llm_interface import tool,Tool
@@ -1185,7 +1187,11 @@ from typing import Optional, List, Dict, Any, Type
 
     preamble += "\n# Please, make changes to your worker class below. The code above is just for auto-completion purposes.\n"
 
-    python_code = create_worker_class(worker, add_comment=False)
+    python_code = ""
+    if tools:
+        python_code += "\n".join(extract_tool_calls(tools))
+    if worker:
+        python_code += "\n" + create_worker_class(worker, add_comment=False)
     formatted_code = format_python_code(preamble + python_code)
 
     return (

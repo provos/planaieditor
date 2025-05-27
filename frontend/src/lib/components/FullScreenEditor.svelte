@@ -14,6 +14,7 @@
 	import FloppyDisk from 'phosphor-svelte/lib/FloppyDisk';
 	import X from 'phosphor-svelte/lib/X';
 	import { onMount, tick } from 'svelte';
+	import { getToolById } from '$lib/stores/toolStore.svelte';
 
 	let isLoading = $state(true);
 	let currentCode = $state<string | undefined>(undefined);
@@ -26,19 +27,37 @@
 
 		// Get the node with the id from the store
 		const currentNodes = getCurrentNodes();
-		const currentNode = currentNodes.find((node) => node.id === fullScreenEditorState.id);
 		const moduleLevelImport = currentNodes.find((node) => node.type === 'modulelevelimport');
-		const toolNodes = currentNodes.filter((node) => node.type === 'tool');
-		if (!currentNode) {
-			console.error('Node not found');
-			return;
-		}
-
-		const requestData = {
-			worker: convertNodeData(currentNode),
-			moduleLevelImport: moduleLevelImport ? convertNodeData(moduleLevelImport) : undefined,
-			toolNodes: toolNodes.map((node) => convertNodeData(node))
+		let requestData: Record<string, any> = {
+			moduleLevelImport: moduleLevelImport ? convertNodeData(moduleLevelImport) : undefined
 		};
+		switch (fullScreenEditorState.type) {
+			case 'tool':
+				const tool = getToolById(fullScreenEditorState.id!);
+				if (!tool) {
+					console.error('Tool not found: ', fullScreenEditorState.id);
+					return;
+				}
+				requestData['tools'] = [tool];
+				break;
+			case 'worker':
+				const currentNode = currentNodes.find((node) => node.id === fullScreenEditorState.id);
+				if (!currentNode) {
+					console.error('Node not found:', fullScreenEditorState.id);
+					return;
+				}
+
+				if (currentNode.data.tools && Array.isArray(currentNode.data.tools)) {
+					const tools = currentNode.data.tools.map((toolId: string) => getToolById(toolId));
+					requestData['tools'] = tools;
+				}
+
+				requestData['worker'] = convertNodeData(currentNode);
+				break;
+			default:
+				console.error('Unknown full screen editor type');
+				return;
+		}
 
 		const response = await fetch(`${backendUrl}/api/get-node-code`, {
 			method: 'POST',

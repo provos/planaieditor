@@ -19,7 +19,8 @@
 		onUpdateSize,
 		onFullScreen,
 		fontsize = 11,
-		maxHeight = 400
+		maxHeight = 400,
+		additionalStyle = 'min-w-[60ch]'
 	} = $props<{
 		title?: string;
 		code: string;
@@ -32,6 +33,7 @@
 		onFullScreen?: () => void;
 		fontsize?: number;
 		maxHeight?: number; // Maximum height before scrolling
+		additionalStyle?: string;
 	}>();
 
 	let collapsed = $state(initialCollapsed);
@@ -224,7 +226,9 @@
 	</div>
 
 	<div
-		class="min-w-[60ch] {collapsed ? 'hidden h-0' : 'flex-grow'} transition-height p-1 duration-200"
+		class="{collapsed
+			? 'hidden h-0'
+			: 'flex-grow'} transition-height p-1 duration-200 {additionalStyle}"
 	>
 		<div
 			bind:this={editorContainer}
