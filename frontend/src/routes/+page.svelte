@@ -359,6 +359,11 @@
 			});
 		});
 
+		// run the layout function
+		setTimeout(() => {
+			runElkLayout();
+		}, 100);
+
 		return () => {
 			// Ensure the LSP Manager is stopped when component unmounts
 			stopLspManager().catch((err) => {
