@@ -22,6 +22,7 @@
 		prompt: string;
 		system_prompt: string;
 		llm_output_type?: string;
+		llm_input_type?: string;
 		extraValidation: string;
 		formatPrompt: string;
 		preProcess: string;

@@ -500,6 +500,7 @@ export function convertWorkerToNodeData(worker: ImportedWorker, id: string) {
 			nodeData.debug_mode = worker.classVars?.debug_mode || false;
 			// Explicitly map llm_input_type from classVars
 			nodeData.llm_input_type = worker.classVars?.llm_input_type || '';
+			nodeData.manualInputType = worker.classVars?.llm_input_type || '';
 			nodeData.llm_output_type = worker.classVars?.llm_output_type || '';
 			break;
 		case 'joinedtaskworker':

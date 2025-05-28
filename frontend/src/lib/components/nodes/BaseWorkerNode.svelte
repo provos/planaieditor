@@ -41,6 +41,7 @@
 		variableName?: string;
 		nodeId: string;
 		inputTypes: string[];
+		manualInputType?: string;
 		output_types: string[]; // we are exporting this back to python and are using python naming convention
 		output_type_ids?: string[]; // IDs of selected output tasks/task imports
 		requiredMembers?: string[];
@@ -112,9 +113,7 @@
 	const availableTaskClasses = $derived(Array.from(taskClassNamesStore));
 	let inferredInputTypes = $derived<InputType[]>(data.inputTypes.map(inferInputTypeFromName));
 	const taskNodeVisibility = $state<Record<string, boolean>>({});
-	let manuallySelectedInputType = $derived<string>(
-		data.inputTypes.length > 0 ? data.inputTypes[0] : ''
-	);
+	let manuallySelectedInputType = $derived<string>(data.manualInputType || '');
 	let currentOutputTypeIds = $derived(data.output_type_ids || []);
 	const currentOutputTypes = $derived.by<string[]>(() => {
 		// Derive output types from IDs - ensure proper reactivity to data changes
@@ -344,19 +343,46 @@
 		}
 	}
 
+	function getTask(taskName: string) {
+		return getTaskByName(taskName) || getTaskImportByName(taskName);
+	}
+
 	function setInputTypeManually(event: Event) {
 		const select = event.target as HTMLSelectElement;
 		if (select && select.value) {
 			manuallySelectedInputType = select.value;
+			data.manualInputType = select.value;
 			select.value = ''; // Reset select
+
+			const task = getTask(select.value);
+			if (task) {
+				data.inputTypes = [task.className];
+				inferredInputTypes = [{ className: task.className, id: task.id }];
+			}
+
+			persistNodeDataDebounced();
 		}
 	}
 
 	function resetManualInputType() {
+		const previousInputType = manuallySelectedInputType;
 		manuallySelectedInputType = '';
+		data.manualInputType = '';
 		data.inputTypes = [];
 		inferredInputTypes = [];
 		persistNodeDataDebounced();
+
+		const task = getTask(previousInputType);
+		if (task) {
+			edges.update((edges) => {
+				return edges.filter((edge) => {
+					if (edge.target === id && edge.sourceHandle === `output-${task.id}`) {
+						return false;
+					}
+					return true;
+				});
+			});
+		}
 	}
 
 	function addOutputTypeFromSelect(event: Event) {
