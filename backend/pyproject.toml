@@ -1,6 +1,6 @@
 [project]
 name = "planaieditor"
-version = "0.1.7"
+version = "0.2"
 description = "PlanAI Editor Backend and UI Server"
 authors = [{name = "Niels Provos", email = "niels@provos.com"}]
 license = "Apache-2.0"
