@@ -807,9 +807,9 @@
 
 		<!-- Error Display Area -->
 		{#if data.error}
-			<div class="mt-auto flex-none border-t border-red-200 bg-red-50 p-1.5">
+			<div class="mt-auto max-w-155 flex-none border-t border-red-200 bg-red-50 p-1.5 break-words">
 				<p class="text-2xs font-semibold text-red-700">Error:</p>
-				<p class="text-2xs text-red-600">{@html formatErrorMessage(data.error)}</p>
+				<p class="text-2xs break-words text-red-600">{@html formatErrorMessage(data.error)}</p>
 			</div>
 		{/if}
 	</div>
