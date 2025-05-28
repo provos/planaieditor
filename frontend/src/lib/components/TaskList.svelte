@@ -9,6 +9,7 @@
 	import { generateUniqueName } from '$lib/utils/utils';
 	import { taskClassNamesStore } from '$lib/stores/classNameStore.svelte';
 	import BaseList from './BaseList.svelte';
+	import { getCurrentEdges } from '$lib/stores/graphStore';
 
 	function createNewTask() {
 		const baseName = 'Task';
@@ -32,6 +33,11 @@
 		}
 	}
 
+	function canDeleteTask(task: Task): boolean {
+		const edges = getCurrentEdges();
+		return edges.every((edge) => edge.sourceHandle !== `output-${task.id}`);
+	}
+
 	function selectTask(task: Task) {
 		splitPaneConfig.upperNodeId = task.id;
 		splitPaneConfig.upperNodeType = 'task';
@@ -47,6 +53,7 @@
 	onSelect={selectTask}
 	onDelete={deleteTask}
 	onCreate={createNewTask}
+	canDelete={canDeleteTask}
 	emptyMessage="No tasks defined yet. Click the plus button below to add one."
 	createButtonTitle="Add new task"
 	getName={(task) => task.className}

@@ -7,6 +7,7 @@
 	} from '$lib/stores/taskImportStore.svelte';
 	import { splitPaneConfig } from '$lib/stores/splitPaneStore.svelte';
 	import BaseList from './BaseList.svelte';
+	import { getCurrentEdges } from '$lib/stores/graphStore';
 
 	function createNewTaskImport() {
 		const newTask: TaskImport = {
@@ -31,6 +32,11 @@
 		}
 	}
 
+	function canDeleteTaskImport(task: TaskImport): boolean {
+		const edges = getCurrentEdges();
+		return edges.every((edge) => edge.sourceHandle !== `output-${task.id}`);
+	}
+
 	function selectTaskImport(task: TaskImport) {
 		splitPaneConfig.upperNodeId = task.id;
 		splitPaneConfig.upperNodeType = 'taskimport';
@@ -47,6 +53,7 @@
 	items={taskImportsStore}
 	onSelect={selectTaskImport}
 	onDelete={deleteTaskImport}
+	canDelete={canDeleteTaskImport}
 	onCreate={createNewTaskImport}
 	emptyMessage="No tasks defined yet. Click the plus button below to add one."
 	createButtonTitle="Add new task"

@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { getColorForType } from '$lib/utils/colorUtils';
-	import Trash from 'phosphor-svelte/lib/Trash';
 	import Plus from 'phosphor-svelte/lib/Plus';
+	import Trash from 'phosphor-svelte/lib/Trash';
 
 	interface BaseListProps<T> {
 		items: T[];
 		onSelect: (item: T) => void;
 		onDelete: (item: T) => void;
+		canDelete: (item: T) => boolean;
 		onCreate: () => void;
 		emptyMessage: string;
 		createButtonTitle: string;
@@ -20,6 +21,7 @@
 		items,
 		onSelect,
 		onDelete,
+		canDelete,
 		onCreate,
 		emptyMessage,
 		createButtonTitle,
@@ -68,12 +70,18 @@
 					<button
 						class="ml-2 flex h-6 w-6 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 {selected
 							? 'text-red-500 hover:bg-red-200'
-							: 'hover:bg-red-100 hover:text-red-600'}"
+							: 'hover:bg-red-100 hover:text-red-600'} {canDelete(item)
+							? 'cursor-pointer'
+							: 'cursor-not-allowed'} disabled:hover:text-gray-400"
+						disabled={!canDelete(item)}
+						aria-disabled={!canDelete(item)}
+						title={!canDelete(item)
+							? 'Cannot delete item with connected edges'
+							: `Delete ${getName(item)}`}
 						onclick={(event: MouseEvent) => {
 							event.stopPropagation();
 							onDelete(item);
 						}}
-						title="Delete {getName(item)}"
 					>
 						<Trash size={14} weight="bold" />
 					</button>

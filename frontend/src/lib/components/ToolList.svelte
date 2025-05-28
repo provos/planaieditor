@@ -47,6 +47,7 @@
 	onSelect={selectTool}
 	onDelete={deleteTool}
 	onCreate={createNewTool}
+	canDelete={(tool) => true}
 	emptyMessage="No tools defined yet. Click the plus button below to add one."
 	createButtonTitle="Add new tool"
 	getName={(tool) => tool.name}
