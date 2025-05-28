@@ -17,7 +17,7 @@
 		"lint:eslint": "eslint .",
 		"test:unit": "vitest",
 		"test": "npm run test:unit -- --run",
-		"copy": "cp -pr build/* ../backend/planaieditor/static_frontend/"
+		"copy": "mkdir -p ../backend/planaieditor/static_frontend/ && cp -pr build/* ../backend/planaieditor/static_frontend/"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.2.5",
