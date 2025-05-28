@@ -381,6 +381,29 @@ def process_execution_results(process, module_name):
         }
         return error_data
 
+    # Try to parse LLM interface errors
+    llm_error_match = re.search(
+        r"ERROR:llm_interface\.llm_interface:Error in chat response: (.*)",
+        process.stderr,
+    )
+    if llm_error_match:
+        # Try to extract worker name from LLM validation error
+        llm_validation_match = re.search(
+            r"ERROR:root:LLM did not return a valid response for task \w+ with provenance \[\('(\w+)', \d+\)\]",
+            process.stderr,
+        )
+        worker_name = llm_validation_match.group(1) if llm_validation_match else None
+
+        error_data = {
+            "success": False,
+            "error": {
+                "message": f"LLM interface error: {llm_error_match.group(1)}",
+                "nodeName": worker_name,
+                "fullTraceback": process.stderr,
+            },
+        }
+        return error_data
+
     traceback_data = parse_traceback(process.stderr)
     if traceback_data:
         return traceback_data
