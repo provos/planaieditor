@@ -647,6 +647,10 @@ def create_llm_args(llm_config: Dict[str, Any]) -> List[str]:
     for arg_name in llm_config:
         arg_info = llm_config[arg_name]
 
+        # Skip entries that don't have a "value" key
+        if "value" not in arg_info:
+            continue
+
         value = arg_info["value"]
         is_literal = arg_info.get(
             "is_literal", True

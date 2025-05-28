@@ -987,3 +987,40 @@ def test_create_llm_args():
     assert sorted(result_mapping) == sorted(
         expected_mapping
     ), f"Key mapping failed. Expected {expected_mapping}, got {result_mapping}"
+
+    # Test case 6: Test handling of missing "value" keys (should be skipped gracefully)
+    llm_config_missing_values = {
+        "provider": {"value": "gemini", "is_literal": True},
+        "modelId": {
+            "value": "models/gemini-2.5-flash-preview-05-20",
+            "is_literal": True,
+        },
+        "json_mode": {
+            "is_literal": True
+            # Missing "value" key - should be skipped
+        },
+        "structured_outputs": {
+            "is_literal": True
+            # Missing "value" key - should be skipped
+        },
+    }
+
+    result_missing = create_llm_args(llm_config_missing_values)
+    expected_missing = [
+        f'provider={repr("gemini")}',
+        f'model_name={repr("models/gemini-2.5-flash-preview-05-20")}',
+        # json_mode and structured_outputs should be omitted since they lack "value"
+    ]
+
+    assert sorted(result_missing) == sorted(
+        expected_missing
+    ), f"Missing value handling failed. Expected {expected_missing}, got {result_missing}"
+
+    # Verify that entries without "value" keys are indeed skipped
+    for arg in result_missing:
+        assert (
+            "json_mode" not in arg
+        ), f"json_mode should have been skipped but found in: {arg}"
+        assert (
+            "structured_outputs" not in arg
+        ), f"structured_outputs should have been skipped but found in: {arg}"
