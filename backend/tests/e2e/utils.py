@@ -552,6 +552,48 @@ class E2ETestHelper:
         edges = self.get_all_edges()
         return len(edges)
 
+    def open_split_pane_programmatically(self) -> None:
+        """
+        Open the split pane by clicking on a task node and then programmatically setting the split pane size.
+        """
+        # Programmatically set the split pane size to ensure it's open
+        print("Setting split pane size programmatically...")
+        self.page.evaluate(
+            """
+            () => {
+                // Find the splitpanes container
+                const splitpanes = document.querySelector('.splitpanes');
+                if (splitpanes) {
+                    // Find the right pane (second pane)
+                    const rightPane = splitpanes.querySelector('.splitpanes__pane:last-child');
+                    if (rightPane) {
+                        // Set the width to 30% to make it visible
+                        rightPane.style.width = '30%';
+                        rightPane.style.minWidth = '300px';
+                        
+                        // Also set the left pane to 70%
+                        const leftPane = splitpanes.querySelector('.splitpanes__pane:first-child');
+                        if (leftPane) {
+                            leftPane.style.width = '70%';
+                        }
+                        
+                        console.log('Split pane size set programmatically');
+                        return true;
+                    }
+                }
+                return false;
+            }
+        """
+        )
+
+        # Wait for the UI to update
+        self.page.wait_for_timeout(1000)
+
+        # Verify the side pane is now visible
+        side_pane = self.page.locator('[data-testid="tasks-tab"]')
+        expect(side_pane).to_be_visible(timeout=self.timeout)
+        print("Split pane opened successfully.")
+
     def verify_connection_failed(self) -> bool:
         """
         Verify that no new edge was created (connection failed).

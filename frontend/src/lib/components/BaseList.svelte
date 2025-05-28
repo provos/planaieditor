@@ -47,6 +47,8 @@
 						? 'border-l-6 border-blue-600 bg-blue-100/70'
 						: 'border-l-4 hover:bg-gray-100/50'}"
 					style={selected ? '' : `border-left-color: ${color}; background-color: ${color}1A;`}
+					data-testid="list-item"
+					data-item-name={getName(item)}
 					onclick={() => onSelect(item)}
 					onkeydown={(event: KeyboardEvent) => {
 						if (event.key === 'Enter' || event.key === ' ') {
@@ -78,6 +80,7 @@
 						title={!canDelete(item)
 							? 'Cannot delete item with connected edges'
 							: `Delete ${getName(item)}`}
+						data-testid="delete-item-button"
 						onclick={(event: MouseEvent) => {
 							event.stopPropagation();
 							onDelete(item);
