@@ -1,0 +1,411 @@
+{
+  "version": 2,
+  "name": "edge-removal",
+  "nodes": [
+    {
+      "id": "datainput-522d005e-e0bf-4111-9000-f15817616c49",
+      "type": "datainput",
+      "position": {
+        "x": 12,
+        "y": 273
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": false,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "className": "ChatTask",
+        "jsonData": "{\"messages\": [{ \"role\": \"user\", \"content\": \"why do i live?\"}]}",
+        "nodeId": "datainput-522d005e-e0bf-4111-9000-f15817616c49",
+        "isJsonValid": true
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 619,
+        "height": 123
+      }
+    },
+    {
+      "id": "llmtaskworker-b8484cd7-6b0f-4311-a295-837498ee12b1",
+      "type": "llmtaskworker",
+      "position": {
+        "x": 751,
+        "y": 51.5
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": true,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "workerName": "LLMTaskWorker1",
+        "requiredMembers": [
+          "prompt",
+          "system_prompt"
+        ],
+        "entryPoint": true,
+        "inputTypes": [
+          "ChatTask"
+        ],
+        "output_types": [
+          "ChatTask"
+        ],
+        "prompt": "Please, identify the sentiment of the user based on the messages they have sent.\n\nYou can select either: happy, sad or neutral",
+        "system_prompt": "You are a helpful task processing assistant.",
+        "extraValidation": "return None",
+        "formatPrompt": "return self.prompt",
+        "preProcess": "return task",
+        "postProcess": "return task",
+        "enabledFunctions": {
+          "extraValidation": false,
+          "formatPrompt": false,
+          "preProcess": false,
+          "postProcess": false
+        },
+        "nodeId": "llmtaskworker-b8484cd7-6b0f-4311-a295-837498ee12b1",
+        "llm_output_type": "",
+        "use_xml": false,
+        "debug_mode": false,
+        "tools": [],
+        "output_type_ids": [
+          "taskimport-ef4d8129-e627-4450-b82f-0ad64c191e52"
+        ],
+        "isCached": false,
+        "methods": {
+          "post_process": "    def post_process(self, response: Optional[Task], input_task: Task):\n        \"\"\"Optional: Post-process the LLM response before publishing.\"\"\"\n        self.publish_work(task=input_task.copy_public(), input_task=input_task)"
+        },
+        "classVars": {
+          "llm_input_type": "ChatTask",
+          "llm_output_type": "Sentiment",
+          "output_types": [
+            "ChatTask"
+          ],
+          "prompt": "Please, identify the sentiment of the user based on the messages they have sent.\n\nYou can select either: happy, sad or neutral",
+          "system_prompt": "You are a helpful task processing assistant.",
+          "use_xml": false,
+          "debug_mode": false,
+          "tools": []
+        },
+        "llm_input_type": "ChatTask",
+        "_lastUpdated": 1748393299448,
+        "llmConfigName": "Flash"
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 627,
+        "height": 566
+      }
+    },
+    {
+      "id": "llmtaskworker-a5d68285-c7f8-427c-a02b-ffa33277d0cf",
+      "type": "llmtaskworker",
+      "position": {
+        "x": 1498,
+        "y": 12
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": false,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "workerName": "LLMTaskWorker2",
+        "requiredMembers": [
+          "prompt",
+          "system_prompt"
+        ],
+        "entryPoint": false,
+        "inputTypes": [
+          "ChatTask"
+        ],
+        "output_types": [
+          "Response"
+        ],
+        "prompt": "Please, engage with the query of the user based on the sentiment:\n\n{messages}\n        \nIf the user is sad, try to steer him towards a neutral sentiment. If they are happy, steer them towards a neutral sentiment as well.",
+        "system_prompt": "You are a helpful task processing assistant.",
+        "extraValidation": "return None",
+        "formatPrompt": "return self.prompt",
+        "preProcess": "return task",
+        "postProcess": "return task",
+        "enabledFunctions": {
+          "extraValidation": false,
+          "formatPrompt": false,
+          "preProcess": false,
+          "postProcess": false
+        },
+        "nodeId": "llmtaskworker-a5d68285-c7f8-427c-a02b-ffa33277d0cf",
+        "llm_output_type": "",
+        "use_xml": false,
+        "debug_mode": false,
+        "tools": [],
+        "output_type_ids": [
+          "task-a193b268-1ba6-4202-a0ef-32a0d3e4d5d1"
+        ],
+        "isCached": false,
+        "llm_input_type": "ChatTask",
+        "_lastUpdated": 1748394308616,
+        "llmConfigName": "Flash",
+        "error": "Worker LLMTaskWorker2 on Task ChatTask failed with exception: 'NoneType' object has no attribute 'sentiment'",
+        "methods": {
+          "format_prompt": "    def format_prompt(self, task: Task) -> str:\n        \"\"\"Optional: Dynamically format the prompt based on the input task.\"\"\"\n        chat = task.find_input_task(ChatTask)\n        return self.prompt.format(\n            sentiment=chat.messages\n        )  # Default implementation"
+        },
+        "classVars": {
+          "llm_input_type": "ChatTask",
+          "output_types": [
+            "Response"
+          ],
+          "prompt": "Please, engage with the query of the user based on the sentiment:\n\n{messages}\n        \nIf the user is sad, try to steer him towards a neutral sentiment. If they are happy, steer them towards a neutral sentiment as well.",
+          "system_prompt": "You are a helpful task processing assistant.",
+          "use_xml": false
+        }
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 627,
+        "height": 645
+      }
+    },
+    {
+      "id": "dataoutput-ea626886-3228-4737-843a-6476dfc32de3",
+      "type": "dataoutput",
+      "position": {
+        "x": 2245,
+        "y": 259.5
+      },
+      "draggable": true,
+      "selectable": true,
+      "deletable": true,
+      "selected": false,
+      "dragging": false,
+      "zIndex": 0,
+      "data": {
+        "workerName": "DataOutput1",
+        "nodeId": "dataoutput-ea626886-3228-4737-843a-6476dfc32de3",
+        "receivedData": [],
+        "inputTypes": [
+          "Response"
+        ]
+      },
+      "origin": [
+        0,
+        0
+      ],
+      "measured": {
+        "width": 123,
+        "height": 150
+      }
+    }
+  ],
+  "edges": [
+    {
+      "type": "smoothstep",
+      "style": "stroke-width:3;stroke:#2ca02c;",
+      "source": "llmtaskworker-b8484cd7-6b0f-4311-a295-837498ee12b1",
+      "sourceHandle": "output-taskimport-ef4d8129-e627-4450-b82f-0ad64c191e52",
+      "target": "llmtaskworker-a5d68285-c7f8-427c-a02b-ffa33277d0cf",
+      "targetHandle": "input",
+      "id": "xy-edge__llmtaskworker-b8484cd7-6b0f-4311-a295-837498ee12b1output-taskimport-ef4d8129-e627-4450-b82f-0ad64c191e52-llmtaskworker-a5d68285-c7f8-427c-a02b-ffa33277d0cfinput",
+      "animated": false,
+      "selected": false,
+      "sources": [
+        "llmtaskworker-b8484cd7-6b0f-4311-a295-837498ee12b1"
+      ],
+      "targets": [
+        "llmtaskworker-a5d68285-c7f8-427c-a02b-ffa33277d0cf"
+      ],
+      "container": "root",
+      "sections": [
+        {
+          "id": "xy-edge__llmtaskworker-b8484cd7-6b0f-4311-a295-837498ee12b1output-taskimport-ef4d8129-e627-4450-b82f-0ad64c191e52-llmtaskworker-a5d68285-c7f8-427c-a02b-ffa33277d0cfinput_s0",
+          "startPoint": {
+            "x": 1378,
+            "y": 334.5
+          },
+          "endPoint": {
+            "x": 1498,
+            "y": 334.5
+          },
+          "bendPoints": [
+            {
+              "x": 1378,
+              "y": 334.5
+            },
+            {
+              "x": 1438,
+              "y": 334.5
+            }
+          ],
+          "incomingShape": "llmtaskworker-b8484cd7-6b0f-4311-a295-837498ee12b1",
+          "outgoingShape": "llmtaskworker-a5d68285-c7f8-427c-a02b-ffa33277d0cf"
+        }
+      ]
+    },
+    {
+      "type": "smoothstep",
+      "style": "stroke-width:3;stroke:#ff7f0e;",
+      "source": "llmtaskworker-a5d68285-c7f8-427c-a02b-ffa33277d0cf",
+      "sourceHandle": "output-task-a193b268-1ba6-4202-a0ef-32a0d3e4d5d1",
+      "target": "dataoutput-ea626886-3228-4737-843a-6476dfc32de3",
+      "targetHandle": "input",
+      "id": "xy-edge__llmtaskworker-a5d68285-c7f8-427c-a02b-ffa33277d0cfoutput-task-a193b268-1ba6-4202-a0ef-32a0d3e4d5d1-dataoutput-ea626886-3228-4737-843a-6476dfc32de3input",
+      "animated": false,
+      "selected": false,
+      "sources": [
+        "llmtaskworker-a5d68285-c7f8-427c-a02b-ffa33277d0cf"
+      ],
+      "targets": [
+        "dataoutput-ea626886-3228-4737-843a-6476dfc32de3"
+      ],
+      "container": "root",
+      "sections": [
+        {
+          "id": "xy-edge__llmtaskworker-a5d68285-c7f8-427c-a02b-ffa33277d0cfoutput-task-a193b268-1ba6-4202-a0ef-32a0d3e4d5d1-dataoutput-ea626886-3228-4737-843a-6476dfc32de3input_s0",
+          "startPoint": {
+            "x": 2125,
+            "y": 334.5
+          },
+          "endPoint": {
+            "x": 2245,
+            "y": 334.5
+          },
+          "bendPoints": [
+            {
+              "x": 2125,
+              "y": 334.5
+            },
+            {
+              "x": 2185,
+              "y": 334.5
+            }
+          ],
+          "incomingShape": "llmtaskworker-a5d68285-c7f8-427c-a02b-ffa33277d0cf",
+          "outgoingShape": "dataoutput-ea626886-3228-4737-843a-6476dfc32de3"
+        }
+      ]
+    },
+    {
+      "type": "smoothstep",
+      "style": "stroke-width:3;stroke:#2ca02c;",
+      "source": "datainput-522d005e-e0bf-4111-9000-f15817616c49",
+      "sourceHandle": "output-taskimport-ef4d8129-e627-4450-b82f-0ad64c191e52",
+      "target": "llmtaskworker-b8484cd7-6b0f-4311-a295-837498ee12b1",
+      "targetHandle": "input",
+      "id": "xy-edge__datainput-522d005e-e0bf-4111-9000-f15817616c49output-taskimport-ef4d8129-e627-4450-b82f-0ad64c191e52-llmtaskworker-b8484cd7-6b0f-4311-a295-837498ee12b1input",
+      "animated": true,
+      "selected": false,
+      "sources": [
+        "datainput-522d005e-e0bf-4111-9000-f15817616c49"
+      ],
+      "targets": [
+        "llmtaskworker-b8484cd7-6b0f-4311-a295-837498ee12b1"
+      ],
+      "container": "root",
+      "sections": [
+        {
+          "id": "xy-edge__datainput-522d005e-e0bf-4111-9000-f15817616c49output-taskimport-ef4d8129-e627-4450-b82f-0ad64c191e52-llmtaskworker-b8484cd7-6b0f-4311-a295-837498ee12b1input_s0",
+          "startPoint": {
+            "x": 631,
+            "y": 334.5
+          },
+          "endPoint": {
+            "x": 751,
+            "y": 334.5
+          },
+          "bendPoints": [
+            {
+              "x": 631,
+              "y": 334.5
+            },
+            {
+              "x": 691,
+              "y": 334.5
+            }
+          ],
+          "incomingShape": "datainput-522d005e-e0bf-4111-9000-f15817616c49",
+          "outgoingShape": "llmtaskworker-b8484cd7-6b0f-4311-a295-837498ee12b1"
+        }
+      ]
+    }
+  ],
+  "tools": [],
+  "tasks": [
+    {
+      "id": "task-5c3d05f5-da68-42cc-b586-4b59a094987f",
+      "className": "Sentiment",
+      "type": "task",
+      "fields": [
+        {
+          "name": "sentiment",
+          "type": "literal",
+          "isList": false,
+          "required": true,
+          "description": "the emotional sense of the query",
+          "literalValues": [
+            "happy",
+            "sad",
+            "neutral"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "task-a193b268-1ba6-4202-a0ef-32a0d3e4d5d1",
+      "className": "Response",
+      "type": "task",
+      "fields": [
+        {
+          "name": "response",
+          "type": "string",
+          "isList": false,
+          "required": true,
+          "description": "the response in markdown"
+        }
+      ]
+    }
+  ],
+  "taskImports": [
+    {
+      "id": "taskimport-ef4d8129-e627-4450-b82f-0ad64c191e52",
+      "type": "taskimport",
+      "className": "ChatTask",
+      "modulePath": "planai",
+      "isImplicit": false,
+      "availableClasses": [
+        "ChatTask"
+      ],
+      "fields": [
+        {
+          "description": null,
+          "isList": true,
+          "literalValues": null,
+          "name": "messages",
+          "required": true,
+          "type": "ChatMessage"
+        }
+      ]
+    }
+  ],
+  "llmConfigs": [
+    {
+      "provider": "openrouter",
+      "modelId": "google/gemini-2.5-flash-preview-05-20",
+      "name": "Flash",
+      "id": "d10fa18a-25bc-4453-8ef9-062367d27fe3",
+      "source": "user"
+    }
+  ],
+  "llmConfigsFromCode": []
+}

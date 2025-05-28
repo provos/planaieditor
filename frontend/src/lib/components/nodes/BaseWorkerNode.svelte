@@ -28,6 +28,7 @@
 	import TaskConfig from '../TaskConfig.svelte';
 	import { type InputType, inferInputTypeFromName } from '$lib/utils/nodeUtils';
 	import { openSplitPane, isSplitPaneOpen } from '$lib/stores/splitPaneStore.svelte';
+	import { edges } from '$lib/stores/graphStore';
 
 	export interface NodeData {
 		className: string;
@@ -192,6 +193,10 @@
 		};
 	});
 
+	$effect(() => {
+		console.log('manuallySelectedInputType', manuallySelectedInputType);
+	});
+
 	if (isEditable) {
 		// Effect to sync localIsCached back to data.isCached
 		$effect(() => {
@@ -303,12 +308,23 @@
 	}
 
 	function deleteOutputType(index: number) {
+		const deletedId = currentOutputTypeIds[index];
 		let tmpOutputTypeIds = [...(currentOutputTypeIds || [])];
 		tmpOutputTypeIds = tmpOutputTypeIds.filter((_: string, i: number) => i !== index);
 		data.output_type_ids = tmpOutputTypeIds;
 		currentOutputTypeIds = tmpOutputTypeIds;
 		persistNodeDataDebounced();
 		typeError = '';
+
+		// delete any edges that are connected to the output type
+		edges.update((edges) => {
+			return edges.filter((edge) => {
+				if (edge.source === id && edge.sourceHandle === `output-${deletedId}`) {
+					return false;
+				}
+				return true;
+			});
+		});
 	}
 
 	function cancelTypeEditing() {
