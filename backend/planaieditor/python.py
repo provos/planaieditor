@@ -1,6 +1,5 @@
 import json
 import re
-from reprlib import repr as smart_repr
 from textwrap import dedent, indent
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -655,8 +654,8 @@ def create_llm_args(llm_config: Dict[str, Any]) -> List[str]:
 
         if is_literal:
             # Format literals correctly (strings quoted, others not)
-            # Use smart_repr for potentially long strings
-            formatted_value = smart_repr(value)
+            # Use repr for proper string representation without truncation
+            formatted_value = repr(value)
             llm_args_list.append(f"{arg_name}={formatted_value}")
         else:
             # Use the value directly as it's a variable/expression

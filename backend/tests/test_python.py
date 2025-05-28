@@ -4,6 +4,7 @@ import os
 
 from planaieditor.python import (
     create_all_graph_dependencies,
+    create_llm_args,
     create_worker_class,
     generate_python_module,
     worker_to_instance_name,
@@ -871,3 +872,118 @@ def custom_calculator_tool(operation: str, val1: float, val2: float) -> float:
         assert (
             False
         ), f"The generated module code has syntax errors: {e}\\n--- Generated Code ---:\\n{generated_module_code}"
+
+
+def test_create_llm_args():
+    """Test create_llm_args function with various input configurations, including the smart_repr bug."""
+    # Test case 1: Basic configuration with string values
+    llm_config_basic = {
+        "provider": {"value": "openrouter", "is_literal": True},
+        "modelId": {
+            "value": "google/gemini-2.5-flash-preview-05-20",
+            "is_literal": True,
+        },
+        "json_mode": {"value": False, "is_literal": True},
+        "structured_outputs": {"value": False, "is_literal": True},
+    }
+
+    result = create_llm_args(llm_config_basic)
+
+    # Check that the result contains the expected arguments
+    # Note: We use repr() to get the expected format since Python's repr() uses single quotes
+    expected_args = [
+        f'provider={repr("openrouter")}',
+        f'model_name={repr("google/gemini-2.5-flash-preview-05-20")}',
+        "json_mode=False",
+        "structured_outputs=False",
+    ]
+
+    # Sort both lists for comparison since order might vary
+    result_sorted = sorted(result)
+    expected_sorted = sorted(expected_args)
+
+    assert (
+        result_sorted == expected_sorted
+    ), f"Expected {expected_sorted}, got {result_sorted}"
+
+    # Test case 2: Configuration with non-literal values (variables/expressions)
+    llm_config_variables = {
+        "provider": {"value": "args.provider", "is_literal": False},
+        "modelId": {"value": "config.model_name", "is_literal": False},
+    }
+
+    result_vars = create_llm_args(llm_config_variables)
+    expected_vars = ["provider=args.provider", "model_name=config.model_name"]
+
+    assert sorted(result_vars) == sorted(
+        expected_vars
+    ), f"Expected {expected_vars}, got {result_vars}"
+
+    # Test case 3: Mixed literal and non-literal values
+    llm_config_mixed = {
+        "provider": {"value": "openai", "is_literal": True},
+        "api_key": {"value": "os.getenv('OPENAI_API_KEY')", "is_literal": False},
+        "temperature": {"value": 0.7, "is_literal": True},
+    }
+
+    result_mixed = create_llm_args(llm_config_mixed)
+    expected_mixed = [
+        f'provider={repr("openai")}',
+        "api_key=os.getenv('OPENAI_API_KEY')",
+        "temperature=0.7",
+    ]
+
+    assert sorted(result_mixed) == sorted(
+        expected_mixed
+    ), f"Expected {expected_mixed}, got {result_mixed}"
+
+    # Test case 4: Test the smart_repr bug with a very long string
+    # This should demonstrate that the bug is fixed - no truncation should occur
+    long_model_name = "a-very-long-model-name-that-might-get-truncated-by-smart-repr-function-because-it-exceeds-the-default-length-limit"
+
+    llm_config_long_string = {"modelId": {"value": long_model_name, "is_literal": True}}
+
+    result_long = create_llm_args(llm_config_long_string)
+
+    # The bug was that smart_repr might truncate this long string
+    # With the fix, we expect the full string to be preserved
+    expected_long = f"model_name={repr(long_model_name)}"
+
+    # Check if the result contains the full string without truncation
+    assert len(result_long) == 1, f"Expected 1 argument, got {len(result_long)}"
+    actual_arg = result_long[0]
+
+    # This assertion should pass now that we fixed the smart_repr bug
+    assert (
+        actual_arg == expected_long
+    ), f"String was truncated! Expected: {expected_long}, got: {actual_arg}"
+
+    # Additional check: ensure the full model name is present in the result
+    assert (
+        long_model_name in actual_arg
+    ), f"Full model name not found in result: {actual_arg}"
+
+    # Verify no ellipsis (truncation indicator) is present
+    assert (
+        "..." not in actual_arg
+    ), f"String appears to be truncated (contains '...'): {actual_arg}"
+
+    # Test case 5: Test key mapping (frontend keys to backend keys)
+    llm_config_key_mapping = {
+        "modelId": {"value": "gpt-4", "is_literal": True},
+        "baseUrl": {"value": "https://api.openai.com", "is_literal": True},
+        "remoteHostname": {"value": "remote.server.com", "is_literal": True},
+        "remoteUsername": {"value": "user123", "is_literal": True},
+    }
+
+    result_mapping = create_llm_args(llm_config_key_mapping)
+    expected_mapping = [
+        f'model_name={repr("gpt-4")}',
+        f'host={repr("https://api.openai.com")}',
+        f'hostname={repr("remote.server.com")}',
+        f'username={repr("user123")}',
+    ]
+
+    assert sorted(result_mapping) == sorted(
+        expected_mapping
+    ), f"Key mapping failed. Expected {expected_mapping}, got {result_mapping}"
