@@ -954,8 +954,8 @@
 	<Assistant />
 {/if}
 
-<div class="flex h-screen w-screen flex-col">
-	<div class="w-full border-b border-gray-300 bg-gray-100 p-4">
+<div class="flex h-screen w-screen flex-col overflow-hidden">
+	<div class="w-full flex-shrink-0 border-b border-gray-300 bg-gray-100 p-4">
 		<ToolShelf
 			onExport={() => handleExport('export')}
 			onExecute={() => handleExport('execute')}
@@ -1018,9 +1018,9 @@
 		</div>
 	</div>
 
-	<div class="flex-grow">
-		<Splitpanes horizontal={false}>
-			<Pane>
+	<div class="min-h-0 flex-grow overflow-hidden">
+		<Splitpanes horizontal={false} class="h-full">
+			<Pane class="h-full overflow-hidden">
 				<SvelteFlow
 					{nodes}
 					{edges}
@@ -1032,7 +1032,7 @@
 					onconnect={handleConnect}
 					{isValidConnection}
 					defaultEdgeOptions={{ type: 'smoothstep', style: 'stroke-width: 3;' }}
-					class="flex-grow"
+					class="h-full w-full"
 					fitView
 					nodesDraggable
 					proOptions={{ hideAttribution: true }}
@@ -1052,7 +1052,12 @@
 					</Controls>
 				</SvelteFlow>
 			</Pane>
-			<Pane maxSize={MAX_SPLIT_PANE_SIZE} bind:size={splitPaneConfig.size} snapSize={10}>
+			<Pane
+				maxSize={MAX_SPLIT_PANE_SIZE}
+				bind:size={splitPaneConfig.size}
+				snapSize={10}
+				class="h-full overflow-hidden"
+			>
 				<SidePane />
 			</Pane>
 		</Splitpanes>
