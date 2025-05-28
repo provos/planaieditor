@@ -19,6 +19,12 @@ This application provides a node-based interface, built with Svelte 5 and svelte
 
 The backend is powered by Python using Flask and Flask-SocketIO to handle graph processing and communication with the PlanAI framework.
 
+## Video Introduction
+
+Watch this 4-minute introduction to see PlanAI Editor in action:
+
+[![PlanAI Editor Introduction](https://img.youtube.com/vi/h8LVfKph8C8/0.jpg)](https://www.youtube.com/watch?v=h8LVfKph8C8)
+
 ## Screenshot
 
 ![PlanAI Editor Screenshot](assets/planaieditor.png)
