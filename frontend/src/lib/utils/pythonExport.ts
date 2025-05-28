@@ -54,7 +54,8 @@ function convertLLMConfigToBackendFormat(config: LLMConfig): Record<string, any>
 	Object.entries(config).forEach(([key, value]) => {
 		console.log('key:', key, 'value:', value);
 		// Skip name and source properties
-		if (key !== 'name' && key !== 'source' && key !== 'id') {
+		// Only emit values that are not undefined
+		if (key !== 'name' && key !== 'source' && key !== 'id' && value !== undefined) {
 			convertedConfig[key] = { value: value, is_literal: true };
 		}
 	});
